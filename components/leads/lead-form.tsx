@@ -121,10 +121,7 @@ export function LeadForm({
 
       <CardContent>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-8"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -166,7 +163,9 @@ export function LeadForm({
                         ref={field.ref}
                       />
                     </FormControl>
-                    <FormDescription>Optional, but useful for search and context.</FormDescription>
+                    <FormDescription>
+                      Optional, but useful for search and context.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

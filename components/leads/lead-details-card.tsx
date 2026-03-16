@@ -86,6 +86,7 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
                 Edit
               </Link>
             </Button>
+
             <DeleteLeadDialog
               leadId={lead.id}
               leadName={lead.fullName}

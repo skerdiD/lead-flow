@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
@@ -31,8 +31,8 @@ export function LeadFilters({
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
 
-  const pushFilters = (nextSearch: string, nextStatus: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+  const pushFilters = useCallback((nextSearch: string, nextStatus: string) => {
+    const params = new URLSearchParams(searchParams);
 
     if (nextSearch.trim()) {
       params.set("search", nextSearch.trim());
@@ -49,9 +49,11 @@ export function LeadFilters({
     const queryString = params.toString();
 
     startTransition(() => {
-      router.push(queryString ? `${pathname}?${queryString}` : pathname);
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
     });
-  };
+  }, [pathname, router, searchParams]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -63,7 +65,7 @@ export function LeadFilters({
     setStatus("");
 
     startTransition(() => {
-      router.push(pathname);
+      router.replace(pathname, { scroll: false });
     });
   };
 
