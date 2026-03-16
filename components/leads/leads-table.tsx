@@ -9,8 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { DeleteLeadDialog } from "@/components/leads/delete-lead-dialog";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
-import { DeleteLeadButton } from "@/components/leads/delete-lead-button";
 import type { LeadStatus } from "@/lib/constants/leads";
 
 type LeadRow = {
@@ -72,7 +72,7 @@ export function LeadsTable({ leads }: LeadsTableProps) {
               <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Created
               </TableHead>
-              <TableHead className="w-[132px] px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className="w-[144px] px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -136,7 +136,10 @@ export function LeadsTable({ leads }: LeadsTableProps) {
                       </Link>
                     </Button>
 
-                    <DeleteLeadButton leadId={lead.id} />
+                    <DeleteLeadDialog
+                      leadId={lead.id}
+                      leadName={lead.fullName}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

@@ -1,37 +1,48 @@
 import { z } from "zod";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 
-const emptyStringToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
-  z.preprocess((value) => {
+const optionalTrimmedString = (max: number, emptyMessage?: string) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+      const trimmed = value.trim();
+      return trimmed === "" ? undefined : trimmed;
+    },
+    z
+      .string()
+      .trim()
+      .max(max, `Must be ${max} characters or less.`)
+      .optional(),
+  );
+
+const optionalEmail = z.preprocess(
+  (value) => {
     if (typeof value !== "string") return value;
     const trimmed = value.trim();
     return trimmed === "" ? undefined : trimmed;
-  }, schema.optional());
+  },
+  z
+    .string()
+    .trim()
+    .email("Please enter a valid email address.")
+    .max(255, "Email must be 255 characters or less.")
+    .optional(),
+);
 
-export const createLeadSchema = z.object({
+export const leadFormSchema = z.object({
   fullName: z
     .string()
     .trim()
-    .min(2, "Full name must be at least 2 characters.")
+    .min(2, "Please enter the lead’s full name.")
     .max(120, "Full name must be 120 characters or less."),
-  company: emptyStringToUndefined(
-    z.string().trim().max(160, "Company must be 160 characters or less."),
-  ),
-  email: emptyStringToUndefined(
-    z.email("Enter a valid email address."),
-  ),
-  phone: emptyStringToUndefined(
-    z.string().trim().max(32, "Phone must be 32 characters or less."),
-  ),
+  company: optionalTrimmedString(160),
+  email: optionalEmail,
+  phone: optionalTrimmedString(32),
   status: z.enum(LEAD_STATUSES, {
-    error: "Please select a valid status.",
+    error: () => ({ message: "Please select a valid lead status." }),
   }),
-  source: emptyStringToUndefined(
-    z.string().trim().max(100, "Source must be 100 characters or less."),
-  ),
-  notes: emptyStringToUndefined(
-    z.string().trim().max(5000, "Notes must be 5000 characters or less."),
-  ),
+  source: optionalTrimmedString(100),
+  notes: optionalTrimmedString(5000),
 });
 
-export type CreateLeadInput = z.infer<typeof createLeadSchema>;
+export type LeadFormValues = z.infer<typeof leadFormSchema>;

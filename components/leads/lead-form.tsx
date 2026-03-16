@@ -7,15 +7,24 @@ import { useForm } from "react-hook-form";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
-import { createLeadAction } from "@/app/dashboard/leads/new/actions";
+import {
+  createLeadAction,
+  updateLeadAction,
+} from "@/app/dashboard/leads/actions";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 import {
-  createLeadSchema,
-  type CreateLeadInput,
+  leadFormSchema,
+  type LeadFormValues,
 } from "@/lib/validations/lead";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -26,10 +35,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-const defaultValues: CreateLeadInput = {
+type LeadFormProps = {
+  mode: "create" | "edit";
+  leadId?: string;
+  initialValues?: Partial<LeadFormValues>;
+};
+
+const defaultValues: LeadFormValues = {
   fullName: "",
   company: undefined,
   email: undefined,
@@ -39,26 +60,36 @@ const defaultValues: CreateLeadInput = {
   notes: undefined,
 };
 
-export function LeadForm() {
+export function LeadForm({
+  mode,
+  leadId,
+  initialValues,
+}: LeadFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const form = useForm<CreateLeadInput>({
-    resolver: zodResolver(createLeadSchema),
-    defaultValues,
+  const form = useForm<LeadFormValues>({
+    resolver: zodResolver(leadFormSchema),
+    defaultValues: {
+      ...defaultValues,
+      ...initialValues,
+    },
     mode: "onBlur",
   });
 
-  const onSubmit = (values: CreateLeadInput) => {
+  const onSubmit = (values: LeadFormValues) => {
     startTransition(async () => {
-      const result = await createLeadAction(values);
+      const result =
+        mode === "edit" && leadId
+          ? await updateLeadAction(leadId, values)
+          : await createLeadAction(values);
 
       if (!result.success) {
         if (result.fieldErrors) {
           for (const [field, errors] of Object.entries(result.fieldErrors)) {
             if (!errors?.length) continue;
 
-            form.setError(field as keyof CreateLeadInput, {
+            form.setError(field as keyof LeadFormValues, {
               type: "server",
               message: errors[0],
             });
@@ -79,10 +110,12 @@ export function LeadForm() {
     <Card className="border-border/60 shadow-sm">
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl font-semibold tracking-tight">
-          Add a new lead
+          {mode === "edit" ? "Edit lead" : "Add a new lead"}
         </CardTitle>
         <CardDescription className="text-sm leading-6">
-          Save a new contact to your pipeline with clean, structured details.
+          {mode === "edit"
+            ? "Update the latest details, status, and context for this lead."
+            : "Save a new lead with clean, structured information for your pipeline."}
         </CardDescription>
       </CardHeader>
 
@@ -103,11 +136,12 @@ export function LeadForm() {
                       <Input
                         placeholder="John Carter"
                         autoComplete="name"
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The main contact name shown in tables and detail pages.
+                      This is the primary contact name shown across the app.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -124,6 +158,7 @@ export function LeadForm() {
                       <Input
                         placeholder="Acme Studio"
                         autoComplete="organization"
+                        disabled={isPending}
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         onBlur={field.onBlur}
@@ -131,6 +166,7 @@ export function LeadForm() {
                         ref={field.ref}
                       />
                     </FormControl>
+                    <FormDescription>Optional, but useful for search and context.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -161,7 +197,7 @@ export function LeadForm() {
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Set the current stage in your lead pipeline.
+                      Choose the current stage in your pipeline.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -181,6 +217,7 @@ export function LeadForm() {
                         type="email"
                         placeholder="john@acmestudio.com"
                         autoComplete="email"
+                        disabled={isPending}
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         onBlur={field.onBlur}
@@ -188,6 +225,9 @@ export function LeadForm() {
                         ref={field.ref}
                       />
                     </FormControl>
+                    <FormDescription>
+                      Used in search and future follow-up workflows.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -204,6 +244,7 @@ export function LeadForm() {
                         type="tel"
                         placeholder="+355 69 123 4567"
                         autoComplete="tel"
+                        disabled={isPending}
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         onBlur={field.onBlur}
@@ -211,6 +252,9 @@ export function LeadForm() {
                         ref={field.ref}
                       />
                     </FormControl>
+                    <FormDescription>
+                      Optional phone number for direct outreach.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -227,6 +271,7 @@ export function LeadForm() {
                     <FormControl>
                       <Input
                         placeholder="Referral, LinkedIn, Website, Upwork..."
+                        disabled={isPending}
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         onBlur={field.onBlur}
@@ -235,7 +280,7 @@ export function LeadForm() {
                       />
                     </FormControl>
                     <FormDescription>
-                      Useful for tracking where this lead came from.
+                      Helps you understand where the lead came from.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -250,8 +295,9 @@ export function LeadForm() {
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Add context, meeting notes, project details, or next steps..."
+                        placeholder="Add project context, meeting notes, budget hints, or next steps..."
                         className="min-h-32 resize-y"
+                        disabled={isPending}
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         onBlur={field.onBlur}
@@ -260,7 +306,7 @@ export function LeadForm() {
                       />
                     </FormControl>
                     <FormDescription>
-                      Keep any early context in one place for future follow-up.
+                      Keep helpful context here so future follow-up stays easy.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -270,15 +316,23 @@ export function LeadForm() {
 
             <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Required fields are validated before saving.
+                {mode === "edit"
+                  ? "Changes update the lead immediately after save."
+                  : "You can edit any field later from the lead details page."}
               </p>
 
               <div className="flex gap-3">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push("/dashboard/leads")}
                   disabled={isPending}
+                  onClick={() =>
+                    router.push(
+                      mode === "edit" && leadId
+                        ? `/dashboard/leads/${leadId}`
+                        : "/dashboard/leads",
+                    )
+                  }
                 >
                   Cancel
                 </Button>
@@ -287,12 +341,12 @@ export function LeadForm() {
                   {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving lead...
+                      {mode === "edit" ? "Saving changes..." : "Creating lead..."}
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Create lead
+                      {mode === "edit" ? "Save changes" : "Create lead"}
                     </>
                   )}
                 </Button>

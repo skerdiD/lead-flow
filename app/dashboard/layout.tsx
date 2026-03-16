@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
-import { requireCurrentUser } from "@/lib/auth";
+import { Toaster } from "@/components/ui/sonner";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 type DashboardLayoutProps = {
   children: ReactNode;
 };
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  await requireCurrentUser();
-
-  return <>{children}</>;
+  return (
+    <>
+      <DashboardShell>{children}</DashboardShell>
+      <Toaster richColors position="top-right" closeButton />
+    </>
+  );
 }

@@ -19,7 +19,6 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const status = params.status ?? "";
 
   const userLeads = await getLeadsList({ search, status });
-
   const hasFilters = Boolean(search.trim() || status.trim());
 
   return (
@@ -31,8 +30,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
             Leads
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Search, filter, and manage every lead in one place with a focused,
-            professional workflow.
+            Search, filter, and manage every lead from one clean workspace.
           </p>
         </div>
 
