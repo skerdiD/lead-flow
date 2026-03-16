@@ -101,7 +101,11 @@ export function LeadForm({
       }
 
       toast.success(result.message);
-      router.push(`/dashboard/leads/${result.leadId}`);
+      router.push(
+        mode === "create"
+          ? "/dashboard/leads"
+          : `/dashboard/leads/${result.leadId}`,
+      );
       router.refresh();
     });
   };

@@ -18,6 +18,13 @@ function isActivePath(
 ) {
   if (exact) return pathname === href;
   if (href === "/dashboard") return pathname === href;
+  if (href === "/dashboard/leads") {
+    return (
+      pathname === href ||
+      (pathname.startsWith("/dashboard/leads/") &&
+        pathname !== "/dashboard/leads/new")
+    );
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
