@@ -1,10 +1,11 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { protectLeadMutation } from "@/lib/arcjet";
+import { whereOwnedLead } from "@/lib/leads";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 
 export type LeadMutationState =
@@ -19,9 +20,28 @@ export type LeadMutationState =
       fieldErrors?: Partial<Record<keyof LeadFormValues, string[]>>;
     };
 
+export type DeleteLeadActionState =
+  | {
+      success: true;
+      message: string;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
 export async function createLeadAction(
   input: LeadFormValues,
 ): Promise<LeadMutationState> {
+  const protection = await protectLeadMutation();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
+
   const userId = await requireUserId();
   const parsed = leadFormSchema.safeParse(input);
 
@@ -68,6 +88,24 @@ export async function updateLeadAction(
   leadId: string,
   input: LeadFormValues,
 ): Promise<LeadMutationState> {
+  const normalizedLeadId = leadId.trim();
+
+  if (!normalizedLeadId) {
+    return {
+      success: false,
+      message: "Invalid lead ID.",
+    };
+  }
+
+  const protection = await protectLeadMutation();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
+
   const userId = await requireUserId();
   const parsed = leadFormSchema.safeParse(input);
 
@@ -92,7 +130,7 @@ export async function updateLeadAction(
         notes: parsed.data.notes ?? null,
         updatedAt: new Date(),
       })
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(whereOwnedLead(userId, normalizedLeadId))
       .returning({ id: leads.id });
 
     if (!updatedLead) {
@@ -104,8 +142,8 @@ export async function updateLeadAction(
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");
-    revalidatePath(`/dashboard/leads/${leadId}`);
-    revalidatePath(`/dashboard/leads/${leadId}/edit`);
+    revalidatePath(`/dashboard/leads/${normalizedLeadId}`);
+    revalidatePath(`/dashboard/leads/${normalizedLeadId}/edit`);
 
     return {
       success: true,
@@ -120,25 +158,33 @@ export async function updateLeadAction(
   }
 }
 
-export type DeleteLeadActionState =
-  | {
-      success: true;
-      message: string;
-    }
-  | {
-      success: false;
-      message: string;
-    };
-
 export async function deleteLeadAction(
   leadId: string,
 ): Promise<DeleteLeadActionState> {
+  const normalizedLeadId = leadId.trim();
+
+  if (!normalizedLeadId) {
+    return {
+      success: false,
+      message: "Invalid lead ID.",
+    };
+  }
+
+  const protection = await protectLeadMutation();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
+
   const userId = await requireUserId();
 
   try {
     const [deletedLead] = await db
       .delete(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(whereOwnedLead(userId, normalizedLeadId))
       .returning({ id: leads.id });
 
     if (!deletedLead) {

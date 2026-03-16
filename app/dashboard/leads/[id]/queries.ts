@@ -1,27 +1,30 @@
-import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { findOwnedLeadById } from "@/lib/leads";
 
 export async function getLeadDetails(leadId: string) {
+  const normalizedLeadId = leadId.trim();
+
+  if (!normalizedLeadId) {
+    return null;
+  }
+
   const userId = await requireUserId();
+  const lead = await findOwnedLeadById(userId, normalizedLeadId);
 
-  const [lead] = await db
-    .select({
-      id: leads.id,
-      fullName: leads.fullName,
-      company: leads.company,
-      email: leads.email,
-      phone: leads.phone,
-      status: leads.status,
-      source: leads.source,
-      notes: leads.notes,
-      createdAt: leads.createdAt,
-      updatedAt: leads.updatedAt,
-    })
-    .from(leads)
-    .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
-    .limit(1);
+  if (!lead) {
+    return null;
+  }
 
-  return lead ?? null;
+  return {
+    id: lead.id,
+    fullName: lead.fullName,
+    company: lead.company,
+    email: lead.email,
+    phone: lead.phone,
+    status: lead.status,
+    source: lead.source,
+    notes: lead.notes,
+    createdAt: lead.createdAt,
+    updatedAt: lead.updatedAt,
+  };
 }

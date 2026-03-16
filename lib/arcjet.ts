@@ -1,18 +1,54 @@
-import arcjet, { tokenBucket, shield, detectBot } from "@arcjet/next";
+import arcjet, {
+  detectBot,
+  fixedWindow,
+  request,
+  shield,
+} from "@arcjet/next";
 
-export const aj = arcjet({
+const aj = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
-    shield({ mode: "LIVE" }),
+    shield({
+      mode: "LIVE",
+    }),
     detectBot({
       mode: "LIVE",
-      allow: ["CATEGORY:SEARCH_ENGINE"],
+      allow: [],
     }),
-    tokenBucket({
+    fixedWindow({
       mode: "LIVE",
-      refillRate: 10,
-      interval: 60,
-      capacity: 20,
+      window: "1m",
+      max: 20,
     }),
   ],
 });
+
+type ArcjetDecision = Awaited<ReturnType<typeof aj.protect>>;
+
+function getDeniedMessage(decision: ArcjetDecision) {
+  if (decision.reason.isRateLimit()) {
+    return "Too many requests. Please wait a moment and try again.";
+  }
+
+  if (decision.reason.isBot()) {
+    return "Automated traffic is not allowed for this action.";
+  }
+
+  return "This request was blocked for security reasons.";
+}
+
+export async function protectLeadMutation() {
+  const req = await request();
+  const decision = await aj.protect(req);
+
+  if (decision.isDenied()) {
+    return {
+      ok: false as const,
+      message: getDeniedMessage(decision),
+    };
+  }
+
+  return {
+    ok: true as const,
+  };
+}
