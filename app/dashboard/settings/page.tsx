@@ -1,6 +1,6 @@
 import { Bell, CreditCard, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
 
 function SettingsSection({
@@ -76,24 +76,11 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border bg-background p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium text-primary">Workspace settings</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
-              Settings
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Manage your account, workspace preferences, and the core settings
-              that shape how LeadFlow feels day to day.
-            </p>
-          </div>
-
-          <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-xs font-medium">
-            Version 1
-          </Badge>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Workspace settings"
+        title="Settings"
+        description="Manage your account, workspace preferences, and the core settings that shape how LeadFlow feels day to day."
+      />
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
         <div className="space-y-6">
@@ -108,13 +95,11 @@ export default async function SettingsPage() {
                 value={fullName}
                 hint="Used for your account identity in the app."
               />
-
               <SettingRow
                 label="Email address"
                 value={primaryEmail}
                 hint="Managed by your authentication provider."
               />
-
               <SettingRow
                 label="User ID"
                 value={
@@ -130,20 +115,19 @@ export default async function SettingsPage() {
           <SettingsSection
             icon={Bell}
             title="Notifications"
-            description="Simple notification structure for a clean version 1 experience."
+            description="A simple notification structure for a clean version 1 experience."
           >
             <div className="space-y-4">
               <SettingRow
                 label="Product notifications"
                 value="Notifications are not configurable yet in version 1."
-                hint="This area is intentionally prepared for future reminder and activity features."
+                hint="This space is intentionally prepared for future reminder and activity features."
                 action={
                   <Button variant="outline" disabled>
                     Coming soon
                   </Button>
                 }
               />
-
               <SettingRow
                 label="Lead activity reminders"
                 value="No reminder system is active yet."
@@ -151,7 +135,9 @@ export default async function SettingsPage() {
               />
             </div>
           </SettingsSection>
+        </div>
 
+        <div className="space-y-6">
           <SettingsSection
             icon={CreditCard}
             title="Plan and billing"
@@ -160,17 +146,9 @@ export default async function SettingsPage() {
             <div className="space-y-4">
               <SettingRow
                 label="Current plan"
-                value={
-                  <div className="flex items-center gap-2">
-                    <span>Starter</span>
-                    <Badge variant="secondary" className="rounded-full">
-                      Demo
-                    </Badge>
-                  </div>
-                }
+                value="Starter plan"
                 hint="LeadFlow version 1 does not include live billing yet."
               />
-
               <SettingRow
                 label="Usage"
                 value="Lead tracking, statuses, notes, search, and filtering"
@@ -178,9 +156,7 @@ export default async function SettingsPage() {
               />
             </div>
           </SettingsSection>
-        </div>
 
-        <div className="space-y-6">
           <SettingsSection
             icon={ShieldCheck}
             title="Workspace and data"
@@ -192,17 +168,10 @@ export default async function SettingsPage() {
                 value="Personal workspace"
                 hint="Each lead is isolated by the authenticated user account."
               />
-
               <SettingRow
                 label="Data ownership"
                 value="All lead records are scoped to your user ID."
                 hint="This keeps access control strict and prevents cross-user data access."
-              />
-
-              <SettingRow
-                label="Environment"
-                value="LeadFlow SaaS dashboard"
-                hint="Designed for freelancers and small agencies managing their sales pipeline."
               />
             </div>
           </SettingsSection>
@@ -218,13 +187,6 @@ export default async function SettingsPage() {
                 value="Protected with Clerk"
                 hint="Sign-in, session management, and route protection are active."
               />
-
-              <SettingRow
-                label="Route access"
-                value="Dashboard routes require authentication"
-                hint="Protected pages are not accessible to signed-out users."
-              />
-
               <SettingRow
                 label="Lead access control"
                 value="Owner-only access"
@@ -232,28 +194,6 @@ export default async function SettingsPage() {
               />
             </div>
           </SettingsSection>
-
-          <section className="rounded-3xl border bg-background p-6 shadow-sm">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                Product notes
-              </h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                LeadFlow version 1 focuses on the essentials: structured lead
-                management, a clean dashboard, protected access, and a polished
-                B2B workflow.
-              </p>
-            </div>
-
-            <div className="mt-6 rounded-2xl border bg-muted/20 p-4">
-              <p className="text-sm leading-6 text-muted-foreground">
-                This settings page is intentionally simple, but structured so the
-                app already feels complete and ready for future upgrades like
-                notifications, billing, workspace customization, and account
-                preferences.
-              </p>
-            </div>
-          </section>
         </div>
       </div>
     </div>

@@ -1,9 +1,8 @@
-import { and, desc, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
-import { whereLeadsBelongToUser } from "@/lib/leads";
 
 export type LeadsListFilters = {
   search?: string;
@@ -19,19 +18,21 @@ export async function getLeadsList(filters: LeadsListFilters) {
       ? (filters.status as LeadStatus)
       : undefined;
 
-  const predicates = [
-    whereLeadsBelongToUser(userId),
-    ...(search
-      ? [
-          or(
-            ilike(leads.fullName, `%${search}%`),
-            ilike(leads.company, `%${search}%`),
-            ilike(leads.email, `%${search}%`),
-          ),
-        ]
-      : []),
-    ...(status ? [and()] : []),
-  ].filter(Boolean);
+  const conditions = [eq(leads.userId, userId)];
+
+  if (search) {
+    conditions.push(
+      or(
+        ilike(leads.fullName, `%${search}%`),
+        ilike(leads.company, `%${search}%`),
+        ilike(leads.email, `%${search}%`),
+      )!,
+    );
+  }
+
+  if (status) {
+    conditions.push(eq(leads.status, status));
+  }
 
   return db
     .select({
@@ -45,20 +46,6 @@ export async function getLeadsList(filters: LeadsListFilters) {
       createdAt: leads.createdAt,
     })
     .from(leads)
-    .where(
-      and(
-        whereLeadsBelongToUser(userId),
-        ...(search
-          ? [
-              or(
-                ilike(leads.fullName, `%${search}%`),
-                ilike(leads.company, `%${search}%`),
-                ilike(leads.email, `%${search}%`),
-              ),
-            ]
-          : []),
-        ...(status ? [leads.status.eq(status)] : []),
-      ),
-    )
+    .where(and(...conditions))
     .orderBy(desc(leads.createdAt));
 }

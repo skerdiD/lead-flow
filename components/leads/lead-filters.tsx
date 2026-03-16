@@ -14,15 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type LeadsFiltersProps = {
+type LeadFiltersProps = {
   initialSearch?: string;
   initialStatus?: string;
 };
 
-export function LeadsFilters({
+export function LeadFilters({
   initialSearch = "",
   initialStatus = "",
-}: LeadsFiltersProps) {
+}: LeadFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -31,7 +31,7 @@ export function LeadsFilters({
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
 
-  const applyFilters = (nextSearch: string, nextStatus: string) => {
+  const pushFilters = (nextSearch: string, nextStatus: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
     if (nextSearch.trim()) {
@@ -55,12 +55,13 @@ export function LeadsFilters({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    applyFilters(search, status);
+    pushFilters(search, status);
   };
 
-  const clearFilters = () => {
+  const handleClear = () => {
     setSearch("");
     setStatus("");
+
     startTransition(() => {
       router.push(pathname);
     });
@@ -79,6 +80,7 @@ export function LeadsFilters({
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by name, company, or email..."
             className="pl-9"
+            disabled={isPending}
           />
         </div>
 
@@ -88,8 +90,9 @@ export function LeadsFilters({
             onValueChange={(value) => {
               const nextStatus = value === "all" ? "" : (value as LeadStatus);
               setStatus(nextStatus);
-              applyFilters(search, nextStatus);
+              pushFilters(search, nextStatus);
             }}
+            disabled={isPending}
           >
             <SelectTrigger>
               <SelectValue placeholder="Filter by status" />
@@ -108,13 +111,13 @@ export function LeadsFilters({
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={isPending}>
-          Search
+          {isPending ? "Searching..." : "Search"}
         </Button>
 
         <Button
           type="button"
           variant="outline"
-          onClick={clearFilters}
+          onClick={handleClear}
           disabled={isPending}
         >
           <X className="mr-2 h-4 w-4" />
