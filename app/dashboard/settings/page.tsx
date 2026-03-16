@@ -1,4 +1,4 @@
-import { Bell, CreditCard, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
+import { Bell, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
@@ -138,25 +138,6 @@ export default async function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          <SettingsSection
-            icon={CreditCard}
-            title="Plan and billing"
-            description="A realistic billing section placeholder so the product feels complete."
-          >
-            <div className="space-y-4">
-              <SettingRow
-                label="Current plan"
-                value="Starter plan"
-                hint="LeadFlow version 1 does not include live billing yet."
-              />
-              <SettingRow
-                label="Usage"
-                value="Lead tracking, statuses, notes, search, and filtering"
-                hint="A solid product foundation for a small SaaS workflow."
-              />
-            </div>
-          </SettingsSection>
-
           <SettingsSection
             icon={ShieldCheck}
             title="Workspace and data"

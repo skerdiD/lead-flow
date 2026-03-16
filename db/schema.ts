@@ -18,6 +18,16 @@ export const leadStatuses = [
 ] as const;
 
 export const leadStatusEnum = pgEnum("lead_status", leadStatuses);
+export const activityEventTypes = [
+  "lead_created",
+  "lead_updated",
+  "lead_status_changed",
+  "lead_deleted",
+] as const;
+export const activityEventTypeEnum = pgEnum(
+  "activity_event_type",
+  activityEventTypes,
+);
 
 export const leads = pgTable(
   "leads",
@@ -46,5 +56,32 @@ export const leads = pgTable(
     index("leads_user_id_idx").on(table.userId),
     index("leads_user_id_status_idx").on(table.userId, table.status),
     index("leads_user_id_created_at_idx").on(table.userId, table.createdAt),
+  ],
+);
+
+export const activityEvents = pgTable(
+  "activity_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    eventType: activityEventTypeEnum("event_type").notNull(),
+    message: varchar("message", { length: 255 }).notNull(),
+    leadId: uuid("lead_id"),
+    leadName: varchar("lead_name", { length: 120 }),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("activity_events_user_id_idx").on(table.userId),
+    index("activity_events_user_id_created_at_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+    index("activity_events_user_id_event_type_idx").on(
+      table.userId,
+      table.eventType,
+    ),
   ],
 );

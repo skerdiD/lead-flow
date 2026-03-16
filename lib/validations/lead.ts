@@ -45,4 +45,5 @@ export const leadFormSchema = z.object({
   notes: optionalTrimmedString(5000),
 });
 
-export type LeadFormValues = z.infer<typeof leadFormSchema>;
+export type LeadFormInput = z.input<typeof leadFormSchema>;
+export type LeadFormValues = z.output<typeof leadFormSchema>;

@@ -31,6 +31,11 @@ const pageMetaMap: Array<{
     description: "Capture a new opportunity in your workspace",
   },
   {
+    match: (pathname) => pathname === "/dashboard/activity",
+    title: "Activity",
+    description: "Recent lead actions across your workspace",
+  },
+  {
     match: (pathname) =>
       /^\/dashboard\/leads\/[^/]+\/edit$/.test(pathname),
     title: "Edit Lead",
@@ -106,7 +111,6 @@ export function DashboardTopbar({
           ) : null}
 
           <UserButton
-            afterSignOutUrl="/"
             appearance={{
               elements: {
                 avatarBox: "h-9 w-9 ring-1 ring-border",

@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Users,
   PlusSquare,
+  Clock3,
   Settings,
 } from "lucide-react";
 
@@ -29,6 +30,12 @@ export const dashboardNavItems: DashboardNavItem[] = [
     title: "Add Lead",
     href: "/dashboard/leads/new",
     icon: PlusSquare,
+    exact: true,
+  },
+  {
+    title: "Activity",
+    href: "/dashboard/activity",
+    icon: Clock3,
     exact: true,
   },
   {

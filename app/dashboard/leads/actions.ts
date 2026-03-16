@@ -3,7 +3,8 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { leads } from "@/db/schema";
+import { activityEvents, leads } from "@/db/schema";
+import { ensureActivitySchema } from "@/lib/activity-schema";
 import { requireUserId } from "@/lib/auth";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 
@@ -28,6 +29,34 @@ export type DeleteLeadActionState =
       success: false;
       message: string;
     };
+
+type LeadActivityEventType =
+  | "lead_created"
+  | "lead_updated"
+  | "lead_status_changed"
+  | "lead_deleted";
+
+async function createLeadActivity(params: {
+  userId: string;
+  eventType: LeadActivityEventType;
+  message: string;
+  leadId?: string | null;
+  leadName?: string | null;
+}) {
+  try {
+    await ensureActivitySchema();
+
+    await db.insert(activityEvents).values({
+      userId: params.userId,
+      eventType: params.eventType,
+      message: params.message,
+      leadId: params.leadId ?? null,
+      leadName: params.leadName ?? null,
+    });
+  } catch {
+    // Activity logging should not block lead mutations.
+  }
+}
 
 export async function createLeadAction(
   input: LeadFormValues,
@@ -58,10 +87,20 @@ export async function createLeadAction(
       })
       .returning({
         id: leads.id,
+        fullName: leads.fullName,
       });
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_created",
+      message: `Lead created: ${createdLead.fullName}`,
+      leadId: createdLead.id,
+      leadName: createdLead.fullName,
+    });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");
+    revalidatePath("/dashboard/activity");
 
     return {
       success: true,
@@ -92,6 +131,23 @@ export async function updateLeadAction(
   }
 
   try {
+    const [existingLead] = await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+        status: leads.status,
+      })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .limit(1);
+
+    if (!existingLead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
     const [updatedLead] = await db
       .update(leads)
       .set({
@@ -107,6 +163,8 @@ export async function updateLeadAction(
       .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
       .returning({
         id: leads.id,
+        fullName: leads.fullName,
+        status: leads.status,
       });
 
     if (!updatedLead) {
@@ -116,8 +174,21 @@ export async function updateLeadAction(
       };
     }
 
+    const statusChanged = existingLead.status !== updatedLead.status;
+
+    await createLeadActivity({
+      userId,
+      eventType: statusChanged ? "lead_status_changed" : "lead_updated",
+      message: statusChanged
+        ? `Lead status changed: ${updatedLead.fullName} (${existingLead.status} -> ${updatedLead.status})`
+        : `Lead updated: ${updatedLead.fullName}`,
+      leadId: updatedLead.id,
+      leadName: updatedLead.fullName,
+    });
+
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");
+    revalidatePath("/dashboard/activity");
     revalidatePath(`/dashboard/leads/${leadId}`);
     revalidatePath(`/dashboard/leads/${leadId}/edit`);
 
@@ -145,6 +216,7 @@ export async function deleteLeadAction(
       .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
       .returning({
         id: leads.id,
+        fullName: leads.fullName,
       });
 
     if (!deletedLead) {
@@ -154,8 +226,17 @@ export async function deleteLeadAction(
       };
     }
 
+    await createLeadActivity({
+      userId,
+      eventType: "lead_deleted",
+      message: `Lead deleted: ${deletedLead.fullName}`,
+      leadId: deletedLead.id,
+      leadName: deletedLead.fullName,
+    });
+
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");
+    revalidatePath("/dashboard/activity");
 
     return {
       success: true,

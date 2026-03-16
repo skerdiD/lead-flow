@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { createLeadSchema, type CreateLeadInput } from "@/lib/validations/lead";
+import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 
 export type CreateLeadActionState =
   | {
@@ -15,15 +15,15 @@ export type CreateLeadActionState =
   | {
       success: false;
       message: string;
-      fieldErrors?: Partial<Record<keyof CreateLeadInput, string[]>>;
+      fieldErrors?: Partial<Record<keyof LeadFormValues, string[]>>;
     };
 
 export async function createLeadAction(
-  input: CreateLeadInput,
+  input: LeadFormValues,
 ): Promise<CreateLeadActionState> {
   const userId = await requireUserId();
 
-  const parsed = createLeadSchema.safeParse(input);
+  const parsed = leadFormSchema.safeParse(input);
 
   if (!parsed.success) {
     return {

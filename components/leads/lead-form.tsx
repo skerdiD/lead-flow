@@ -69,7 +69,7 @@ export function LeadForm({
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema),
+    resolver: zodResolver(leadFormSchema) as never,
     defaultValues: {
       ...defaultValues,
       ...initialValues,
