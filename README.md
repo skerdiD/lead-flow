@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lead Flow
 
-## Getting Started
+Lead Flow is a modern full-stack CRM-style SaaS app built for managing leads, tracking pipeline activity, and making the workflow more organized with AI support.
 
-First, run the development server:
+I built it with a production-style stack, focusing on authenticated dashboards, lead management, clean UI, and secure server-side logic.
+
+## Live Demo
+
+[View live app](https://lead-flow-lyart.vercel.app)
+
+## Overview
+
+Lead Flow is designed as a startup-style lead management platform where each user can:
+
+- create and manage their own leads
+- organize pipeline data inside a clean dashboard
+- update lead details through validated server actions
+- use an AI-powered assistant inside the app
+- work in a protected authenticated experience
+
+This project was built to show full-stack product thinking, not just separate UI pages.
+
+## Features
+
+- Authentication with Clerk
+- Protected dashboard routes
+- Lead creation, editing, and deletion
+- Per-user data ownership
+- AI chat assistant
+- Server-side validation with Zod
+- Database access with Drizzle ORM
+- PostgreSQL database integration
+- Bot/rate-limit protection with Arcjet
+- Responsive SaaS-style UI built with reusable components
+
+## Tech Stack
+
+### Frontend
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+
+### Backend / Server
+- Next.js App Router
+- Server Actions
+- API Routes
+- Zod validation
+
+### Auth / Database / Infra
+- Clerk
+- Drizzle ORM
+- PostgreSQL
+- Arcjet
+- Vercel
+
+### AI
+- OpenAI via AI SDK
+
+## Project Structure
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+lead-flow/
+├── app/                 # App Router pages, auth pages, dashboard, API routes
+├── components/          # Shared UI components
+├── db/                  # Database setup and schema-related code
+├── features/leads/      # Lead-focused domain logic and UI
+├── lib/                 # Auth, validation, actions, utilities, protections
+├── public/              # Static assets
+└── README.md
