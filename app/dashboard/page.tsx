@@ -6,17 +6,27 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { getDashboardStats, getRecentLeads } from "@/app/dashboard/queries";
+import {
+  getDashboardStats,
+  getLeadPipelineData,
+  getRecentLeads,
+  getSourcePerformanceData,
+} from "@/app/dashboard/queries";
+import { LeadPipelineChart } from "@/components/dashboard/charts/lead-pipeline-chart";
+import { LeadSourcePerformanceChart } from "@/components/dashboard/charts/lead-source-performance-chart";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 import { RecentLeadsList } from "@/components/dashboard/recent-leads-list";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
-  const [stats, recentLeads] = await Promise.all([
-    getDashboardStats(),
-    getRecentLeads(5),
-  ]);
+  const [stats, recentLeads, leadPipelineData, sourcePerformanceData] =
+    await Promise.all([
+      getDashboardStats(),
+      getRecentLeads(5),
+      getLeadPipelineData(),
+      getSourcePerformanceData(),
+    ]);
 
   const isEmpty = stats.totalLeads === 0;
 
@@ -70,6 +80,13 @@ export default async function DashboardPage() {
           icon={BadgeCheck}
         />
       </section>
+
+      {!isEmpty ? (
+        <section className="grid gap-4 xl:grid-cols-2">
+          <LeadPipelineChart data={leadPipelineData} />
+          <LeadSourcePerformanceChart data={sourcePerformanceData} />
+        </section>
+      ) : null}
 
       {isEmpty ? (
         <DashboardEmptyState />

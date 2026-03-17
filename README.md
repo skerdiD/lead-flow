@@ -6,7 +6,7 @@ I built it with a production-style stack, focusing on authenticated dashboards, 
 
 ## Live Demo
 
-[View live app](https://lead-flow-lyart.vercel.app)
+[View live app](https://lead-flow-fstg89v0n-skerdids-projects.vercel.app/)
 
 ## Overview
 
@@ -14,6 +14,7 @@ Lead Flow is designed as a startup-style lead management platform where each use
 
 - create and manage their own leads
 - organize pipeline data inside a clean dashboard
+- monitor pipeline momentum with visual charts for stages and lead sources
 - update lead details through validated server actions
 - use an AI-powered assistant inside the app
 - work in a protected authenticated experience
@@ -25,6 +26,7 @@ This project was built to show full-stack product thinking, not just separate UI
 - Authentication with Clerk
 - Protected dashboard routes
 - Lead creation, editing, and deletion
+- Dashboard charts for pipeline stage distribution and source performance
 - Per-user data ownership
 - AI chat assistant
 - Server-side validation with Zod
@@ -58,14 +60,9 @@ This project was built to show full-stack product thinking, not just separate UI
 ### AI
 - OpenAI via AI SDK
 
-## Project Structure
+## LeadFlow Screenshoots
 
-```bash
-lead-flow/
-├── app/                 # App Router pages, auth pages, dashboard, API routes
-├── components/          # Shared UI components
-├── db/                  # Database setup and schema-related code
-├── features/leads/      # Lead-focused domain logic and UI
-├── lib/                 # Auth, validation, actions, utilities, protections
-├── public/              # Static assets
-└── README.md
+![Dashboard screen 1](./public/screenshoots/Image1.png)
+![Dashboard screen 2](./public/screenshoots/Image2.png)
+![Dashboard screen 3](./public/screenshoots/Image3.png)
+![Dashboard screen 4](./public/screenshoots/Image4.png)
