@@ -11,16 +11,32 @@ type LeadsPageProps = {
   searchParams?: Promise<{
     search?: string;
     status?: string;
+    source?: string;
+    sortBy?: string;
+    sortDir?: string;
+    page?: string;
+    pageSize?: string;
   }>;
 };
 
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const params = (await searchParams) ?? {};
-  const search = params.search ?? "";
-  const status = params.status ?? "";
 
-  const userLeads = await getLeadsList({ search, status });
-  const hasFilters = Boolean(search.trim() || status.trim());
+  const tableData = await getLeadsList({
+    search: params.search,
+    status: params.status,
+    source: params.source,
+    sortBy: params.sortBy,
+    sortDir: params.sortDir,
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+
+  const hasFilters = Boolean(
+    tableData.search.trim() || tableData.status.trim() || tableData.source.trim(),
+  );
+  const rangeStart = tableData.totalCount === 0 ? 0 : (tableData.page - 1) * tableData.pageSize + 1;
+  const rangeEnd = Math.min(tableData.page * tableData.pageSize, tableData.totalCount);
 
   return (
     <div className="space-y-6">
@@ -39,19 +55,34 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       />
 
       <div className="rounded-3xl border bg-background p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
-            {userLeads.length} {userLeads.length === 1 ? "lead" : "leads"} shown
+            {tableData.totalCount === 0
+              ? "No leads found"
+              : `Showing ${rangeStart}-${rangeEnd} of ${tableData.totalCount} leads`}
           </p>
         </div>
 
-        <LeadFilters initialSearch={search} initialStatus={status} />
+        <LeadFilters
+          initialSearch={tableData.search}
+          initialStatus={tableData.status}
+          initialSource={tableData.source}
+          sourceOptions={tableData.sourceOptions}
+        />
       </div>
 
-      {userLeads.length === 0 ? (
+      {tableData.totalCount === 0 ? (
         <EmptyLeadsState hasFilters={hasFilters} />
       ) : (
-        <LeadsTable leads={userLeads} />
+        <LeadsTable
+          leads={tableData.leads}
+          totalCount={tableData.totalCount}
+          page={tableData.page}
+          pageCount={tableData.pageCount}
+          pageSize={tableData.pageSize}
+          sortBy={tableData.sortBy}
+          sortDir={tableData.sortDir}
+        />
       )}
     </div>
   );

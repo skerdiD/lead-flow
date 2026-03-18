@@ -1,11 +1,12 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { activityEvents, leads } from "@/db/schema";
 import { ensureActivitySchema } from "@/lib/activity-schema";
 import { requireUserId } from "@/lib/auth";
+import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 
 export type LeadMutationState =
@@ -30,11 +31,31 @@ export type DeleteLeadActionState =
       message: string;
     };
 
+export type BulkLeadActionState =
+  | {
+      success: true;
+      message: string;
+      affectedCount: number;
+    }
+  | {
+      success: false;
+      message: string;
+      affectedCount?: number;
+    };
+
 type LeadActivityEventType =
   | "lead_created"
   | "lead_updated"
   | "lead_status_changed"
   | "lead_deleted";
+
+function normalizeLeadIds(leadIds: string[]) {
+  return Array.from(new Set(leadIds.filter(Boolean))).slice(0, 200);
+}
+
+function isLeadStatus(value: string): value is LeadStatus {
+  return LEAD_STATUSES.includes(value as LeadStatus);
+}
 
 async function createLeadActivity(params: {
   userId: string;
@@ -110,7 +131,7 @@ export async function createLeadAction(
   } catch {
     return {
       success: false,
-      message: "We couldn’t create this lead right now. Please try again.",
+      message: "We couldn't create this lead right now. Please try again.",
     };
   }
 }
@@ -200,7 +221,7 @@ export async function updateLeadAction(
   } catch {
     return {
       success: false,
-      message: "We couldn’t save your changes right now. Please try again.",
+      message: "We couldn't save your changes right now. Please try again.",
     };
   }
 }
@@ -245,7 +266,140 @@ export async function deleteLeadAction(
   } catch {
     return {
       success: false,
-      message: "We couldn’t delete this lead right now. Please try again.",
+      message: "We couldn't delete this lead right now. Please try again.",
+    };
+  }
+}
+
+export async function bulkUpdateLeadStatusAction(
+  leadIds: string[],
+  status: string,
+): Promise<BulkLeadActionState> {
+  const userId = await requireUserId();
+  const normalizedIds = normalizeLeadIds(leadIds);
+
+  if (normalizedIds.length === 0) {
+    return {
+      success: false,
+      message: "Select at least one lead to update.",
+    };
+  }
+
+  if (!isLeadStatus(status)) {
+    return {
+      success: false,
+      message: "Select a valid lead stage.",
+    };
+  }
+
+  try {
+    const ownedLeads = await db
+      .select({
+        id: leads.id,
+        status: leads.status,
+      })
+      .from(leads)
+      .where(and(eq(leads.userId, userId), inArray(leads.id, normalizedIds)));
+
+    if (ownedLeads.length === 0) {
+      return {
+        success: false,
+        message: "No matching leads were found.",
+      };
+    }
+
+    const leadIdsToUpdate = ownedLeads
+      .filter((lead) => lead.status !== status)
+      .map((lead) => lead.id);
+
+    if (leadIdsToUpdate.length === 0) {
+      return {
+        success: true,
+        affectedCount: 0,
+        message: `Selected leads are already in ${status}.`,
+      };
+    }
+
+    await db
+      .update(leads)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(leads.userId, userId), inArray(leads.id, leadIdsToUpdate)));
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_status_changed",
+      message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} moved to ${status}.`,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/leads");
+    revalidatePath("/dashboard/activity");
+
+    return {
+      success: true,
+      affectedCount: leadIdsToUpdate.length,
+      message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} updated to ${status}.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't update the selected leads right now. Please try again.",
+    };
+  }
+}
+
+export async function bulkDeleteLeadsAction(
+  leadIds: string[],
+): Promise<BulkLeadActionState> {
+  const userId = await requireUserId();
+  const normalizedIds = normalizeLeadIds(leadIds);
+
+  if (normalizedIds.length === 0) {
+    return {
+      success: false,
+      message: "Select at least one lead to delete.",
+    };
+  }
+
+  try {
+    const deletedLeads = await db
+      .delete(leads)
+      .where(and(eq(leads.userId, userId), inArray(leads.id, normalizedIds)))
+      .returning({
+        id: leads.id,
+      });
+
+    const affectedCount = deletedLeads.length;
+
+    if (affectedCount === 0) {
+      return {
+        success: false,
+        message: "No matching leads were found.",
+      };
+    }
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_deleted",
+      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} deleted in bulk.`,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/leads");
+    revalidatePath("/dashboard/activity");
+
+    return {
+      success: true,
+      affectedCount,
+      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} deleted successfully.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't delete the selected leads right now. Please try again.",
     };
   }
 }
