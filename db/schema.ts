@@ -23,6 +23,9 @@ export const activityEventTypes = [
   "lead_updated",
   "lead_status_changed",
   "lead_deleted",
+  "lead_note_added",
+  "lead_note_updated",
+  "lead_note_deleted",
 ] as const;
 export const activityEventTypeEnum = pgEnum(
   "activity_event_type",
@@ -56,6 +59,33 @@ export const leads = pgTable(
     index("leads_user_id_idx").on(table.userId),
     index("leads_user_id_status_idx").on(table.userId, table.status),
     index("leads_user_id_created_at_idx").on(table.userId, table.createdAt),
+  ],
+);
+
+export const leadNotes = pgTable(
+  "lead_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("lead_notes_user_id_idx").on(table.userId),
+    index("lead_notes_lead_id_idx").on(table.leadId),
+    index("lead_notes_user_id_created_at_idx").on(table.userId, table.createdAt),
   ],
 );
 

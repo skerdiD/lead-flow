@@ -45,6 +45,18 @@ async function createActivitySchema() {
     CREATE INDEX IF NOT EXISTS activity_events_user_id_event_type_idx
       ON activity_events (user_id, event_type);
   `);
+
+  await db.execute(sql`
+    DO $$
+    BEGIN
+      ALTER TYPE activity_event_type ADD VALUE IF NOT EXISTS 'lead_note_added';
+      ALTER TYPE activity_event_type ADD VALUE IF NOT EXISTS 'lead_note_updated';
+      ALTER TYPE activity_event_type ADD VALUE IF NOT EXISTS 'lead_note_deleted';
+    EXCEPTION
+      WHEN undefined_object THEN null;
+    END
+    $$;
+  `);
 }
 
 export async function ensureActivitySchema() {

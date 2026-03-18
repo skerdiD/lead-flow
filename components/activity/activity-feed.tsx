@@ -27,6 +27,12 @@ function eventTypeLabel(eventType: ActivityFeedItem["eventType"]) {
       return "Status changed";
     case "lead_deleted":
       return "Lead deleted";
+    case "lead_note_added":
+      return "Note added";
+    case "lead_note_updated":
+      return "Note updated";
+    case "lead_note_deleted":
+      return "Note deleted";
     default:
       return "Activity";
   }
@@ -40,6 +46,11 @@ function eventTypeVariant(
       return "default";
     case "lead_status_changed":
       return "secondary";
+    case "lead_note_added":
+      return "secondary";
+    case "lead_note_updated":
+      return "outline";
+    case "lead_note_deleted":
     case "lead_deleted":
       return "destructive";
     case "lead_updated":
@@ -73,7 +84,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
               {canOpenLead ? (
                 <div className="mt-3">
                   <Link
-                    href={`/dashboard/leads/${item.leadId}/edit`}
+                    href={`/dashboard/leads/${item.leadId}`}
                     className="inline-flex items-center text-sm font-medium text-primary transition-colors hover:text-primary/80"
                   >
                     Open lead

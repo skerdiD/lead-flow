@@ -29,6 +29,20 @@ export default function LeadDetailsLoading() {
         <Pulse className="mt-2 h-4 w-64" />
         <Pulse className="mt-6 h-24 w-full" />
       </div>
+
+      <div className="rounded-3xl border bg-background p-6 shadow-sm">
+        <Pulse className="h-5 w-28" />
+        <Pulse className="mt-2 h-4 w-72" />
+        <Pulse className="mt-5 h-20 w-full" />
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className="rounded-2xl border p-4">
+              <Pulse className="h-4 w-40" />
+              <Pulse className="mt-3 h-16 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

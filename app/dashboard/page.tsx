@@ -69,6 +69,9 @@ export default async function DashboardPage() {
               <span className="rounded-full border bg-background px-2.5 py-1">
                 {toPercent(winRate)} win rate
               </span>
+              <span className="rounded-full border bg-background px-2.5 py-1">
+                {stats.notesCount} notes logged
+              </span>
             </div>
           </div>
 
@@ -114,6 +117,7 @@ export default async function DashboardPage() {
           icon={BriefcaseBusiness}
           tone="warning"
           helper={`${stats.proposalLeads} in proposal stage`}
+          badge={`${stats.notesCount} notes`}
         />
         <StatCard
           title="Closed Won"

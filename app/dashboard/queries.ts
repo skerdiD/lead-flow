@@ -1,8 +1,9 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { leads } from "@/db/schema";
+import { leadNotes, leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import { ensureLeadNotesSchema } from "@/lib/lead-notes-schema";
 
 export type LeadPipelineDatum = {
   status: LeadStatus;
@@ -20,19 +21,28 @@ export type SourcePerformanceDatum = {
 
 export async function getDashboardStats() {
   const userId = await requireUserId();
+  await ensureLeadNotesSchema();
 
-  const [stats] = await db
-    .select({
-      totalLeads: sql<number>`count(*)`,
-      newLeads: sql<number>`count(*) filter (where ${leads.status} = 'New')`,
-      contactedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Contacted')`,
-      interestedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Interested')`,
-      proposalLeads: sql<number>`count(*) filter (where ${leads.status} = 'Proposal Sent')`,
-      closedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Closed')`,
-      lostLeads: sql<number>`count(*) filter (where ${leads.status} = 'Lost')`,
-    })
-    .from(leads)
-    .where(eq(leads.userId, userId));
+  const [[stats], [notesStats]] = await Promise.all([
+    db
+      .select({
+        totalLeads: sql<number>`count(*)`,
+        newLeads: sql<number>`count(*) filter (where ${leads.status} = 'New')`,
+        contactedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Contacted')`,
+        interestedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Interested')`,
+        proposalLeads: sql<number>`count(*) filter (where ${leads.status} = 'Proposal Sent')`,
+        closedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Closed')`,
+        lostLeads: sql<number>`count(*) filter (where ${leads.status} = 'Lost')`,
+      })
+      .from(leads)
+      .where(eq(leads.userId, userId)),
+    db
+      .select({
+        notesCount: sql<number>`count(*)`,
+      })
+      .from(leadNotes)
+      .where(eq(leadNotes.userId, userId)),
+  ]);
 
   return {
     totalLeads: Number(stats?.totalLeads ?? 0),
@@ -42,6 +52,7 @@ export async function getDashboardStats() {
     proposalLeads: Number(stats?.proposalLeads ?? 0),
     closedLeads: Number(stats?.closedLeads ?? 0),
     lostLeads: Number(stats?.lostLeads ?? 0),
+    notesCount: Number(notesStats?.notesCount ?? 0),
   };
 }
 

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteLeadDialog } from "@/components/leads/delete-lead-dialog";
+import { LeadNotesPanel } from "@/components/leads/lead-notes-panel";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 
 type LeadDetails = {
@@ -21,6 +22,12 @@ type LeadDetails = {
   status: "New" | "Contacted" | "Interested" | "Proposal Sent" | "Closed" | "Lost";
   source: string | null;
   notes: string | null;
+  noteEntries: Array<{
+    id: string;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -54,9 +61,7 @@ function DetailItem({
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-3 text-sm text-foreground">
-        {value && value.trim() ? value : "—"}
-      </p>
+      <p className="mt-3 text-sm text-foreground">{value && value.trim() ? value : "-"}</p>
     </div>
   );
 }
@@ -75,7 +80,7 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
             </div>
 
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Review contact details, source, notes, and the latest status for this lead.
+              Review contact details, source, profile notes, and timeline activity for this lead.
             </p>
           </div>
 
@@ -133,10 +138,10 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
         <div className="space-y-3">
           <div>
             <p className="text-sm font-semibold tracking-tight text-foreground">
-              Notes
+              Profile notes
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Internal context and follow-up details for this lead.
+              Static context saved directly on the lead record.
             </p>
           </div>
 
@@ -144,11 +149,13 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
             <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
               {lead.notes && lead.notes.trim()
                 ? lead.notes
-                : "No notes have been added yet."}
+                : "No profile notes have been added yet."}
             </p>
           </div>
         </div>
       </section>
+
+      <LeadNotesPanel leadId={lead.id} notes={lead.noteEntries} />
     </div>
   );
 }

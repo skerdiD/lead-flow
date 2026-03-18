@@ -10,7 +10,10 @@ export type ActivityFeedItem = {
     | "lead_created"
     | "lead_updated"
     | "lead_status_changed"
-    | "lead_deleted";
+    | "lead_deleted"
+    | "lead_note_added"
+    | "lead_note_updated"
+    | "lead_note_deleted";
   message: string;
   leadId: string | null;
   leadName: string | null;

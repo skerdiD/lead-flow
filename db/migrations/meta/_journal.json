@@ -15,6 +15,13 @@
       "when": 1773655339281,
       "tag": "0001_steady_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779696000000,
+      "tag": "0002_add_lead_notes",
+      "breakpoints": true
     }
   ]
 }

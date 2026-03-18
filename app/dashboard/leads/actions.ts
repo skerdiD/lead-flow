@@ -3,10 +3,12 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { activityEvents, leads } from "@/db/schema";
+import { activityEvents, leadNotes, leads } from "@/db/schema";
 import { ensureActivitySchema } from "@/lib/activity-schema";
 import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import { ensureLeadNotesSchema } from "@/lib/lead-notes-schema";
+import { leadNoteSchema } from "@/lib/validations/lead-note";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 
 export type LeadMutationState =
@@ -43,11 +45,27 @@ export type BulkLeadActionState =
       affectedCount?: number;
     };
 
+export type LeadNoteMutationState =
+  | {
+      success: true;
+      message: string;
+    }
+  | {
+      success: false;
+      message: string;
+      fieldErrors?: {
+        content?: string[];
+      };
+    };
+
 type LeadActivityEventType =
   | "lead_created"
   | "lead_updated"
   | "lead_status_changed"
-  | "lead_deleted";
+  | "lead_deleted"
+  | "lead_note_added"
+  | "lead_note_updated"
+  | "lead_note_deleted";
 
 function normalizeLeadIds(leadIds: string[]) {
   return Array.from(new Set(leadIds.filter(Boolean))).slice(0, 200);
@@ -55,6 +73,14 @@ function normalizeLeadIds(leadIds: string[]) {
 
 function isLeadStatus(value: string): value is LeadStatus {
   return LEAD_STATUSES.includes(value as LeadStatus);
+}
+
+function revalidateLeadPaths(leadId: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/leads");
+  revalidatePath("/dashboard/activity");
+  revalidatePath(`/dashboard/leads/${leadId}`);
+  revalidatePath(`/dashboard/leads/${leadId}/edit`);
 }
 
 async function createLeadActivity(params: {
@@ -400,6 +426,209 @@ export async function bulkDeleteLeadsAction(
     return {
       success: false,
       message: "We couldn't delete the selected leads right now. Please try again.",
+    };
+  }
+}
+
+export async function createLeadNoteAction(
+  leadId: string,
+  content: string,
+): Promise<LeadNoteMutationState> {
+  const userId = await requireUserId();
+  await ensureLeadNotesSchema();
+  const parsed = leadNoteSchema.safeParse({ content });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please review your note and try again.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  try {
+    const [lead] = await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+      })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .limit(1);
+
+    if (!lead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
+    await db.insert(leadNotes).values({
+      userId,
+      leadId,
+      content: parsed.data.content,
+    });
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_note_added",
+      message: `Note added to ${lead.fullName}`,
+      leadId: lead.id,
+      leadName: lead.fullName,
+    });
+
+    revalidateLeadPaths(leadId);
+
+    return {
+      success: true,
+      message: "Note added.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't save this note right now. Please try again.",
+    };
+  }
+}
+
+export async function updateLeadNoteAction(
+  leadId: string,
+  noteId: string,
+  content: string,
+): Promise<LeadNoteMutationState> {
+  const userId = await requireUserId();
+  await ensureLeadNotesSchema();
+  const parsed = leadNoteSchema.safeParse({ content });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please review your note and try again.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  try {
+    const [lead] = await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+      })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .limit(1);
+
+    if (!lead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
+    const [updatedNote] = await db
+      .update(leadNotes)
+      .set({
+        content: parsed.data.content,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(leadNotes.id, noteId),
+          eq(leadNotes.leadId, leadId),
+          eq(leadNotes.userId, userId),
+        ),
+      )
+      .returning({ id: leadNotes.id });
+
+    if (!updatedNote) {
+      return {
+        success: false,
+        message: "This note could not be found.",
+      };
+    }
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_note_updated",
+      message: `Note updated for ${lead.fullName}`,
+      leadId: lead.id,
+      leadName: lead.fullName,
+    });
+
+    revalidateLeadPaths(leadId);
+
+    return {
+      success: true,
+      message: "Note updated.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't update this note right now. Please try again.",
+    };
+  }
+}
+
+export async function deleteLeadNoteAction(
+  leadId: string,
+  noteId: string,
+): Promise<LeadNoteMutationState> {
+  const userId = await requireUserId();
+  await ensureLeadNotesSchema();
+
+  try {
+    const [lead] = await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+      })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .limit(1);
+
+    if (!lead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
+    const [deletedNote] = await db
+      .delete(leadNotes)
+      .where(
+        and(
+          eq(leadNotes.id, noteId),
+          eq(leadNotes.leadId, leadId),
+          eq(leadNotes.userId, userId),
+        ),
+      )
+      .returning({ id: leadNotes.id });
+
+    if (!deletedNote) {
+      return {
+        success: false,
+        message: "This note could not be found.",
+      };
+    }
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_note_deleted",
+      message: `Note removed from ${lead.fullName}`,
+      leadId: lead.id,
+      leadName: lead.fullName,
+    });
+
+    revalidateLeadPaths(leadId);
+
+    return {
+      success: true,
+      message: "Note deleted.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't delete this note right now. Please try again.",
     };
   }
 }
