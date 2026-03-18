@@ -25,8 +25,11 @@ export async function getDashboardStats() {
     .select({
       totalLeads: sql<number>`count(*)`,
       newLeads: sql<number>`count(*) filter (where ${leads.status} = 'New')`,
+      contactedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Contacted')`,
       interestedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Interested')`,
+      proposalLeads: sql<number>`count(*) filter (where ${leads.status} = 'Proposal Sent')`,
       closedLeads: sql<number>`count(*) filter (where ${leads.status} = 'Closed')`,
+      lostLeads: sql<number>`count(*) filter (where ${leads.status} = 'Lost')`,
     })
     .from(leads)
     .where(eq(leads.userId, userId));
@@ -34,8 +37,11 @@ export async function getDashboardStats() {
   return {
     totalLeads: Number(stats?.totalLeads ?? 0),
     newLeads: Number(stats?.newLeads ?? 0),
+    contactedLeads: Number(stats?.contactedLeads ?? 0),
     interestedLeads: Number(stats?.interestedLeads ?? 0),
+    proposalLeads: Number(stats?.proposalLeads ?? 0),
     closedLeads: Number(stats?.closedLeads ?? 0),
+    lostLeads: Number(stats?.lostLeads ?? 0),
   };
 }
 

@@ -16,7 +16,7 @@ export function DashboardShell({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-gradient-to-b from-muted/35 via-muted/20 to-background">
       <div className="flex min-h-screen">
         <DashboardSidebar
           open={mobileSidebarOpen}
@@ -29,7 +29,7 @@ export function DashboardShell({
             searchSlot={searchSlot}
           />
 
-          <main className="flex-1 px-4 py-6 sm:px-6">
+          <main className="flex-1 px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
         </div>

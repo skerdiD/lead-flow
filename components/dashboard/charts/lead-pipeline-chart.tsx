@@ -41,10 +41,13 @@ const STATUS_COLORS = [
 
 export function LeadPipelineChart({ data }: LeadPipelineChartProps) {
   const totalLeads = data.reduce((sum, item) => sum + item.leads, 0);
-  const closedLeads =
-    data.find((item) => item.status === "Closed")?.leads ?? 0;
-  const closeRate =
-    totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
+  const closedLeads = data.find((item) => item.status === "Closed")?.leads ?? 0;
+  const closeRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
+  const topStage =
+    data.reduce<LeadPipelineDatum | null>((best, current) => {
+      if (!best || current.leads > best.leads) return current;
+      return best;
+    }, null) ?? null;
 
   return (
     <article className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/30 p-5 shadow-sm">
@@ -52,9 +55,7 @@ export function LeadPipelineChart({ data }: LeadPipelineChartProps) {
 
       <div className="relative flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-foreground">
-            Pipeline Distribution
-          </p>
+          <p className="text-sm font-semibold text-foreground">Pipeline Distribution</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             Stage-by-stage view of where your leads currently sit.
           </p>
@@ -68,52 +69,70 @@ export function LeadPipelineChart({ data }: LeadPipelineChartProps) {
         </div>
       </div>
 
+      <div className="relative mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:w-fit sm:grid-cols-3">
+        <p className="rounded-full border bg-background/80 px-2.5 py-1">
+          {totalLeads} leads tracked
+        </p>
+        <p className="rounded-full border bg-background/80 px-2.5 py-1">
+          Top stage: {topStage?.status ?? "N/A"}
+        </p>
+        <p className="rounded-full border bg-background/80 px-2.5 py-1">
+          {topStage?.share ?? 0}% share
+        </p>
+      </div>
+
       <div className="relative mt-4 h-[280px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 12, right: 16, left: -16, bottom: 4 }}
-          >
-            <CartesianGrid
-              vertical={false}
-              strokeDasharray="3 3"
-              stroke="var(--border)"
-            />
-            <XAxis
-              dataKey="status"
-              axisLine={false}
-              tickLine={false}
-              tickMargin={10}
-              interval={0}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-              tickFormatter={(value: string) => SHORT_STATUS_LABELS[value] ?? value}
-            />
-            <YAxis
-              allowDecimals={false}
-              axisLine={false}
-              tickLine={false}
-              width={34}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-            />
-            <Tooltip
-              cursor={{ fill: "var(--muted)", opacity: 0.3 }}
-              contentStyle={{
-                borderRadius: "0.75rem",
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--background)",
-              }}
-              labelFormatter={(value) => `Stage: ${value}`}
-            />
-            <Bar dataKey="leads" radius={[9, 9, 0, 0]} maxBarSize={46}>
-              {data.map((entry, index) => (
-                <Cell
-                  key={`${entry.status}-${index}`}
-                  fill={STATUS_COLORS[index % STATUS_COLORS.length]}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        {totalLeads === 0 ? (
+          <div className="flex h-full items-center justify-center rounded-2xl border border-dashed bg-background/70 px-6 text-center text-sm text-muted-foreground">
+            Pipeline chart will populate once leads are added.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 12, right: 16, left: -16, bottom: 4 }}
+            >
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+              />
+              <XAxis
+                dataKey="status"
+                axisLine={false}
+                tickLine={false}
+                tickMargin={10}
+                interval={0}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                tickFormatter={(value: string) => SHORT_STATUS_LABELS[value] ?? value}
+              />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickLine={false}
+                width={34}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+              />
+              <Tooltip
+                cursor={{ fill: "var(--muted)", opacity: 0.3 }}
+                contentStyle={{
+                  borderRadius: "0.75rem",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--background)",
+                }}
+                labelFormatter={(value) => `Stage: ${value}`}
+              />
+              <Bar dataKey="leads" radius={[9, 9, 0, 0]} maxBarSize={46}>
+                {data.map((entry, index) => (
+                  <Cell
+                    key={`${entry.status}-${index}`}
+                    fill={STATUS_COLORS[index % STATUS_COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </article>
   );

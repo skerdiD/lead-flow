@@ -53,7 +53,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </Link>
       </div>
 
-      <div className="flex-1 px-3 py-4">
+      <div className="flex-1 px-3 py-5">
         <nav className="space-y-1">
           {dashboardNavItems.map((item) => {
             const active = isActivePath(pathname, item.href, item.exact);
@@ -65,10 +65,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                   active
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-0.5",
                 )}
               >
                 <Icon
@@ -87,7 +87,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       <div className="border-t px-4 py-4">
-        <div className="rounded-2xl border bg-muted/40 p-4">
+        <div className="rounded-2xl border bg-gradient-to-br from-muted/55 via-muted/35 to-background p-4">
           <p className="text-sm font-semibold tracking-tight text-foreground">
             Stay organized
           </p>
@@ -106,7 +106,7 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   return (
     <>
-      <aside className="hidden h-screen w-72 shrink-0 border-r bg-background lg:block">
+      <aside className="hidden h-screen w-72 shrink-0 border-r bg-background/95 backdrop-blur lg:block">
         <SidebarContent />
       </aside>
 

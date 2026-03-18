@@ -125,199 +125,217 @@ export function LeadForm({
 
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Full name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="John Carter"
-                        autoComplete="name"
-                        disabled={isPending}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      This is the primary contact name shown across the app.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <section className="rounded-2xl border bg-muted/20 p-4 sm:p-5">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Lead basics
+              </p>
 
-              <FormField
-                control={form.control}
-                name="company"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Acme Studio"
-                        autoComplete="organization"
-                        disabled={isPending}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Optional, but useful for search and context.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={isPending}
-                    >
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Full name</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select lead status" />
-                        </SelectTrigger>
+                        <Input
+                          placeholder="John Carter"
+                          autoComplete="name"
+                          disabled={isPending}
+                          {...field}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {LEAD_STATUSES.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Choose the current stage in your pipeline.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                      <FormDescription>
+                        This is the primary contact name shown across the app.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="john@acmestudio.com"
-                        autoComplete="email"
+                <FormField
+                  control={form.control}
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Acme Studio"
+                          autoComplete="organization"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional, but useful for search and context.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
                         disabled={isPending}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Used in search and future follow-up workflows.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select lead status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {LEAD_STATUSES.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Choose the current stage in your pipeline.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="+355 69 123 4567"
-                        autoComplete="tel"
-                        disabled={isPending}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Optional phone number for direct outreach.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <section className="rounded-2xl border bg-muted/20 p-4 sm:p-5">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Contact details
+              </p>
 
-            <div className="grid gap-6">
-              <FormField
-                control={form.control}
-                name="source"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Source</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Referral, LinkedIn, Website, Upwork..."
-                        disabled={isPending}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Helps you understand where the lead came from.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="john@acmestudio.com"
+                          autoComplete="email"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Used in search and future follow-up workflows.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add project context, meeting notes, budget hints, or next steps..."
-                        className="min-h-32 resize-y"
-                        disabled={isPending}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Keep helpful context here so future follow-up stays easy.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="tel"
+                          placeholder="+355 69 123 4567"
+                          autoComplete="tel"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional phone number for direct outreach.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
 
-            <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <section className="rounded-2xl border bg-muted/20 p-4 sm:p-5">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Context
+              </p>
+
+              <div className="grid gap-6">
+                <FormField
+                  control={form.control}
+                  name="source"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Referral, LinkedIn, Website, Upwork..."
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Helps you understand where the lead came from.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add project context, meeting notes, budget hints, or next steps..."
+                          className="min-h-32 resize-y"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Keep helpful context here so future follow-up stays easy.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
+            <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {mode === "edit"
                   ? "Changes update the lead immediately after save."

@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 
 export function DashboardEmptyState() {
   return (
-    <section className="rounded-3xl border bg-background p-8 shadow-sm">
-      <div className="mx-auto max-w-2xl text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border bg-muted/40">
+    <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/30 p-8 shadow-sm">
+      <div className="pointer-events-none absolute -right-20 -top-16 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-12 bottom-0 h-36 w-36 rounded-full bg-muted/70 blur-3xl" />
+
+      <div className="relative mx-auto max-w-2xl text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border bg-background/80">
           <Users className="h-6 w-6 text-muted-foreground" />
         </div>
 
@@ -15,9 +18,8 @@ export function DashboardEmptyState() {
         </h2>
 
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          LeadFlow works best when every opportunity is tracked in one place.
-          Add your first lead to unlock search, filtering, statuses, and a
-          cleaner sales workflow.
+          LeadFlow works best when every opportunity is tracked in one place. Add your first lead to unlock
+          search, filtering, statuses, and a cleaner sales workflow.
         </p>
 
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">

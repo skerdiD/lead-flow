@@ -73,12 +73,12 @@ export function DashboardTopbar({
   const onCreatePage = pathname === "/dashboard/leads/new";
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6">
+    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="flex min-h-[4.25rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={onOpenSidebar}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground lg:hidden"
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
@@ -88,7 +88,7 @@ export function DashboardTopbar({
           <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {page.title}
           </h1>
-          <p className="hidden truncate text-xs text-muted-foreground sm:block">
+          <p className="hidden truncate pt-0.5 text-xs text-muted-foreground sm:block">
             {page.description}
           </p>
         </div>
@@ -103,7 +103,7 @@ export function DashboardTopbar({
           {!onCreatePage ? (
             <Link
               href="/dashboard/leads/new"
-              className="hidden items-center rounded-xl border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted md:inline-flex"
+              className="hidden items-center rounded-xl border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted md:inline-flex"
             >
               <Plus className="mr-2 h-4 w-4" />
               New lead

@@ -18,17 +18,20 @@ export function PageHeader({
   return (
     <section
       className={cn(
-        "rounded-3xl border bg-background p-6 shadow-sm",
+        "relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/25 p-6 shadow-sm sm:p-7",
         className,
       )}
     >
+      <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/8 blur-3xl" />
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           {eyebrow ? (
-            <p className="text-sm font-medium text-primary">{eyebrow}</p>
+            <p className="inline-flex items-center rounded-full border bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {eyebrow}
+            </p>
           ) : null}
 
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {title}
           </h1>
 

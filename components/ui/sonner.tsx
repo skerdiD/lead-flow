@@ -38,7 +38,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast:
+            "group toast group-[.toaster]:rounded-xl group-[.toaster]:border group-[.toaster]:bg-popover/95 group-[.toaster]:px-4 group-[.toaster]:py-3 group-[.toaster]:text-sm group-[.toaster]:shadow-lg",
+          title: "text-sm font-semibold text-popover-foreground",
+          description: "text-xs text-muted-foreground",
+          actionButton:
+            "rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground",
+          cancelButton:
+            "rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground",
+          success: "border-emerald-200/80 bg-emerald-50/80",
+          error: "border-rose-200/80 bg-rose-50/80",
+          warning: "border-amber-200/80 bg-amber-50/80",
+          info: "border-sky-200/80 bg-sky-50/80",
         },
       }}
       {...props}
