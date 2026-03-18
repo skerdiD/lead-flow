@@ -66,3 +66,4 @@ This project was built to show full-stack product thinking, not just separate UI
 ![Dashboard screen 2](./public/screenshoots/Image2.png)
 ![Dashboard screen 3](./public/screenshoots/Image3.png)
 ![Dashboard screen 4](./public/screenshoots/Image4.png)
+![Dashboard screen 5](./public/screenshoots/Image5.png)
