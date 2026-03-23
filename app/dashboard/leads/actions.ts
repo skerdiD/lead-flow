@@ -4,10 +4,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { activityEvents, leadNotes, leads } from "@/db/schema";
-import { ensureActivitySchema } from "@/lib/activity-schema";
 import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
-import { ensureLeadNotesSchema } from "@/lib/lead-notes-schema";
 import { leadNoteSchema } from "@/lib/validations/lead-note";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 
@@ -91,8 +89,6 @@ async function createLeadActivity(params: {
   leadName?: string | null;
 }) {
   try {
-    await ensureActivitySchema();
-
     await db.insert(activityEvents).values({
       userId: params.userId,
       eventType: params.eventType,
@@ -435,7 +431,6 @@ export async function createLeadNoteAction(
   content: string,
 ): Promise<LeadNoteMutationState> {
   const userId = await requireUserId();
-  await ensureLeadNotesSchema();
   const parsed = leadNoteSchema.safeParse({ content });
 
   if (!parsed.success) {
@@ -497,7 +492,6 @@ export async function updateLeadNoteAction(
   content: string,
 ): Promise<LeadNoteMutationState> {
   const userId = await requireUserId();
-  await ensureLeadNotesSchema();
   const parsed = leadNoteSchema.safeParse({ content });
 
   if (!parsed.success) {
@@ -574,7 +568,6 @@ export async function deleteLeadNoteAction(
   noteId: string,
 ): Promise<LeadNoteMutationState> {
   const userId = await requireUserId();
-  await ensureLeadNotesSchema();
 
   try {
     const [lead] = await db

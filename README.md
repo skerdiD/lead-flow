@@ -35,6 +35,17 @@ This project was built to show full-stack product thinking, not just separate UI
 - Bot/rate-limit protection with Arcjet
 - Responsive SaaS-style UI built with reusable components
 
+## Testing & CI
+
+Implemented a focused baseline (important checks only):
+
+- Unit tests for lead form validation (`lib/validations/lead.test.ts`)
+- API guardrail tests for chat route auth/content-type validation (`app/api/chat/route.test.ts`)
+- CI pipeline via GitHub Actions (`.github/workflows/ci.yml`) that runs:
+  - typecheck
+  - tests
+  - production build
+
 ## Tech Stack
 
 ### Frontend

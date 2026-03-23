@@ -2,11 +2,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { leadNotes, leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { ensureLeadNotesSchema } from "@/lib/lead-notes-schema";
 
 export async function getLeadDetails(leadId: string) {
   const userId = await requireUserId();
-  await ensureLeadNotesSchema();
 
   const [lead] = await db
     .select({

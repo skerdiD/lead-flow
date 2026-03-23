@@ -1,7 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activityEvents } from "@/db/schema";
-import { ensureActivitySchema } from "@/lib/activity-schema";
 import { requireUserId } from "@/lib/auth";
 
 export type ActivityFeedItem = {
@@ -23,23 +22,17 @@ export type ActivityFeedItem = {
 export async function getActivityFeed(limit = 40): Promise<ActivityFeedItem[]> {
   const userId = await requireUserId();
 
-  try {
-    await ensureActivitySchema();
-
-    return await db
-      .select({
-        id: activityEvents.id,
-        eventType: activityEvents.eventType,
-        message: activityEvents.message,
-        leadId: activityEvents.leadId,
-        leadName: activityEvents.leadName,
-        createdAt: activityEvents.createdAt,
-      })
-      .from(activityEvents)
-      .where(eq(activityEvents.userId, userId))
-      .orderBy(desc(activityEvents.createdAt))
-      .limit(limit);
-  } catch {
-    return [];
-  }
+  return db
+    .select({
+      id: activityEvents.id,
+      eventType: activityEvents.eventType,
+      message: activityEvents.message,
+      leadId: activityEvents.leadId,
+      leadName: activityEvents.leadName,
+      createdAt: activityEvents.createdAt,
+    })
+    .from(activityEvents)
+    .where(eq(activityEvents.userId, userId))
+    .orderBy(desc(activityEvents.createdAt))
+    .limit(limit);
 }

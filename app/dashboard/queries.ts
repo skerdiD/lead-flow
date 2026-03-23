@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { leadNotes, leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
-import { ensureLeadNotesSchema } from "@/lib/lead-notes-schema";
 
 export type LeadPipelineDatum = {
   status: LeadStatus;
@@ -21,7 +20,6 @@ export type SourcePerformanceDatum = {
 
 export async function getDashboardStats() {
   const userId = await requireUserId();
-  await ensureLeadNotesSchema();
 
   const [[stats], [notesStats]] = await Promise.all([
     db
