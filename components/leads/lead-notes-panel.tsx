@@ -44,10 +44,7 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
   const [editingDraft, setEditingDraft] = useState("");
 
   const sortedNotes = useMemo(
-    () =>
-      [...notes].sort(
-        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-      ),
+    () => [...notes].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
     [notes],
   );
 
@@ -83,9 +80,7 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
   };
 
   const handleDeleteNote = (noteId: string) => {
-    const confirmed = window.confirm(
-      "Delete this note? This action cannot be undone.",
-    );
+    const confirmed = window.confirm("Delete this note? This action cannot be undone.");
 
     if (!confirmed) return;
 
@@ -103,12 +98,10 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
   };
 
   return (
-    <section className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section id="lead-notes" className="rounded-3xl border bg-background p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">
-            Lead notes
-          </p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">Lead notes</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Keep a timeline of follow-ups, context, and decisions.
           </p>
@@ -121,6 +114,7 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
 
       <div className="mt-5 rounded-2xl border bg-muted/20 p-4">
         <Textarea
+          id="lead-notes-input"
           placeholder="Add a note about this lead..."
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -134,11 +128,7 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
             {draft.trim().length}/{MAX_NOTE_LENGTH}
           </p>
 
-          <Button
-            type="button"
-            onClick={handleCreateNote}
-            disabled={isPending || draft.trim().length === 0}
-          >
+          <Button type="button" onClick={handleCreateNote} disabled={isPending || draft.trim().length === 0}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -169,9 +159,7 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
                     Added {formatDateTime(note.createdAt)}
-                    {wasUpdated
-                      ? ` • Updated ${formatDateTime(note.updatedAt)}`
-                      : null}
+                    {wasUpdated ? ` - Updated ${formatDateTime(note.updatedAt)}` : null}
                   </p>
 
                   {isEditing ? (
@@ -244,9 +232,7 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
                     disabled={isPending}
                   />
                 ) : (
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground">
-                    {note.content}
-                  </p>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground">{note.content}</p>
                 )}
               </article>
             );

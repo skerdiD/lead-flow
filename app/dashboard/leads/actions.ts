@@ -56,6 +56,17 @@ export type LeadNoteMutationState =
       };
     };
 
+export type LeadQuickStatusState =
+  | {
+      success: true;
+      message: string;
+      status: LeadStatus;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
 type LeadActivityEventType =
   | "lead_created"
   | "lead_updated"
@@ -244,6 +255,88 @@ export async function updateLeadAction(
     return {
       success: false,
       message: "We couldn't save your changes right now. Please try again.",
+    };
+  }
+}
+
+export async function updateLeadStatusQuickAction(
+  leadId: string,
+  status: string,
+): Promise<LeadQuickStatusState> {
+  const userId = await requireUserId();
+
+  if (!isLeadStatus(status)) {
+    return {
+      success: false,
+      message: "Select a valid lead stage.",
+    };
+  }
+
+  try {
+    const [existingLead] = await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+        status: leads.status,
+      })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .limit(1);
+
+    if (!existingLead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
+    if (existingLead.status === status) {
+      return {
+        success: true,
+        status,
+        message: `Lead is already in ${status}.`,
+      };
+    }
+
+    const [updatedLead] = await db
+      .update(leads)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .returning({
+        id: leads.id,
+        fullName: leads.fullName,
+        status: leads.status,
+      });
+
+    if (!updatedLead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
+    await createLeadActivity({
+      userId,
+      eventType: "lead_status_changed",
+      message: `Lead status changed: ${updatedLead.fullName} (${existingLead.status} -> ${updatedLead.status})`,
+      leadId: updatedLead.id,
+      leadName: updatedLead.fullName,
+    });
+
+    revalidateLeadPaths(leadId);
+
+    return {
+      success: true,
+      status: updatedLead.status,
+      message: `Lead stage updated to ${updatedLead.status}.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't update lead stage right now. Please try again.",
     };
   }
 }

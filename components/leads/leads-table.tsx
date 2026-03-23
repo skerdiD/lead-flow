@@ -99,6 +99,15 @@ function formatDate(dateValue: string) {
   }).format(new Date(dateValue));
 }
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 function CellFallback({ value }: { value: string | null }) {
   return value ? (
     <span className="text-foreground">{value}</span>
@@ -156,13 +165,11 @@ export function LeadsTable({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setSelectedIds(new Set());
-    setBulkStatus("");
-  }, [leads]);
-
   const leadIdsOnPage = useMemo(() => leads.map((lead) => lead.id), [leads]);
-  const selectedLeadIds = useMemo(() => Array.from(selectedIds), [selectedIds]);
+  const selectedLeadIds = useMemo(
+    () => leadIdsOnPage.filter((leadId) => selectedIds.has(leadId)),
+    [leadIdsOnPage, selectedIds],
+  );
   const selectedCount = selectedLeadIds.length;
 
   const isAllSelected =
@@ -223,6 +230,7 @@ export function LeadsTable({
   const toggleSelectAll = (checked: boolean) => {
     if (!checked) {
       setSelectedIds(new Set());
+      setBulkStatus("");
       return;
     }
 
@@ -288,7 +296,7 @@ export function LeadsTable({
     <>
       <div className="space-y-3">
         {selectedCount > 0 ? (
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">
               {selectedCount} lead{selectedCount === 1 ? "" : "s"} selected
             </p>
@@ -343,7 +351,7 @@ export function LeadsTable({
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+                <TableRow className="border-b bg-muted/35 hover:bg-muted/35">
                   <TableHead className="w-10 px-3">
                     <input
                       ref={selectAllRef}
@@ -369,21 +377,14 @@ export function LeadsTable({
                         className="inline-flex items-center gap-1.5 rounded-md py-0.5 transition-colors hover:text-foreground"
                       >
                         <span>{column.label}</span>
-                        <SortIcon
-                          active={sortBy === column.field}
-                          direction={sortDir}
-                        />
+                        <SortIcon active={sortBy === column.field} direction={sortDir} />
                       </button>
                     </TableHead>
                   ))}
 
-                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Email
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Phone
-                  </TableHead>
-                  <TableHead className="w-[144px] px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone</TableHead>
+                  <TableHead className="w-[180px] px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -391,7 +392,7 @@ export function LeadsTable({
 
               <TableBody>
                 {leads.map((lead) => (
-                  <TableRow key={lead.id} className="hover:bg-muted/20">
+                  <TableRow key={lead.id} className="group border-b border-border/60 hover:bg-muted/10">
                     <TableCell className="px-3 py-4 align-middle">
                       <input
                         type="checkbox"
@@ -403,8 +404,17 @@ export function LeadsTable({
                     </TableCell>
 
                     <TableCell className="px-6 py-4 align-middle">
-                      <div className="min-w-[180px]">
-                        <p className="font-medium text-foreground">{lead.fullName}</p>
+                      <div className="flex min-w-[220px] items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-muted/30 text-xs font-semibold text-foreground">
+                          {getInitials(lead.fullName)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">{lead.fullName}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {lead.company?.trim() || "No company"}
+                          </p>
+                        </div>
                       </div>
                     </TableCell>
 
@@ -419,14 +429,14 @@ export function LeadsTable({
                     </TableCell>
 
                     <TableCell className="py-4 align-middle">
-                      <div className="min-w-[150px] text-foreground">
-                        {lead.sourceLabel}
+                      <div className="min-w-[150px]">
+                        <span className="inline-flex rounded-full border bg-muted/20 px-2.5 py-1 text-xs font-medium text-foreground">
+                          {lead.sourceLabel}
+                        </span>
                       </div>
                     </TableCell>
 
-                    <TableCell className="py-4 align-middle text-muted-foreground">
-                      {formatDate(lead.createdAt)}
-                    </TableCell>
+                    <TableCell className="py-4 align-middle text-muted-foreground">{formatDate(lead.createdAt)}</TableCell>
 
                     <TableCell className="py-4 align-middle">
                       <div className="min-w-[200px]">
@@ -441,10 +451,11 @@ export function LeadsTable({
                     </TableCell>
 
                     <TableCell className="px-6 py-4 align-middle">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button asChild size="sm" variant="outline" className="h-8 px-2.5">
                           <Link href={`/dashboard/leads/${lead.id}`} aria-label="View lead">
-                            <Eye className="h-4 w-4" />
+                            <Eye className="mr-1.5 h-3.5 w-3.5" />
+                            View
                           </Link>
                         </Button>
 

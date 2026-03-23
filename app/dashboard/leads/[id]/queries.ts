@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { leadNotes, leads } from "@/db/schema";
+import { activityEvents, leadNotes, leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 
 export async function getLeadDetails(leadId: string) {
@@ -38,8 +38,21 @@ export async function getLeadDetails(leadId: string) {
     .where(and(eq(leadNotes.leadId, leadId), eq(leadNotes.userId, userId)))
     .orderBy(desc(leadNotes.createdAt));
 
+  const activityEntries = await db
+    .select({
+      id: activityEvents.id,
+      eventType: activityEvents.eventType,
+      message: activityEvents.message,
+      createdAt: activityEvents.createdAt,
+    })
+    .from(activityEvents)
+    .where(and(eq(activityEvents.leadId, leadId), eq(activityEvents.userId, userId)))
+    .orderBy(desc(activityEvents.createdAt))
+    .limit(8);
+
   return {
     ...lead,
     noteEntries,
+    activityEntries,
   };
 }
