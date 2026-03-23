@@ -37,14 +37,26 @@ This project was built to show full-stack product thinking, not just separate UI
 
 ## Testing & CI
 
-Implemented a focused baseline (important checks only):
+Implemented focused, high-value automated checks:
 
-- Unit tests for lead form validation (`lib/validations/lead.test.ts`)
-- API guardrail tests for chat route auth/content-type validation (`app/api/chat/route.test.ts`)
-- CI pipeline via GitHub Actions (`.github/workflows/ci.yml`) that runs:
-  - typecheck
-  - tests
-  - production build
+- Validation unit tests for lead form rules (`lib/validations/lead.test.ts`)
+- Lead server action tests for:
+  - create lead
+  - update lead
+  - delete lead
+  (`app/dashboard/leads/actions.test.ts`)
+- Lead list query tests for filtering + pagination behavior (`app/dashboard/leads/queries.test.ts`)
+- Chat API route tests for:
+  - auth/content-type guardrails
+  - one successful request path
+  (`app/api/chat/route.test.ts`)
+
+CI pipeline (`.github/workflows/ci.yml`) runs on push/PR and executes:
+
+- `npm ci`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
 
 ## Tech Stack
 
@@ -77,4 +89,3 @@ Implemented a focused baseline (important checks only):
 ![Dashboard screen 2](./public/screenshoots/Image2.png)
 ![Dashboard screen 3](./public/screenshoots/Image3.png)
 ![Dashboard screen 4](./public/screenshoots/Image4.png)
-![Dashboard screen 5](./public/screenshoots/Image5.png)
