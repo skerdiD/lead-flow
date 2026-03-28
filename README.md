@@ -80,9 +80,6 @@ CI pipeline (`.github/workflows/ci.yml`) runs on push/PR and executes:
 - Arcjet
 - Vercel
 
-### AI
-- OpenAI via AI SDK
-
 ## LeadFlow Screenshoots
 
 ![Dashboard screen 1](./public/screenshoots/Image1.png)
