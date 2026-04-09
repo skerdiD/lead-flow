@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,6 +34,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased`}
       >
+        <Script id="scroll-top-on-refresh" strategy="beforeInteractive">
+          {`
+            if (typeof window !== "undefined") {
+              if ("scrollRestoration" in window.history) {
+                window.history.scrollRestoration = "manual";
+              }
+              window.addEventListener("beforeunload", function () {
+                window.scrollTo(0, 0);
+              });
+              window.addEventListener("pageshow", function () {
+                window.scrollTo(0, 0);
+              });
+            }
+          `}
+        </Script>
         <ClerkProvider>
           {children}
         </ClerkProvider>

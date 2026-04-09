@@ -119,11 +119,22 @@
 @keyframes leadflow-fade-up {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes leadflow-fade-up-scale {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -142,16 +153,74 @@
 @layer utilities {
   .leadflow-load-in {
     opacity: 0;
-    transform: translateY(16px);
-    animation: leadflow-fade-up 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform: translateY(10px);
+    animation: leadflow-fade-up 620ms ease-out forwards;
     will-change: opacity, transform;
+  }
+
+  .leadflow-load-in-scale {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+    animation: leadflow-fade-up-scale 680ms ease-out forwards;
+    will-change: opacity, transform;
+  }
+
+  .leadflow-hover-button {
+    transition:
+      transform 320ms ease-out,
+      box-shadow 320ms ease-out,
+      background-color 320ms ease-out,
+      border-color 320ms ease-out,
+      color 320ms ease-out;
+    will-change: transform;
+  }
+
+  .leadflow-hover-button:hover {
+    transform: translateY(-2px);
+  }
+
+  .leadflow-hover-card {
+    transition:
+      transform 340ms ease-out,
+      box-shadow 340ms ease-out,
+      border-color 340ms ease-out;
+    will-change: transform;
+  }
+
+  .leadflow-hover-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .leadflow-hover-preview {
+    transition:
+      transform 360ms ease-out,
+      box-shadow 360ms ease-out,
+      border-color 360ms ease-out;
+    will-change: transform;
+  }
+
+  .leadflow-hover-preview:hover {
+    transform: translateY(-3px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .leadflow-load-in {
+  .leadflow-load-in,
+  .leadflow-load-in-scale {
     animation: none !important;
     opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .leadflow-hover-button,
+  .leadflow-hover-card,
+  .leadflow-hover-preview {
+    transition: none !important;
+  }
+
+  .leadflow-hover-button:hover,
+  .leadflow-hover-card:hover,
+  .leadflow-hover-preview:hover {
     transform: none !important;
   }
 }
