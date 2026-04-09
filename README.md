@@ -6,7 +6,7 @@ I built it with a production-style stack, focusing on authenticated dashboards, 
 
 ## Live Demo
 
-[View live app](https://lead-flow-fstg89v0n-skerdids-projects.vercel.app/)
+[View live app](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/)
 
 ## Overview
 
@@ -95,9 +95,17 @@ CI pipeline (`.github/workflows/ci.yml`) runs on push/PR and executes:
 - Arcjet
 - Vercel
 
-## LeadFlow Screenshoots
+## LeadFlow Screenshots
 
-![Dashboard screen 1](./public/screenshoots/Image1.png)
-![Dashboard screen 2](./public/screenshoots/Image2.png)
-![Dashboard screen 3](./public/screenshoots/Image3.png)
-![Dashboard screen 4](./public/screenshoots/Image4.png)
+![Landing page hero](./public/screenshots/landing-hero.png)
+![Why LeadFlow section](./public/screenshots/why-leadflow-section.png)
+![Workflow section](./public/screenshots/workflow-section.png)
+![Dashboard overview](./public/screenshots/dashboard-overview.png)
+![Dashboard charts](./public/screenshots/dashboard-charts.png)
+![Leads workspace](./public/screenshots/leads-workspace.png)
+![Activity timeline](./public/screenshots/activity-timeline.png)
+![Create lead mobile view](./public/screenshots/create-lead-mobile.png)
+
+## Live Deployment
+
+https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/
