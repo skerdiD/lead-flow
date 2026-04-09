@@ -29,6 +29,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isE2ETestMode = process.env.E2E_TEST_MODE === "1";
+
   return (
     <html lang="en">
       <body
@@ -49,9 +51,7 @@ export default function RootLayout({
             }
           `}
         </Script>
-        <ClerkProvider>
-          {children}
-        </ClerkProvider>
+        {isE2ETestMode ? children : <ClerkProvider>{children}</ClerkProvider>}
       </body>
     </html>
   );

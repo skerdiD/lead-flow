@@ -111,7 +111,7 @@ export function LeadForm({
   };
 
   return (
-    <Card className="border-border/60 shadow-sm">
+    <Card className="border-border/60 shadow-sm" data-testid={mode === "edit" ? "edit-lead-form" : "create-lead-form"}>
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl font-semibold tracking-tight">
           {mode === "edit" ? "Edit lead" : "Add a new lead"}
@@ -143,6 +143,7 @@ export function LeadForm({
                           placeholder="John Carter"
                           autoComplete="name"
                           disabled={isPending}
+                          data-testid="lead-full-name-input"
                           {...field}
                         />
                       </FormControl>
@@ -165,6 +166,7 @@ export function LeadForm({
                           placeholder="Acme Studio"
                           autoComplete="organization"
                           disabled={isPending}
+                          data-testid="lead-company-input"
                           value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -192,7 +194,7 @@ export function LeadForm({
                         disabled={isPending}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="lead-status-select">
                             <SelectValue placeholder="Select lead status" />
                           </SelectTrigger>
                         </FormControl>
@@ -232,6 +234,7 @@ export function LeadForm({
                           placeholder="john@acmestudio.com"
                           autoComplete="email"
                           disabled={isPending}
+                          data-testid="lead-email-input"
                           value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -259,6 +262,7 @@ export function LeadForm({
                           placeholder="+355 69 123 4567"
                           autoComplete="tel"
                           disabled={isPending}
+                          data-testid="lead-phone-input"
                           value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -292,6 +296,7 @@ export function LeadForm({
                         <Input
                           placeholder="Referral, LinkedIn, Website, Upwork..."
                           disabled={isPending}
+                          data-testid="lead-source-input"
                           value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -318,6 +323,7 @@ export function LeadForm({
                           placeholder="Add project context, meeting notes, budget hints, or next steps..."
                           className="min-h-32 resize-y"
                           disabled={isPending}
+                          data-testid="lead-notes-input-field"
                           value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -347,6 +353,7 @@ export function LeadForm({
                   type="button"
                   variant="outline"
                   disabled={isPending}
+                  data-testid="lead-form-cancel-btn"
                   onClick={() =>
                     router.push(
                       mode === "edit" && leadId
@@ -358,7 +365,7 @@ export function LeadForm({
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" disabled={isPending} data-testid="lead-form-submit-btn">
                   {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

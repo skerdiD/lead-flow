@@ -34,6 +34,7 @@ This project was built to show full-stack product thinking, not just separate UI
 - PostgreSQL database integration
 - Bot/rate-limit protection with Arcjet
 - Responsive SaaS-style UI built with reusable components
+- Lead export on `/dashboard/leads` (CSV and PDF)
 
 ## Testing & CI
 
@@ -50,6 +51,20 @@ Implemented focused, high-value automated checks:
   - auth/content-type guardrails
   - one successful request path
   (`app/api/chat/route.test.ts`)
+- Browser E2E coverage with Playwright for:
+  - protected dashboard access in test auth mode
+  - leads page load
+  - create/edit/status change/delete lead flow
+  - CSV/PDF export download checks
+  (`e2e/leads.spec.ts`)
+
+### E2E Commands
+
+- `npm run e2e:install`
+- `npm run e2e`
+- `npm run e2e:headed`
+
+Playwright starts the app in test mode with `E2E_TEST_MODE=1` and a deterministic user id (`e2e-user`) so protected flows can be tested without interactive Clerk sign-in.
 
 CI pipeline (`.github/workflows/ci.yml`) runs on push/PR and executes:
 

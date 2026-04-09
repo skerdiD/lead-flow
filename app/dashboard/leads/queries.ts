@@ -23,6 +23,16 @@ export type LeadsListFilters = {
   pageSize?: string;
 };
 
+export type NormalizedLeadsFilters = {
+  search: string;
+  status: string;
+  source: string;
+  sortBy: LeadsTableSortField;
+  sortDir: LeadsTableSortDirection;
+  requestedPage: number;
+  pageSize: number;
+};
+
 export type LeadsListItem = {
   id: string;
   fullName: string;
@@ -89,19 +99,51 @@ function normalizePageSize(value?: string) {
     : DEFAULT_LEADS_TABLE_PAGE_SIZE;
 }
 
-export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsListResult> {
-  const userId = await requireUserId();
+export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLeadsFilters {
+  return {
+    search: normalizeSearch(filters.search),
+    status: normalizeStatus(filters.status),
+    source: normalizeSource(filters.source),
+    sortBy: normalizeSortBy(filters.sortBy),
+    sortDir: normalizeSortDirection(filters.sortDir),
+    requestedPage: normalizePositiveInteger(filters.page),
+    pageSize: normalizePageSize(filters.pageSize),
+  };
+}
 
-  const search = normalizeSearch(filters.search);
-  const status = normalizeStatus(filters.status);
-  const source = normalizeSource(filters.source);
-  const sortBy = normalizeSortBy(filters.sortBy);
-  const sortDir = normalizeSortDirection(filters.sortDir);
-  const requestedPage = normalizePositiveInteger(filters.page);
-  const pageSize = normalizePageSize(filters.pageSize);
-
+export function buildLeadsWhereConditions(
+  userId: string,
+  filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source">,
+) {
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
-  const sourceCount = sql<number>`count(*)`;
+  const conditions = [eq(leads.userId, userId)];
+
+  if (filters.search) {
+    conditions.push(
+      or(
+        ilike(leads.fullName, `%${filters.search}%`),
+        ilike(leads.company, `%${filters.search}%`),
+        ilike(leads.email, `%${filters.search}%`),
+        ilike(sourceLabel, `%${filters.search}%`),
+      )!,
+    );
+  }
+
+  if (filters.status) {
+    conditions.push(eq(leads.status, filters.status as LeadStatus));
+  }
+
+  if (filters.source) {
+    conditions.push(eq(sourceLabel, filters.source));
+  }
+
+  return { conditions, sourceLabel };
+}
+
+export function getLeadsSortOrder(
+  sortBy: LeadsTableSortField,
+  sortDir: LeadsTableSortDirection,
+) {
   const statusSortWeight = sql<number>`case
     when ${leads.status} = 'New' then 1
     when ${leads.status} = 'Contacted' then 2
@@ -112,26 +154,41 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     else 7
   end`;
 
-  const conditions = [eq(leads.userId, userId)];
+  const sortValues: Record<LeadsTableSortField, SQL> = {
+    fullName: sql`lower(${leads.fullName})`,
+    company: sql`lower(coalesce(${leads.company}, ''))`,
+    status: statusSortWeight,
+    source: sql`lower(coalesce(nullif(trim(${leads.source}), ''), 'Unspecified'))`,
+    createdAt: sql`${leads.createdAt}`,
+  };
 
-  if (search) {
-    conditions.push(
-      or(
-        ilike(leads.fullName, `%${search}%`),
-        ilike(leads.company, `%${search}%`),
-        ilike(leads.email, `%${search}%`),
-        ilike(sourceLabel, `%${search}%`),
-      )!,
-    );
-  }
+  const sortValue = sortValues[sortBy];
+  const primarySort = sortDir === "asc" ? asc(sortValue) : desc(sortValue);
+  const secondarySort =
+    sortBy === "createdAt"
+      ? asc(sql<string>`lower(${leads.fullName})`)
+      : desc(leads.createdAt);
 
-  if (status) {
-    conditions.push(eq(leads.status, status as LeadStatus));
-  }
+  return { primarySort, secondarySort };
+}
 
-  if (source) {
-    conditions.push(eq(sourceLabel, source));
-  }
+export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsListResult> {
+  const userId = await requireUserId();
+  const {
+    search,
+    status,
+    source,
+    sortBy,
+    sortDir,
+    requestedPage,
+    pageSize,
+  } = normalizeLeadsFilters(filters);
+  const { conditions, sourceLabel } = buildLeadsWhereConditions(userId, {
+    search,
+    status,
+    source,
+  });
+  const sourceCount = sql<number>`count(*)`;
 
   const [countRow] = await db
     .select({
@@ -145,20 +202,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
   const page = Math.min(requestedPage, pageCount);
   const offset = (page - 1) * pageSize;
 
-  const sortValues: Record<LeadsTableSortField, SQL> = {
-    fullName: sql`lower(${leads.fullName})`,
-    company: sql`lower(coalesce(${leads.company}, ''))`,
-    status: statusSortWeight,
-    source: sql`lower(${sourceLabel})`,
-    createdAt: sql`${leads.createdAt}`,
-  };
-
-  const sortValue = sortValues[sortBy];
-  const primarySort = sortDir === "asc" ? asc(sortValue) : desc(sortValue);
-  const secondarySort =
-    sortBy === "createdAt"
-      ? asc(sql<string>`lower(${leads.fullName})`)
-      : desc(leads.createdAt);
+  const { primarySort, secondarySort } = getLeadsSortOrder(sortBy, sortDir);
 
   const rows = await db
     .select({

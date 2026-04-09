@@ -68,6 +68,7 @@ export function DashboardTopbar({
   onOpenSidebar,
   searchSlot,
 }: DashboardTopbarProps) {
+  const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
   const pathname = usePathname();
   const page = getPageMeta(pathname);
   const onCreatePage = pathname === "/dashboard/leads/new";
@@ -110,13 +111,20 @@ export function DashboardTopbar({
             </Link>
           ) : null}
 
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "h-9 w-9 ring-1 ring-border",
-              },
-            }}
-          />
+          {isE2ETestMode ? (
+            <div
+              className="h-9 w-9 rounded-full border bg-muted/40"
+              aria-label="Test user avatar"
+            />
+          ) : (
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "h-9 w-9 ring-1 ring-border",
+                },
+              }}
+            />
+          )}
         </div>
       </div>
 

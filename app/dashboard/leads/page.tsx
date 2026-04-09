@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { getLeadsList } from "@/app/dashboard/leads/queries";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyLeadsState } from "@/components/leads/empty-leads-state";
+import { ExportLeadsMenu } from "@/components/leads/export-leads-menu";
 import { LeadFilters } from "@/components/leads/lead-filters";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { Button } from "@/components/ui/button";
@@ -45,12 +46,15 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         title="Leads"
         description="Search, filter, and manage every lead from one clean workspace."
         action={
-          <Button asChild>
-            <Link href="/dashboard/leads/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Lead
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" />
+            <Button asChild data-testid="add-lead-btn">
+              <Link href="/dashboard/leads/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Lead
+              </Link>
+            </Button>
+          </div>
         }
       />
 

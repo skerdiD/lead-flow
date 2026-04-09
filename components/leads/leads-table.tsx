@@ -20,6 +20,7 @@ import {
   bulkUpdateLeadStatusAction,
 } from "@/app/dashboard/leads/actions";
 import { DeleteLeadDialog } from "@/components/leads/delete-lead-dialog";
+import { ExportLeadsMenu } from "@/components/leads/export-leads-menu";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import {
   AlertDialog,
@@ -294,7 +295,7 @@ export function LeadsTable({
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="space-y-3" data-testid="leads-table-section">
         {selectedCount > 0 ? (
           <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">
@@ -302,9 +303,15 @@ export function LeadsTable({
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
+              <ExportLeadsMenu
+                selectedIds={selectedLeadIds}
+                buttonLabel="Export selected"
+                testId="export-selected-leads"
+              />
+
               <div className="w-[170px]">
                 <Select value={bulkStatus || "none"} onValueChange={setBulkStatus} disabled={isPending}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="bulk-status-select">
                     <SelectValue placeholder="Set stage" />
                   </SelectTrigger>
                   <SelectContent>
@@ -323,6 +330,7 @@ export function LeadsTable({
                 variant="outline"
                 onClick={handleBulkStatusApply}
                 disabled={!bulkStatus || bulkStatus === "none" || isPending}
+                data-testid="bulk-apply-stage-btn"
               >
                 {isPending ? (
                   <>
@@ -339,6 +347,7 @@ export function LeadsTable({
                 variant="destructive"
                 onClick={() => setDeleteOpen(true)}
                 disabled={isPending}
+                data-testid="bulk-delete-btn"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete selected
@@ -347,7 +356,7 @@ export function LeadsTable({
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-3xl border bg-background shadow-sm">
+        <div className="overflow-hidden rounded-3xl border bg-background shadow-sm" data-testid="leads-table-wrapper">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -360,6 +369,7 @@ export function LeadsTable({
                       onChange={(event) => toggleSelectAll(event.target.checked)}
                       className="h-4 w-4 rounded border border-input accent-primary"
                       aria-label="Select all leads on page"
+                      data-testid="select-all-leads"
                     />
                   </TableHead>
 
@@ -392,7 +402,11 @@ export function LeadsTable({
 
               <TableBody>
                 {leads.map((lead) => (
-                  <TableRow key={lead.id} className="group border-b border-border/60 hover:bg-muted/10">
+                  <TableRow
+                    key={lead.id}
+                    className="group border-b border-border/60 hover:bg-muted/10"
+                    data-testid={`lead-row-${lead.id}`}
+                  >
                     <TableCell className="px-3 py-4 align-middle">
                       <input
                         type="checkbox"
@@ -400,6 +414,7 @@ export function LeadsTable({
                         onChange={(event) => toggleRow(lead.id, event.target.checked)}
                         className="h-4 w-4 rounded border border-input accent-primary"
                         aria-label={`Select ${lead.fullName}`}
+                        data-testid={`select-lead-${lead.id}`}
                       />
                     </TableCell>
 
@@ -453,14 +468,14 @@ export function LeadsTable({
                     <TableCell className="px-6 py-4 align-middle">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button asChild size="sm" variant="outline" className="h-8 px-2.5">
-                          <Link href={`/dashboard/leads/${lead.id}`} aria-label="View lead">
+                          <Link href={`/dashboard/leads/${lead.id}`} aria-label="View lead" data-testid={`view-lead-${lead.id}`}>
                             <Eye className="mr-1.5 h-3.5 w-3.5" />
                             View
                           </Link>
                         </Button>
 
                         <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                          <Link href={`/dashboard/leads/${lead.id}/edit`} aria-label="Edit lead">
+                          <Link href={`/dashboard/leads/${lead.id}/edit`} aria-label="Edit lead" data-testid={`edit-lead-${lead.id}`}>
                             <Pencil className="h-4 w-4" />
                           </Link>
                         </Button>
@@ -485,7 +500,7 @@ export function LeadsTable({
               <span className="text-sm text-muted-foreground">Rows</span>
               <div className="w-[84px]">
                 <Select value={String(pageSize)} onValueChange={handlePageSizeChange} disabled={isPending}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="rows-per-page-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -500,13 +515,14 @@ export function LeadsTable({
             </div>
 
             <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(page - 1)}
-                disabled={page <= 1 || isPending}
-              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(page - 1)}
+                  disabled={page <= 1 || isPending}
+                  data-testid="pagination-prev-btn"
+                >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Prev
               </Button>
@@ -525,6 +541,7 @@ export function LeadsTable({
                     onClick={() => goToPage(item)}
                     disabled={isPending}
                     className="min-w-8"
+                    data-testid={`pagination-page-${item}`}
                   >
                     {item}
                   </Button>
@@ -537,6 +554,7 @@ export function LeadsTable({
                 size="sm"
                 onClick={() => goToPage(page + 1)}
                 disabled={page >= pageCount || isPending}
+                data-testid="pagination-next-btn"
               >
                 Next
                 <ChevronRight className="ml-1 h-4 w-4" />
