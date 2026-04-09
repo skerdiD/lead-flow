@@ -510,7 +510,7 @@ export function HomePageMarketing() {
                       <div className="p-4">
                         <div className="overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
                           <Image
-                            src="/screenshoots/Image1.png"
+                            src="/screenshoots/Screenshot 2026-04-09 104021.png"
                             alt="LeadFlow dashboard preview"
                             width={1440}
                             height={900}
@@ -537,22 +537,22 @@ export function HomePageMarketing() {
                   </Card>
                 </LoadIn>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:auto-rows-fr md:grid-cols-2">
                   <LoadIn delay={140}>
-                    <Card className="leadflow-hover-preview overflow-hidden rounded-3xl border border-black/10 bg-white/90 py-0 shadow-sm ring-0 dark:border-white/10 dark:bg-slate-900/80">
-                      <CardContent className="p-0">
+                    <Card className="leadflow-hover-preview h-full overflow-hidden rounded-3xl border border-black/10 bg-white/90 py-0 shadow-sm ring-0 dark:border-white/10 dark:bg-slate-900/80">
+                      <CardContent className="flex h-full flex-col p-0">
                         <div className="flex items-center justify-between border-b border-black/10 bg-slate-50/70 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
                           <span>Leads workspace</span>
                           <span>Status + ownership</span>
                         </div>
-                        <div className="p-4">
-                          <div className="overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+                        <div className="flex flex-1 p-4">
+                          <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
                             <Image
-                              src="/screenshoots/Image2.png"
+                              src="/screenshoots/Screenshot 2026-04-09 104044.png"
                               alt="LeadFlow leads management preview"
                               width={1180}
                               height={760}
-                              className="h-auto w-full"
+                              className="h-full min-h-[220px] w-full object-cover object-top"
                             />
                           </div>
                         </div>
@@ -561,20 +561,20 @@ export function HomePageMarketing() {
                   </LoadIn>
 
                   <LoadIn delay={220}>
-                    <Card className="leadflow-hover-preview overflow-hidden rounded-3xl border border-black/10 bg-white/90 py-0 shadow-sm ring-0 dark:border-white/10 dark:bg-slate-900/80">
-                      <CardContent className="p-0">
+                    <Card className="leadflow-hover-preview h-full overflow-hidden rounded-3xl border border-black/10 bg-white/90 py-0 shadow-sm ring-0 dark:border-white/10 dark:bg-slate-900/80">
+                      <CardContent className="flex h-full flex-col p-0">
                         <div className="flex items-center justify-between border-b border-black/10 bg-slate-50/70 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
                           <span>Activity timeline</span>
                           <span>Full deal history</span>
                         </div>
-                        <div className="p-4">
-                          <div className="overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+                        <div className="flex flex-1 p-4">
+                          <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
                             <Image
-                              src="/screenshoots/Image4.png"
+                              src="/screenshoots/Screenshot 2026-04-09 104139.png"
                               alt="LeadFlow activity timeline preview"
                               width={1180}
                               height={760}
-                              className="h-auto w-full"
+                              className="h-full min-h-[220px] w-full object-cover object-top"
                             />
                           </div>
                         </div>
