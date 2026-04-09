@@ -19,10 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type HomePageProps = {
-  userId?: string | null;
-};
-
 const navLinks = [
   { label: "Why LeadFlow", href: "#why" },
   { label: "Capabilities", href: "#capabilities" },
@@ -148,8 +144,8 @@ type LoadInProps = {
 function LoadIn({ children, className, delay = 0 }: LoadInProps) {
   return (
     <div
-      className={cn("animate-in fade-in-0 duration-700", className)}
-      style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
+      className={cn("leadflow-load-in", className)}
+      style={{ animationDelay: `${delay}ms` }}
     >
       {children}
     </div>
@@ -178,9 +174,9 @@ function SectionIntro({ eyebrow, title, description }: SectionIntroProps) {
   );
 }
 
-export function HomePageMarketing({ userId }: HomePageProps) {
-  const primaryHref = userId ? "/dashboard" : "/sign-up";
-  const primaryLabel = userId ? "Enter workspace" : "Start free";
+export function HomePageMarketing() {
+  const primaryHref = "/dashboard";
+  const primaryLabel = "Enter workspace";
   const footerYear = 2026;
 
   return (
@@ -205,11 +201,9 @@ export function HomePageMarketing({ userId }: HomePageProps) {
           </nav>
 
           <div className="flex items-center gap-2">
-            {!userId ? (
-              <Button asChild variant="ghost" size="sm" className="hidden h-9 rounded-xl px-3 sm:inline-flex">
-                <Link href="/sign-in">Sign in</Link>
-              </Button>
-            ) : null}
+            <Button asChild variant="ghost" size="sm" className="hidden h-9 rounded-xl px-3 sm:inline-flex">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
             <Button
               asChild
               size="sm"
@@ -462,28 +456,52 @@ export function HomePageMarketing({ userId }: HomePageProps) {
             </LoadIn>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <LoadIn>
-                <Card className="overflow-hidden rounded-[2rem] border border-black/10 bg-white/90 py-0 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.55)] ring-0 dark:border-white/10 dark:bg-slate-900/85 dark:shadow-[0_34px_100px_-54px_rgba(2,6,23,0.92)]">
-                  <CardContent className="p-0">
-                    <div className="flex items-center justify-between border-b border-black/10 bg-slate-50/80 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-950/65 dark:text-slate-400">
-                      <span>LeadFlow dashboard</span>
-                      <span>Live pipeline snapshot</span>
-                    </div>
-                    <div className="p-3">
-                      <div className="overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
-                        <Image
-                          src="/screenshoots/Image1.png"
-                          alt="LeadFlow dashboard preview"
-                          width={1440}
-                          height={900}
-                          className="h-auto w-full"
-                          priority
-                        />
+              <div className="space-y-4">
+                <LoadIn>
+                  <Card className="overflow-hidden rounded-[2rem] border border-black/10 bg-white/90 py-0 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.55)] ring-0 dark:border-white/10 dark:bg-slate-900/85 dark:shadow-[0_34px_100px_-54px_rgba(2,6,23,0.92)]">
+                    <CardContent className="p-0">
+                      <div className="flex items-center justify-between border-b border-black/10 bg-slate-50/80 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-950/65 dark:text-slate-400">
+                        <span>LeadFlow dashboard</span>
+                        <span>Live pipeline snapshot</span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </LoadIn>
+                      <div className="p-3">
+                        <div className="overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
+                          <Image
+                            src="/screenshoots/Image1.png"
+                            alt="LeadFlow dashboard preview"
+                            width={1440}
+                            height={900}
+                            className="h-auto w-full"
+                            priority
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </LoadIn>
+
+                <LoadIn delay={140}>
+                  <Card className="overflow-hidden rounded-3xl border border-black/10 bg-white/90 py-0 shadow-sm ring-0 dark:border-white/10 dark:bg-slate-900/80">
+                    <CardContent className="p-0">
+                      <div className="flex items-center justify-between border-b border-black/10 bg-slate-50/70 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+                        <span>Leads workspace</span>
+                        <span>Status and ownership view</span>
+                      </div>
+                      <div className="p-3">
+                        <div className="overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+                          <Image
+                            src="/screenshoots/Image2.png"
+                            alt="LeadFlow leads management preview"
+                            width={1180}
+                            height={760}
+                            className="h-auto w-full"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </LoadIn>
+              </div>
 
               <div className="space-y-4">
                 {previewHighlights.map((item, index) => (
@@ -648,8 +666,8 @@ export function HomePageMarketing({ userId }: HomePageProps) {
             <div className="mt-4 space-y-2 text-sm text-slate-400">
               <a href="#workflow" className="block transition-colors hover:text-white">How it works</a>
               <a href="#cta" className="block transition-colors hover:text-white">Get started</a>
-              <Link href={userId ? "/dashboard" : "/sign-in"} className="block transition-colors hover:text-white">
-                {userId ? "Workspace" : "Sign in"}
+              <Link href="/sign-in" className="block transition-colors hover:text-white">
+                Sign in
               </Link>
             </div>
           </div>
