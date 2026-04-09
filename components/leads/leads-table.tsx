@@ -425,7 +425,13 @@ export function LeadsTable({
                         </div>
 
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">{lead.fullName}</p>
+                          <Link
+                            href={`/dashboard/leads/${lead.id}/edit`}
+                            className="truncate text-sm font-semibold text-foreground transition-colors hover:text-primary"
+                            data-testid={`lead-name-link-${lead.id}`}
+                          >
+                            {lead.fullName}
+                          </Link>
                           <p className="truncate text-xs text-muted-foreground">
                             {lead.company?.trim() || "No company"}
                           </p>

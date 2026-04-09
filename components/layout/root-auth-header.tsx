@@ -13,8 +13,8 @@ export function RootAuthHeader() {
   return (
     <header className="flex w-full items-center justify-end gap-2 p-4">
       <Show when="signed-out">
-        <SignInButton />
-        <SignUpButton />
+        <SignInButton fallbackRedirectUrl="/dashboard" forceRedirectUrl="/dashboard" />
+        <SignUpButton fallbackRedirectUrl="/dashboard" forceRedirectUrl="/dashboard" />
       </Show>
       <Show when="signed-in">
         <UserButton />

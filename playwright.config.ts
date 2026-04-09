@@ -26,6 +26,7 @@ export default defineConfig({
       E2E_TEST_MODE: "1",
       NEXT_PUBLIC_E2E_TEST_MODE: "1",
       E2E_USER_ID: process.env.E2E_USER_ID || "e2e-user",
+      E2E_TEST_SECRET: process.env.E2E_TEST_SECRET || "leadflow-local-e2e-secret",
     },
   },
   projects: [

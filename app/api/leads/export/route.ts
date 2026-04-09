@@ -94,6 +94,7 @@ export async function GET(request: Request) {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": disposition,
         "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   }
@@ -104,6 +105,7 @@ export async function GET(request: Request) {
       "Content-Type": "application/pdf",
       "Content-Disposition": disposition,
       "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

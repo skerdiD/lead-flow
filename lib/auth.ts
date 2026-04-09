@@ -1,12 +1,13 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 const getCachedAuth = cache(async () => auth());
 const getCachedCurrentUser = cache(async () => currentUser());
 
 function getE2ETestUserId() {
-  if (process.env.E2E_TEST_MODE !== "1") return null;
+  if (!isSafeE2ETestMode()) return null;
   return process.env.E2E_USER_ID || "e2e-user";
 }
 
@@ -34,7 +35,7 @@ export async function requireUserId() {
 export async function requireCurrentUser() {
   const userId = await requireUserId();
 
-  if (process.env.E2E_TEST_MODE === "1") {
+  if (isSafeE2ETestMode()) {
     return {
       userId,
       user: {

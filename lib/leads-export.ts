@@ -37,11 +37,13 @@ function toCsvDate(date: Date) {
 }
 
 function escapeCsvValue(value: string) {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+  const normalized = /^[\s]*[=+\-@]/.test(value) ? `'${value}` : value;
+
+  if (normalized.includes(",") || normalized.includes('"') || normalized.includes("\n")) {
+    return `"${normalized.replace(/"/g, '""')}"`;
   }
 
-  return value;
+  return normalized;
 }
 
 function toDisplayValue(value: string | null) {

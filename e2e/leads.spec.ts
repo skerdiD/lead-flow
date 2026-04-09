@@ -1,7 +1,12 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 async function resetWorkspace(request: APIRequestContext) {
-  const response = await request.post("/api/testing/e2e/reset");
+  const response = await request.post("/api/testing/e2e/reset", {
+    headers: {
+      "x-e2e-test-secret":
+        process.env.E2E_TEST_SECRET || "leadflow-local-e2e-secret",
+    },
+  });
   expect(response.ok()).toBeTruthy();
 }
 

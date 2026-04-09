@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -7,7 +8,7 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (process.env.E2E_TEST_MODE === "1") {
+  if (isSafeE2ETestMode()) {
     return;
   }
 
