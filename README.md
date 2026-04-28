@@ -1,111 +1,432 @@
 # Lead Flow
 
-Lead Flow is a modern full-stack CRM-style SaaS app built for managing leads, tracking pipeline activity, and making the workflow more organized with AI support.
+**Lead Flow** is a modern full-stack CRM-style SaaS application built for managing leads, tracking pipeline activity, exporting lead data, and supporting sales workflows with an AI assistant.
 
-I built it with a production-style stack, focusing on authenticated dashboards, lead management, clean UI, and secure server-side logic.
+It demonstrates authentication, protected dashboards, lead CRUD, per-user data ownership, dashboard analytics, validated server actions, AI-powered assistance, CSV/PDF exports, automated tests, CI, and production-minded SaaS UI/UX.
 
-## Live Demo
+[Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) · [Features](#features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Testing and CI](#testing-and-ci)
 
-[View live app](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/)
+---
+
+## Preview
+
+### Live App
+
+https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/
+
+### Landing Page Hero
+
+![Lead Flow landing page hero](./public/screenshots/landing-hero.png)
+
+### Why Lead Flow Section
+
+![Why Lead Flow section](./public/screenshots/why-leadflow-section.png)
+
+### Workflow Section
+
+![Lead Flow workflow section](./public/screenshots/workflow-section.png)
+
+### Dashboard Overview
+
+![Lead Flow dashboard overview](./public/screenshots/dashboard-overview.png)
+
+### Dashboard Charts
+
+![Lead Flow dashboard charts](./public/screenshots/dashboard-charts.png)
+
+### Leads Workspace
+
+![Lead Flow leads workspace](./public/screenshots/leads-workspace.png)
+
+### Activity Timeline
+
+![Lead Flow activity timeline](./public/screenshots/activity-timeline.png)
+
+### Mobile Create Lead View
+
+![Lead Flow create lead mobile view](./public/screenshots/create-lead-mobile.png)
+
+---
 
 ## Overview
 
-Lead Flow is designed as a startup-style lead management platform where each user can:
+Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product.
 
-- create and manage their own leads
-- organize pipeline data inside a clean dashboard
-- monitor pipeline momentum with visual charts for stages and lead sources
-- update lead details through validated server actions
-- use an AI-powered assistant inside the app
-- work in a protected authenticated experience
+The app includes authenticated users, protected dashboard routes, lead creation and editing, pipeline tracking, source analytics, CSV/PDF export, an AI assistant, server-side validation, database persistence, bot/rate-limit protection, and a responsive premium interface.
 
-This project was built to show full-stack product thinking, not just separate UI pages.
+The goal was not only to build a working CRUD app, but to show product thinking, user experience, secure server-side logic, database design, testing, and business value.
+
+---
 
 ## Features
 
-- Authentication with Clerk
-- Protected dashboard routes
-- Lead creation, editing, and deletion
-- Dashboard charts for pipeline stage distribution and source performance
-- Per-user data ownership
-- AI chat assistant
-- Server-side validation with Zod
-- Database access with Drizzle ORM
-- PostgreSQL database integration
-- Bot/rate-limit protection with Arcjet
-- Responsive SaaS-style UI built with reusable components
-- Lead export on `/dashboard/leads` (CSV and PDF)
+### Authentication and User Access
 
-## Testing & CI
+* Authentication with Clerk
+* Protected dashboard routes
+* Per-user data ownership
+* Test-mode authentication support for E2E flows
+* Secure access to dashboard and lead data
 
-Implemented focused, high-value automated checks:
+### Lead Management
 
-- Validation unit tests for lead form rules (`lib/validations/lead.test.ts`)
-- Lead server action tests for:
-  - create lead
-  - update lead
-  - delete lead
-  (`app/dashboard/leads/actions.test.ts`)
-- Lead list query tests for filtering + pagination behavior (`app/dashboard/leads/queries.test.ts`)
-- Chat API route tests for:
-  - auth/content-type guardrails
-  - one successful request path
-  (`app/api/chat/route.test.ts`)
-- Browser E2E coverage with Playwright for:
-  - protected dashboard access in test auth mode
-  - leads page load
-  - create/edit/status change/delete lead flow
-  - CSV/PDF export download checks
-  (`e2e/leads.spec.ts`)
+* Create new leads
+* Edit existing leads
+* Delete leads
+* Update lead status
+* Track lead source
+* Manage lead details inside a focused workspace
+* Filter and paginate leads
+* Export leads from `/dashboard/leads`
 
-### E2E Commands
+### Dashboard Analytics
 
-- `npm run e2e:install`
-- `npm run e2e`
-- `npm run e2e:headed`
+* Pipeline overview cards
+* Stage distribution charts
+* Lead source performance charts
+* Visual dashboard for understanding pipeline momentum
+* Activity timeline for recent lead movement
 
-Playwright starts the app in test mode with `E2E_TEST_MODE=1` and a deterministic user id (`e2e-user`) so protected flows can be tested without interactive Clerk sign-in.
+### AI Assistant
 
-CI pipeline (`.github/workflows/ci.yml`) runs on push/PR and executes:
+* AI-powered assistant inside the app
+* Chat API route with guardrails
+* Auth and content-type protection
+* Useful support for lead-management workflows
 
-- `npm ci`
-- `npm run typecheck`
-- `npm run test`
-- `npm run build`
+### Export Functionality
+
+* CSV export for lead data
+* PDF export for lead data
+* Download checks covered by Playwright E2E tests
+* Useful for reporting, sharing, and offline review
+
+### Security and Validation
+
+* Server-side validation with Zod
+* Protected server actions
+* Per-user database access patterns
+* Arcjet bot/rate-limit protection
+* API route guardrails
+* Environment-variable based configuration
+
+### Performance and UX
+
+* Responsive SaaS-style dashboard
+* Clean landing page
+* Reusable UI components
+* Mobile-friendly lead creation flow
+* Smooth dashboard navigation
+* Clear empty states and form interactions
+* Production build support
+
+---
 
 ## Tech Stack
 
 ### Frontend
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
 
-### Backend / Server
-- Next.js App Router
-- Server Actions
-- API Routes
-- Zod validation
+* Next.js App Router
+* React
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+* Recharts
 
-### Auth / Database / Infra
-- Clerk
-- Drizzle ORM
-- PostgreSQL
-- Arcjet
-- Vercel
+### Backend and Server
 
-## LeadFlow Screenshots
+* Next.js Server Actions
+* API Routes
+* Zod validation
+* Drizzle ORM
+* PostgreSQL
 
-![Landing page hero](./public/screenshots/landing-hero.png)
-![Why LeadFlow section](./public/screenshots/why-leadflow-section.png)
-![Workflow section](./public/screenshots/workflow-section.png)
-![Dashboard overview](./public/screenshots/dashboard-overview.png)
-![Dashboard charts](./public/screenshots/dashboard-charts.png)
-![Leads workspace](./public/screenshots/leads-workspace.png)
-![Activity timeline](./public/screenshots/activity-timeline.png)
-![Create lead mobile view](./public/screenshots/create-lead-mobile.png)
+### Auth, Security, and Infra
 
-## Live Deployment
+* Clerk
+* Arcjet
+* Vercel
+* Environment-based secrets
 
-https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/
+### Testing and Tooling
+
+* Vitest
+* Playwright
+* TypeScript compiler
+* GitHub Actions
+* ESLint
+
+---
+
+## Architecture Overview
+
+Lead Flow uses a modern full-stack architecture built around the Next.js App Router.
+
+```txt
+Client UI
+  |-- Next.js App Router
+  |-- React Components
+  |-- Tailwind CSS / shadcn UI
+  |-- Dashboard Charts
+  |-- Lead Forms
+
+Server Layer
+  |-- Server Actions
+  |-- API Routes
+  |-- Zod Validation
+  |-- Auth Checks
+  |-- Arcjet Protection
+
+Database Layer
+  |-- PostgreSQL
+  |-- Drizzle ORM
+  |-- User-Owned Lead Records
+
+AI Layer
+  |-- Chat API Route
+  |-- Auth Guardrails
+  |-- Content-Type Validation
+
+Quality Layer
+  |-- TypeScript
+  |-- Vitest
+  |-- Playwright
+  |-- GitHub Actions
+```
+
+The app keeps lead data tied to the authenticated user, validates important mutations on the server, and uses automated tests to protect the core product flow.
+
+---
+
+## Product Flow
+
+1. A user visits the landing page.
+2. The user signs in with Clerk.
+3. The user enters the protected dashboard.
+4. The user creates and manages leads.
+5. The dashboard visualizes pipeline stages and lead sources.
+6. The user can update, delete, filter, and paginate leads.
+7. The user can export lead data as CSV or PDF.
+8. The AI assistant supports workflow-related questions.
+9. Tests and CI verify the most important product paths.
+
+---
+
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/skerdiD/lead-flow.git
+cd lead-flow
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Create environment variables
+
+Create a `.env.local` file in the root of the project.
+
+```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+
+DATABASE_URL=
+
+ARCJET_KEY=
+
+OPENAI_API_KEY=
+```
+
+If your AI provider uses a different key name, use the exact variable name configured in the project.
+
+### 4. Push or migrate the database schema
+
+```bash
+npm run db:push
+```
+
+If the project uses migrations instead, run the migration command configured in the repository.
+
+### 5. Start the development server
+
+```bash
+npm run dev
+```
+
+Open the app at:
+
+```txt
+http://localhost:3000
+```
+
+---
+
+## Available Scripts
+
+```bash
+npm run dev          # Start the development server
+npm run build        # Create a production build
+npm run start        # Start the production server
+npm run typecheck    # Run TypeScript checks
+npm run test         # Run Vitest tests
+npm run e2e:install  # Install Playwright browsers
+npm run e2e          # Run Playwright E2E tests
+npm run e2e:headed   # Run Playwright E2E tests in headed mode
+```
+
+---
+
+## Testing and CI
+
+Lead Flow includes focused automated coverage for the most important product paths.
+
+### Unit and Server Action Tests
+
+The test suite covers:
+
+* Lead form validation rules
+* Create lead server action
+* Update lead server action
+* Delete lead server action
+* Lead list filtering
+* Lead list pagination
+* Chat API route guardrails
+* Successful chat API request path
+
+Example test locations:
+
+```txt
+lib/validations/lead.test.ts
+app/dashboard/leads/actions.test.ts
+app/dashboard/leads/queries.test.ts
+app/api/chat/route.test.ts
+```
+
+### End-to-End Tests
+
+Playwright covers core browser flows:
+
+* Protected dashboard access in test auth mode
+* Leads page load
+* Create lead flow
+* Edit lead flow
+* Status change flow
+* Delete lead flow
+* CSV export download
+* PDF export download
+
+Example E2E location:
+
+```txt
+e2e/leads.spec.ts
+```
+
+### E2E Commands
+
+```bash
+npm run e2e:install
+npm run e2e
+npm run e2e:headed
+```
+
+Playwright starts the app in test mode with:
+
+```txt
+E2E_TEST_MODE=1
+```
+
+and uses a deterministic user id:
+
+```txt
+e2e-user
+```
+
+This allows protected dashboard flows to be tested without interactive Clerk sign-in.
+
+### CI Pipeline
+
+The GitHub Actions workflow runs on push and pull request.
+
+CI executes:
+
+```bash
+npm ci
+npm run typecheck
+npm run test
+npm run build
+```
+
+This helps verify type safety, business logic, tests, and production build readiness before changes are merged.
+
+---
+
+## What This Project Demonstrates
+
+Lead Flow shows experience with more than basic CRUD development.
+
+It demonstrates:
+
+* Full-stack SaaS architecture
+* Authenticated dashboard development
+* CRM-style product flows
+* Lead management logic
+* User-owned data access
+* Server-side validation
+* Database modeling with Drizzle ORM
+* API route guardrails
+* AI feature integration
+* Dashboard analytics and charts
+* Export functionality
+* Playwright E2E testing
+* CI workflow setup
+* Production-ready UI/UX thinking
+
+---
+
+## Business Value
+
+Lead Flow represents the type of internal tool that freelancers, agencies, startups, and small sales teams need to organize pipeline activity and avoid losing potential customers.
+
+From a business perspective, this project supports:
+
+* Better lead organization
+* Faster follow-up workflows
+* Clear pipeline visibility
+* Better understanding of lead sources
+* Easier reporting through CSV/PDF exports
+* AI-assisted workflow support
+* A foundation for a paid CRM-style SaaS product
+
+The strongest business value is not only the lead table itself, but the system around it: authentication, per-user data ownership, dashboard analytics, secure server actions, export functionality, and an interface that can grow into a real sales productivity platform.
+
+---
+
+## Future Improvements
+
+Possible improvements that could extend Lead Flow into a larger CRM product:
+
+* Team workspaces
+* Lead assignment
+* Lead notes and reminders
+* Email follow-up tracking
+* Kanban pipeline board
+* Calendar integration
+* Advanced analytics
+* Lead import from CSV
+* Webhook integrations
+* AI-generated follow-up suggestions
+* Stripe billing for SaaS plans
+* Admin dashboard
+
+---
+
+## Author
+
+Built by **skerdiD**.
+
+GitHub: [@skerdiD](https://github.com/skerdiD)
