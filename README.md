@@ -406,25 +406,6 @@ The strongest business value is not only the lead table itself, but the system a
 
 ---
 
-## Future Improvements
-
-Possible improvements that could extend Lead Flow into a larger CRM product:
-
-* Team workspaces
-* Lead assignment
-* Lead notes and reminders
-* Email follow-up tracking
-* Kanban pipeline board
-* Calendar integration
-* Advanced analytics
-* Lead import from CSV
-* Webhook integrations
-* AI-generated follow-up suggestions
-* Stripe billing for SaaS plans
-* Admin dashboard
-
----
-
 ## Author
 
 Built by **skerdiD**.
