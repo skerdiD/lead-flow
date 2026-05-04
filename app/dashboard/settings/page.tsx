@@ -1,7 +1,7 @@
 import { Bell, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
+import { requireCurrentUser } from "@/lib/auth";
 
 function SettingsSection({
   icon: Icon,
@@ -63,16 +63,28 @@ function SettingRow({
 }
 
 export default async function SettingsPage() {
-  const { userId } = await auth();
-  const user = await currentUser();
+  const { userId, user } = await requireCurrentUser();
+  const userRecord = user as Record<string, unknown>;
+  const firstName =
+    typeof userRecord.firstName === "string" ? userRecord.firstName : "";
+  const lastName =
+    typeof userRecord.lastName === "string" ? userRecord.lastName : "";
+  const username =
+    typeof userRecord.username === "string" ? userRecord.username : "";
+  const primaryEmailAddress =
+    typeof userRecord.primaryEmailAddress === "object" &&
+    userRecord.primaryEmailAddress !== null &&
+    "emailAddress" in userRecord.primaryEmailAddress &&
+    typeof userRecord.primaryEmailAddress.emailAddress === "string"
+      ? userRecord.primaryEmailAddress.emailAddress
+      : "";
 
   const fullName =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-    user?.username ||
+    [firstName, lastName].filter(Boolean).join(" ") ||
+    username ||
     "Account owner";
 
-  const primaryEmail =
-    user?.primaryEmailAddress?.emailAddress || "No email available";
+  const primaryEmail = primaryEmailAddress || "No email available";
 
   return (
     <div className="space-y-6">

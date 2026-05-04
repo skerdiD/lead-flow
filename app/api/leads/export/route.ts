@@ -10,20 +10,14 @@ import {
 } from "@/app/dashboard/leads/queries";
 import { requireUserId } from "@/lib/auth";
 import { buildLeadsCsv, buildLeadsPdf } from "@/lib/leads-export";
+import { normalizeUuidList } from "@/lib/uuid";
 
 export const runtime = "nodejs";
 
 function normalizeSelectedIds(rawSelected: string | null) {
   if (!rawSelected) return [];
 
-  return Array.from(
-    new Set(
-      rawSelected
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  ).slice(0, 500);
+  return normalizeUuidList(rawSelected.split(","), 500);
 }
 
 export async function GET(request: Request) {

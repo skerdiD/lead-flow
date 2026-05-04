@@ -4,10 +4,12 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { activityEvents, leadNotes, leads } from "@/db/schema";
+import { protectLeadMutation } from "@/lib/arcjet";
 import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
 import { leadNoteSchema } from "@/lib/validations/lead-note";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
+import { isUuid, normalizeUuidList } from "@/lib/uuid";
 
 export type LeadMutationState =
   | {
@@ -77,7 +79,7 @@ type LeadActivityEventType =
   | "lead_note_deleted";
 
 function normalizeLeadIds(leadIds: string[]) {
-  return Array.from(new Set(leadIds.filter(Boolean))).slice(0, 200);
+  return normalizeUuidList(leadIds, 200);
 }
 
 function isLeadStatus(value: string): value is LeadStatus {
@@ -112,11 +114,23 @@ async function createLeadActivity(params: {
   }
 }
 
+async function ensureLeadMutationAllowed() {
+  return protectLeadMutation();
+}
+
 export async function createLeadAction(
   input: LeadFormValues,
 ): Promise<LeadMutationState> {
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (!parsed.success) {
     return {
@@ -173,8 +187,23 @@ export async function updateLeadAction(
   leadId: string,
   input: LeadFormValues,
 ): Promise<LeadMutationState> {
+  if (!isUuid(leadId)) {
+    return {
+      success: false,
+      message: "This lead could not be found.",
+    };
+  }
+
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (!parsed.success) {
     return {
@@ -263,7 +292,22 @@ export async function updateLeadStatusQuickAction(
   leadId: string,
   status: string,
 ): Promise<LeadQuickStatusState> {
+  if (!isUuid(leadId)) {
+    return {
+      success: false,
+      message: "This lead could not be found.",
+    };
+  }
+
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (!isLeadStatus(status)) {
     return {
@@ -344,7 +388,22 @@ export async function updateLeadStatusQuickAction(
 export async function deleteLeadAction(
   leadId: string,
 ): Promise<DeleteLeadActionState> {
+  if (!isUuid(leadId)) {
+    return {
+      success: false,
+      message: "This lead could not be found or you do not have access to it.",
+    };
+  }
+
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   try {
     const [deletedLead] = await db
@@ -391,7 +450,15 @@ export async function bulkUpdateLeadStatusAction(
   status: string,
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (normalizedIds.length === 0) {
     return {
@@ -470,7 +537,15 @@ export async function bulkDeleteLeadsAction(
   leadIds: string[],
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (normalizedIds.length === 0) {
     return {
@@ -523,8 +598,23 @@ export async function createLeadNoteAction(
   leadId: string,
   content: string,
 ): Promise<LeadNoteMutationState> {
+  if (!isUuid(leadId)) {
+    return {
+      success: false,
+      message: "This lead could not be found.",
+    };
+  }
+
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (!parsed.success) {
     return {
@@ -584,8 +674,23 @@ export async function updateLeadNoteAction(
   noteId: string,
   content: string,
 ): Promise<LeadNoteMutationState> {
+  if (!isUuid(leadId) || !isUuid(noteId)) {
+    return {
+      success: false,
+      message: "This note could not be found.",
+    };
+  }
+
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   if (!parsed.success) {
     return {
@@ -660,7 +765,22 @@ export async function deleteLeadNoteAction(
   leadId: string,
   noteId: string,
 ): Promise<LeadNoteMutationState> {
+  if (!isUuid(leadId) || !isUuid(noteId)) {
+    return {
+      success: false,
+      message: "This note could not be found.",
+    };
+  }
+
   const userId = await requireUserId();
+  const protection = await ensureLeadMutationAllowed();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
 
   try {
     const [lead] = await db

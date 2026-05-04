@@ -92,12 +92,14 @@ const sortableColumns: SortableColumn[] = [
   { field: "createdAt", label: "Created" },
 ];
 
+const LEAD_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
 function formatDate(dateValue: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(dateValue));
+  return LEAD_DATE_FORMATTER.format(new Date(dateValue));
 }
 
 function getInitials(name: string) {

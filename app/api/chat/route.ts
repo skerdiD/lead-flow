@@ -138,11 +138,18 @@ export async function POST(req: Request) {
   const estimate = Math.max(1, Math.ceil(totalChars / 4));
   const lastMessage = extractLastMessageText(typedMessages.at(-1));
 
-  const decision = await aj.protect(req, {
-    userId,
-    requested: estimate,
-    sensitiveInfoValue: lastMessage,
-  });
+  let decision: Awaited<ReturnType<typeof aj.protect>>;
+  try {
+    decision = await aj.protect(req, {
+      userId,
+      requested: estimate,
+      sensitiveInfoValue: lastMessage,
+    });
+  } catch {
+    return new Response("AI service is temporarily unavailable", {
+      status: 503,
+    });
+  }
 
   if (decision.isDenied()) {
     if (decision.reason.isBot()) {
@@ -162,10 +169,16 @@ export async function POST(req: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const result = await streamText({
-    model: openai("gpt-4o"),
-    messages: modelMessages,
-  });
+  try {
+    const result = await streamText({
+      model: openai("gpt-4o"),
+      messages: modelMessages,
+    });
 
-  return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse();
+  } catch {
+    return new Response("AI service is temporarily unavailable", {
+      status: 502,
+    });
+  }
 }

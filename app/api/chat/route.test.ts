@@ -118,4 +118,26 @@ describe("POST /api/chat", () => {
     expect(arcjetProtectMock).toHaveBeenCalledTimes(1);
     expect(streamTextMock).toHaveBeenCalledTimes(1);
   });
+
+  it("returns 502 when the AI provider fails", async () => {
+    streamTextMock.mockRejectedValueOnce(new Error("provider down"));
+
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            parts: [{ type: "text", text: "Give me a short sales tip" }],
+          },
+        ],
+      }),
+    });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(502);
+    await expect(res.text()).resolves.toContain("temporarily unavailable");
+  });
 });

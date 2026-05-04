@@ -60,7 +60,7 @@ export type LeadsListResult = {
 };
 
 function normalizeSearch(value?: string) {
-  return value?.trim() ?? "";
+  return value?.trim().slice(0, 120) ?? "";
 }
 
 function normalizeStatus(value?: string) {
@@ -69,7 +69,7 @@ function normalizeStatus(value?: string) {
 }
 
 function normalizeSource(value?: string) {
-  return value?.trim() ?? "";
+  return value?.trim().slice(0, 100) ?? "";
 }
 
 function normalizeSortBy(value?: string): LeadsTableSortField {

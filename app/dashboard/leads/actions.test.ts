@@ -9,6 +9,7 @@ const {
   insertActivityValuesMock,
   updateReturningMock,
   deleteReturningMock,
+  protectLeadMutationMock,
   leadsTable,
   activityEventsTable,
   leadNotesTable,
@@ -22,6 +23,7 @@ const {
     insertActivityValuesMock: vi.fn(),
     updateReturningMock: vi.fn(),
     deleteReturningMock: vi.fn(),
+    protectLeadMutationMock: vi.fn(),
     leadsTable: {
       id: "id",
       userId: "user_id",
@@ -117,6 +119,10 @@ vi.mock("@/lib/auth", () => ({
   requireUserId: requireUserIdMock,
 }));
 
+vi.mock("@/lib/arcjet", () => ({
+  protectLeadMutation: protectLeadMutationMock,
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
 }));
@@ -137,11 +143,14 @@ const validLeadInput = {
   notes: "Interested in onboarding",
 };
 
+const leadId = "11111111-1111-4111-8111-111111111111";
+
 describe("lead actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     selectResults.length = 0;
     requireUserIdMock.mockResolvedValue("user_123");
+    protectLeadMutationMock.mockResolvedValue({ ok: true });
 
     insertLeadValuesMock.mockImplementation(() => ({
       returning: insertLeadReturningMock,
@@ -151,21 +160,21 @@ describe("lead actions", () => {
 
   it("createLeadAction creates a lead and activity event", async () => {
     insertLeadReturningMock.mockResolvedValue([
-      { id: "lead_1", fullName: "Jane Doe" },
+      { id: leadId, fullName: "Jane Doe" },
     ]);
 
     const result = await createLeadAction(validLeadInput);
 
     expect(result).toEqual({
       success: true,
-      leadId: "lead_1",
+      leadId,
       message: "Lead created successfully.",
     });
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user_123",
         eventType: "lead_created",
-        leadId: "lead_1",
+        leadId,
       }),
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/leads");
@@ -173,37 +182,37 @@ describe("lead actions", () => {
 
   it("updateLeadAction updates a lead and logs status change", async () => {
     selectResults.push([
-      { id: "lead_1", fullName: "Jane Doe", status: "New" },
+      { id: leadId, fullName: "Jane Doe", status: "New" },
     ]);
     updateReturningMock.mockResolvedValue([
-      { id: "lead_1", fullName: "Jane Doe", status: "Closed" },
+      { id: leadId, fullName: "Jane Doe", status: "Closed" },
     ]);
 
-    const result = await updateLeadAction("lead_1", {
+    const result = await updateLeadAction(leadId, {
       ...validLeadInput,
       status: "Closed",
     });
 
     expect(result).toEqual({
       success: true,
-      leadId: "lead_1",
+      leadId,
       message: "Lead updated successfully.",
     });
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "lead_status_changed",
-        leadId: "lead_1",
+        leadId,
       }),
     );
-    expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/leads/lead_1");
+    expect(revalidatePathMock).toHaveBeenCalledWith(`/dashboard/leads/${leadId}`);
   });
 
   it("deleteLeadAction deletes a lead and logs delete activity", async () => {
     deleteReturningMock.mockResolvedValue([
-      { id: "lead_1", fullName: "Jane Doe" },
+      { id: leadId, fullName: "Jane Doe" },
     ]);
 
-    const result = await deleteLeadAction("lead_1");
+    const result = await deleteLeadAction(leadId);
 
     expect(result).toEqual({
       success: true,
@@ -212,9 +221,19 @@ describe("lead actions", () => {
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "lead_deleted",
-        leadId: "lead_1",
+        leadId,
       }),
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/activity");
+  });
+
+  it("rejects invalid lead ids before querying the database", async () => {
+    const result = await updateLeadAction("not-a-uuid", validLeadInput);
+
+    expect(result).toEqual({
+      success: false,
+      message: "This lead could not be found.",
+    });
+    expect(protectLeadMutationMock).not.toHaveBeenCalled();
   });
 });

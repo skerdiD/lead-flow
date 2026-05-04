@@ -2,8 +2,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activityEvents, leadNotes, leads } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { isUuid } from "@/lib/uuid";
 
 export async function getLeadDetails(leadId: string) {
+  if (!isUuid(leadId)) {
+    return null;
+  }
+
   const userId = await requireUserId();
 
   const [lead] = await db
@@ -27,28 +32,29 @@ export async function getLeadDetails(leadId: string) {
     return null;
   }
 
-  const noteEntries = await db
-    .select({
-      id: leadNotes.id,
-      content: leadNotes.content,
-      createdAt: leadNotes.createdAt,
-      updatedAt: leadNotes.updatedAt,
-    })
-    .from(leadNotes)
-    .where(and(eq(leadNotes.leadId, leadId), eq(leadNotes.userId, userId)))
-    .orderBy(desc(leadNotes.createdAt));
-
-  const activityEntries = await db
-    .select({
-      id: activityEvents.id,
-      eventType: activityEvents.eventType,
-      message: activityEvents.message,
-      createdAt: activityEvents.createdAt,
-    })
-    .from(activityEvents)
-    .where(and(eq(activityEvents.leadId, leadId), eq(activityEvents.userId, userId)))
-    .orderBy(desc(activityEvents.createdAt))
-    .limit(8);
+  const [noteEntries, activityEntries] = await Promise.all([
+    db
+      .select({
+        id: leadNotes.id,
+        content: leadNotes.content,
+        createdAt: leadNotes.createdAt,
+        updatedAt: leadNotes.updatedAt,
+      })
+      .from(leadNotes)
+      .where(and(eq(leadNotes.leadId, leadId), eq(leadNotes.userId, userId)))
+      .orderBy(desc(leadNotes.createdAt)),
+    db
+      .select({
+        id: activityEvents.id,
+        eventType: activityEvents.eventType,
+        message: activityEvents.message,
+        createdAt: activityEvents.createdAt,
+      })
+      .from(activityEvents)
+      .where(and(eq(activityEvents.leadId, leadId), eq(activityEvents.userId, userId)))
+      .orderBy(desc(activityEvents.createdAt))
+      .limit(8),
+  ]);
 
   return {
     ...lead,

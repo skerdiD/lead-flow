@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 
-const optionalTrimmedString = (max: number, emptyMessage?: string) =>
+const optionalTrimmedString = (max: number) =>
   z.preprocess(
     (value) => {
       if (typeof value !== "string") return value;
@@ -33,7 +33,7 @@ export const leadFormSchema = z.object({
   fullName: z
     .string()
     .trim()
-    .min(2, "Please enter the lead’s full name.")
+    .min(2, "Please enter the lead's full name.")
     .max(120, "Full name must be 120 characters or less."),
   company: optionalTrimmedString(160),
   email: optionalEmail,

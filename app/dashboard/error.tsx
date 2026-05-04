@@ -10,7 +10,6 @@ type DashboardErrorProps = {
 };
 
 export default function DashboardError({
-  error: _error,
   reset,
 }: DashboardErrorProps) {
   return (
