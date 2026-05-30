@@ -1,133 +1,115 @@
 # Lead Flow
 
-**Lead Flow** is a modern full-stack CRM-style SaaS application built for managing leads, follow-ups, deal pipeline value, revenue forecasting, exporting lead data, and supporting sales workflows with an AI assistant.
+**Lead Flow** is a modern CRM-style SaaS application built with **Next.js**, **React**, **TypeScript**, **Clerk Auth**, **PostgreSQL**, **Drizzle ORM**, **Arcjet**, and a clean SaaS dashboard interface.
 
-It demonstrates authentication, protected dashboards, lead CRUD, per-user data ownership, dashboard analytics, validated server actions, AI-powered assistance, CSV/PDF exports, automated tests, CI, and production-minded SaaS UI/UX.
+It demonstrates authentication, protected dashboards, lead management, activity tracking, revenue pipeline metrics, weighted forecasting, CSV/PDF exports, AI assistant support, server-side validation, automated tests, CI, and production-minded UI/UX.
 
-[Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) · [Features](#features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Testing and CI](#testing-and-ci)
+[Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) | [Repository](https://github.com/skerdiD/lead-flow)
 
 ---
 
 ## Preview
 
-### Live App
+Explore the deployed app: [lead-flow-jx61pjm6w-skerdids-projects.vercel.app](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/)
 
-https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/
+### Landing Page
 
-### Landing Page Hero
+<img src="./public/screenshots/landing-hero.png" alt="Lead Flow landing page hero" width="100%">
+<img src="./public/screenshots/why-leadflow-section.png" alt="Lead Flow value section" width="100%">
+<img src="./public/screenshots/workflow-section.png" alt="Lead Flow workflow section" width="100%">
 
-![Lead Flow landing page hero](./public/screenshots/landing-hero.png)
+### CRM Dashboard
 
-### Why Lead Flow Section
-
-![Why Lead Flow section](./public/screenshots/why-leadflow-section.png)
-
-### Workflow Section
-
-![Lead Flow workflow section](./public/screenshots/workflow-section.png)
-
-### Dashboard Overview
-
-![Lead Flow dashboard overview](./public/screenshots/dashboard-overview.png)
-
-### Dashboard Charts
-
-![Lead Flow dashboard charts](./public/screenshots/dashboard-charts.png)
+<img src="./public/screenshots/dashboard-overview.png" alt="Lead Flow dashboard overview" width="100%">
+<img src="./public/screenshots/dashboard-charts.png" alt="Lead Flow dashboard charts" width="100%">
 
 ### Leads Workspace
 
-![Lead Flow leads workspace](./public/screenshots/leads-workspace.png)
-
-### Activity Timeline
-
-![Lead Flow activity timeline](./public/screenshots/activity-timeline.png)
-
-### Mobile Create Lead View
-
-![Lead Flow create lead mobile view](./public/screenshots/create-lead-mobile.png)
+<img src="./public/screenshots/leads-workspace.png" alt="Lead Flow leads workspace" width="100%">
+<img src="./public/screenshots/activity-timeline.png" alt="Lead Flow activity timeline" width="100%">
+<img src="./public/screenshots/create-lead-mobile.png" alt="Lead Flow mobile create lead view" width="100%">
 
 ---
 
 ## Overview
 
-Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product.
+Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product with authentication, protected dashboard routes, lead CRUD, activity tracking, revenue forecasting, exports, AI support, testing, and a polished interface.
 
-The app includes authenticated users, protected dashboard routes, lead creation and editing, follow-up tasks, deal values, weighted revenue forecasting, source analytics, CSV/PDF export, an AI assistant, server-side validation, database persistence, bot/rate-limit protection, and a responsive premium interface.
-
-The goal was not only to build a working CRUD app, but to show product thinking, user experience, secure server-side logic, database design, testing, and business value.
+The goal was to show more than CRUD: secure server actions, database modeling, dashboard analytics, business-focused pipeline tracking, export workflows, and product-focused UX.
 
 ---
 
-## Features
+## Business Value
 
-### Authentication and User Access
+Lead Flow demonstrates how a CRM can help freelancers, agencies, startups, and small sales teams organize leads, track opportunities, and understand pipeline value.
 
-* Authentication with Clerk
+For clients, it shows the foundation of a practical sales tool where users can manage leads, monitor activity, export reports, and view revenue-focused metrics like total pipeline value, weighted forecast, expected revenue, won revenue, and lost revenue.
+
+---
+
+## Key Features
+
+### Auth and Access
+
+* Clerk authentication
 * Protected dashboard routes
 * Per-user data ownership
-* Test-mode authentication support for E2E flows
-* Secure access to dashboard and lead data
+* Secure access to lead data
+* Test-mode auth support for E2E flows
 
 ### Lead Management
 
-* Create new leads
-* Edit existing leads
-* Delete leads
-* Update lead status
-* Track lead source
-* Manage lead details inside a focused workspace
-* Filter and paginate leads
-* Export leads from `/dashboard/leads`
+* Create, edit, and delete leads
+* Track lead status and source
+* Store contact details
+* Filter and paginate lead records
+* Manage leads inside a focused workspace
 
-### Dashboard Analytics
+### Revenue Pipeline
 
-* Pipeline overview cards
-* Revenue cards for total pipeline, weighted forecast, expected revenue, won revenue, and lost revenue
-* Stage distribution charts
-* Pipeline value by deal stage
+* Deal value tracking
+* Currency support
+* Probability percentage
+* Expected close date
+* Closed date tracking
+* Lost reason support
+* Open, won, and lost revenue visibility
+
+### Forecasting and Analytics
+
+* Total pipeline value
+* Weighted forecast value
+* Expected revenue this month
+* Won revenue
+* Lost revenue
+* Pipeline value by stage
 * Lead source performance charts
-* Visual dashboard for understanding pipeline momentum
-* Activity timeline for recent lead movement
-
-### Business Pipeline
-
-* Deals track value, currency, probability, expected close date, closed date, and lost reason
-* Weighted forecast is calculated from deal value multiplied by probability
-* Expected-this-month revenue highlights open deals forecasted to close in the current month
-* Won and lost revenue make outcomes visible beyond simple lead counts
+* Activity timeline
 
 ### AI Assistant
 
-* AI-powered assistant inside the app
-* Chat API route with guardrails
-* Auth and content-type protection
-* Useful support for lead-management workflows
+* AI assistant inside the app
+* CRM workflow support
+* Auth-protected chat route
+* Content-type validation
+* Arcjet-protected API route
 
-### Export Functionality
+### Exports
 
 * CSV export for lead data
 * PDF export for lead data
-* Download checks covered by Playwright E2E tests
-* Useful for reporting, sharing, and offline review
+* Download flows covered by E2E tests
+* Useful for reporting and offline review
 
-### Security and Validation
+### Security and Quality
 
-* Server-side validation with Zod
 * Protected server actions
-* Per-user database access patterns
-* Arcjet bot/rate-limit protection
-* API route guardrails
-* Environment-variable based configuration
-
-### Performance and UX
-
-* Responsive SaaS-style dashboard
-* Clean landing page
-* Reusable UI components
-* Mobile-friendly lead creation flow
-* Smooth dashboard navigation
-* Clear empty states and form interactions
-* Production build support
+* Zod validation
+* Server-side auth checks
+* User-scoped database access
+* Arcjet bot and rate-limit protection
+* API guardrails
+* Responsive SaaS interface
 
 ---
 
@@ -142,82 +124,59 @@ The goal was not only to build a working CRUD app, but to show product thinking,
 * shadcn/ui
 * Recharts
 
-### Backend and Server
+### Backend and Database
 
 * Next.js Server Actions
-* API Routes
-* Zod validation
-* Drizzle ORM
+* Next.js API Routes
 * PostgreSQL
+* Drizzle ORM
+* Zod validation
+* Typed database schema
 
-### Auth, Security, and Infra
+### Auth, AI, and Security
 
 * Clerk
+* OpenAI API
 * Arcjet
-* Vercel
 * Environment-based secrets
+* Vercel deployment
 
-### Testing and Tooling
+### Tooling
 
 * Vitest
 * Playwright
-* TypeScript compiler
-* GitHub Actions
 * ESLint
+* TypeScript compiler
+* Drizzle Kit
+* GitHub Actions
 
 ---
 
-## Architecture Overview
-
-Lead Flow uses a modern full-stack architecture built around the Next.js App Router.
+## Architecture
 
 ```txt
 Client UI
-  |-- Next.js App Router
-  |-- React Components
-  |-- Tailwind CSS / shadcn UI
-  |-- Dashboard Charts
-  |-- Lead Forms
+  |-- Next.js App Router / React / Tailwind / shadcn UI
+  |-- Dashboard Cards / Charts / Lead Forms / Export Buttons
 
 Server Layer
-  |-- Server Actions
-  |-- API Routes
-  |-- Zod Validation
-  |-- Auth Checks
-  |-- Arcjet Protection
+  |-- Server Actions / API Routes / Zod Validation
+  |-- Auth Checks / Arcjet Protection / AI Chat Route
 
 Database Layer
-  |-- PostgreSQL
-  |-- Drizzle ORM
-  |-- User-Owned Lead Records
+  |-- PostgreSQL / Drizzle ORM
+  |-- Leads / Activity Events / Revenue Pipeline Fields
 
-AI Layer
-  |-- Chat API Route
-  |-- Auth Guardrails
-  |-- Content-Type Validation
+CRM Layer
+  |-- Lead Status / Lead Sources / Activity Timeline
+  |-- CSV Export / PDF Export / Dashboard Analytics
 
-Quality Layer
-  |-- TypeScript
-  |-- Vitest
-  |-- Playwright
-  |-- GitHub Actions
+Revenue Layer
+  |-- Deal Value / Probability / Expected Close Date
+  |-- Total Pipeline / Weighted Forecast / Won and Lost Revenue
 ```
 
-The app keeps lead data tied to the authenticated user, validates important mutations on the server, and uses automated tests to protect the core product flow.
-
----
-
-## Product Flow
-
-1. A user visits the landing page.
-2. The user signs in with Clerk.
-3. The user enters the protected dashboard.
-4. The user creates and manages leads.
-5. The dashboard visualizes pipeline stages and lead sources.
-6. The user can update, delete, filter, and paginate leads.
-7. The user can export lead data as CSV or PDF.
-8. The AI assistant supports workflow-related questions.
-9. Tests and CI verify the most important product paths.
+Lead data is scoped to the authenticated user, important mutations are validated on the server, and dashboard analytics turn CRM activity into useful business metrics.
 
 ---
 
@@ -238,27 +197,15 @@ npm install
 
 ### 3. Create environment variables
 
-Create a `.env.local` file in the root of the project.
+Create a `.env.local` file in the project root:
 
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
-
 DATABASE_URL=
-
 ARCJET_KEY=
-
 OPENAI_API_KEY=
 ```
-
-Required for local app use:
-
-* `DATABASE_URL` - PostgreSQL connection string used by Drizzle and the app
-* `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` - Clerk authentication
-* `ARCJET_KEY` - Arcjet protection
-* `OPENAI_API_KEY` - AI assistant route
-
-If your AI provider uses a different key name, use the exact variable name configured in the project.
 
 ### 4. Run database migrations
 
@@ -266,9 +213,7 @@ If your AI provider uses a different key name, use the exact variable name confi
 npm run db:migrate
 ```
 
-This project uses committed Drizzle migrations. Use `npm run db:generate` only after changing `db/schema.ts`, review the generated SQL, then commit the new migration and snapshot files.
-
-Migration note: the file `db/migrations/0001_add_activity_events.sql` is intentionally retained under its original manual name for history. Drizzle applies migrations from `db/migrations/meta/_journal.json`, and that journal now includes the file in the safe migration order.
+Use `npm run db:generate` only after changing `db/schema.ts`, then review and commit the generated migration files.
 
 ### 5. Start the development server
 
@@ -282,20 +227,6 @@ Open the app at:
 http://localhost:3000
 ```
 
-### 6. Run tests
-
-```bash
-npm run typecheck
-npm run test
-```
-
-For browser E2E tests, install the Playwright browser first:
-
-```bash
-npm run e2e:install
-npm run e2e
-```
-
 ---
 
 ## Available Scripts
@@ -304,142 +235,41 @@ npm run e2e
 npm run dev          # Start the development server
 npm run build        # Create a production build
 npm run start        # Start the production server
-npm run typecheck    # Run TypeScript checks
 npm run lint         # Run ESLint
+npm run typecheck    # Run TypeScript checks
 npm run test         # Run Vitest tests
-npm run db:generate  # Generate a Drizzle migration after schema changes
-npm run db:migrate   # Apply committed Drizzle migrations
+npm run db:generate  # Generate Drizzle migrations
+npm run db:migrate   # Apply Drizzle migrations
 npm run e2e:install  # Install Playwright browsers
 npm run e2e          # Run Playwright E2E tests
-npm run e2e:headed   # Run Playwright E2E tests in headed mode
+npm run e2e:headed   # Run Playwright tests in headed mode
 ```
 
 ---
 
-## Testing and CI
+## Testing and Quality
 
-Lead Flow includes focused automated coverage for the most important product paths.
+* Vitest validates lead logic, validators, queries, and API guardrails
+* Playwright validates protected dashboard flows and lead actions
+* TypeScript catches type-level regressions
+* ESLint keeps code quality consistent
+* GitHub Actions runs checks on push and pull request
+* E2E tests cover create, edit, delete, status changes, CSV export, and PDF export
 
-### Unit and Server Action Tests
-
-The test suite covers:
-
-* Lead form validation rules
-* Create lead server action
-* Update lead server action
-* Delete lead server action
-* Lead list filtering
-* Lead list pagination
-* Chat API route guardrails
-* Successful chat API request path
-
-Example test locations:
-
-```txt
-lib/validations/lead.test.ts
-app/dashboard/leads/actions.test.ts
-app/dashboard/leads/queries.test.ts
-app/api/chat/route.test.ts
-```
-
-### End-to-End Tests
-
-Playwright covers core browser flows:
-
-* Protected dashboard access in test auth mode
-* Leads page load
-* Create lead flow
-* Edit lead flow
-* Status change flow
-* Delete lead flow
-* CSV export download
-* PDF export download
-
-Example E2E location:
-
-```txt
-e2e/leads.spec.ts
-```
-
-### E2E Commands
+Run the main quality suite:
 
 ```bash
-npm run e2e:install
-npm run e2e
-npm run e2e:headed
-```
-
-Playwright starts the app in test mode with:
-
-```txt
-E2E_TEST_MODE=1
-```
-
-and uses a deterministic user id:
-
-```txt
-e2e-user
-```
-
-This allows protected dashboard flows to be tested without interactive Clerk sign-in.
-
-### CI Pipeline
-
-The GitHub Actions workflow runs on push and pull request.
-
-CI executes:
-
-```bash
-npm ci
 npm run typecheck
 npm run test
 npm run build
 ```
 
-This helps verify type safety, business logic, tests, and production build readiness before changes are merged.
+Run browser tests:
 
----
-
-## What This Project Demonstrates
-
-Lead Flow shows experience with more than basic CRUD development.
-
-It demonstrates:
-
-* Full-stack SaaS architecture
-* Authenticated dashboard development
-* CRM-style product flows
-* Lead management logic
-* User-owned data access
-* Server-side validation
-* Database modeling with Drizzle ORM
-* API route guardrails
-* AI feature integration
-* Dashboard analytics and charts
-* Export functionality
-* Playwright E2E testing
-* CI workflow setup
-* Production-ready UI/UX thinking
-
----
-
-## Business Value
-
-Lead Flow represents the type of internal tool that freelancers, agencies, startups, and small sales teams need to organize pipeline activity, forecast revenue, and avoid losing potential customers.
-
-From a business perspective, this project supports:
-
-* Better lead organization
-* Faster follow-up workflows
-* Clear pipeline visibility
-* Deal value tracking and weighted revenue forecasting
-* Expected revenue visibility for the current month
-* Better understanding of lead sources
-* Easier reporting through CSV/PDF exports
-* AI-assisted workflow support
-* A foundation for a paid CRM-style SaaS product
-
-The strongest business value is not only the lead table itself, but the system around it: authentication, workspace-scoped data, follow-up tasks, opportunity values, forecast metrics, secure server actions, export functionality, and an interface that can grow into a real sales productivity platform.
+```bash
+npm run e2e:install
+npm run e2e
+```
 
 ---
 
