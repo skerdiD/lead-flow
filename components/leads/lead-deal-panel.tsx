@@ -10,6 +10,7 @@ import {
   DEAL_STAGES,
   type DealStage,
 } from "@/lib/constants/crm";
+import { formatCurrencyFromCents } from "@/lib/revenue";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -25,6 +26,12 @@ type LeadDealPanelProps = {
     id: string;
     name: string;
     stage: DealStage;
+    valueCents: number;
+    currency: string;
+    probability: number;
+    expectedCloseAt: Date | null;
+    closedAt: Date | null;
+    lostReason: string | null;
     updatedAt: Date;
   } | null;
 };
@@ -36,6 +43,16 @@ function formatDateTime(date: Date) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  }).format(date);
+}
+
+function formatDate(date: Date | null) {
+  if (!date) return "Not set";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   }).format(date);
 }
 
@@ -87,6 +104,33 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
         <Target className="h-4 w-4 text-muted-foreground" />
       </div>
 
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border bg-background p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Value
+          </p>
+          <p className="mt-2 text-lg font-semibold text-foreground">
+            {formatCurrencyFromCents(deal.valueCents, deal.currency)}
+          </p>
+        </div>
+        <div className="rounded-2xl border bg-background p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Probability
+          </p>
+          <p className="mt-2 text-lg font-semibold text-foreground">
+            {deal.probability}%
+          </p>
+        </div>
+        <div className="rounded-2xl border bg-background p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Expected close
+          </p>
+          <p className="mt-2 text-sm font-semibold text-foreground">
+            {formatDate(deal.expectedCloseAt)}
+          </p>
+        </div>
+      </div>
+
       <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Deal stage
@@ -123,8 +167,14 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
+        {deal.closedAt ? `Closed ${formatDate(deal.closedAt)} · ` : ""}
         Last updated {formatDateTime(deal.updatedAt)}
       </p>
+      {deal.lostReason ? (
+        <p className="mt-2 rounded-2xl border bg-muted/20 p-3 text-sm text-muted-foreground">
+          Lost reason: {deal.lostReason}
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import {
   index,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -245,6 +246,18 @@ export const deals = pgTable(
     }),
     name: varchar("name", { length: 160 }).notNull(),
     stage: dealStageEnum("stage").notNull().default("new"),
+    valueCents: integer("value_cents").notNull().default(0),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    probability: integer("probability").notNull().default(0),
+    expectedCloseAt: timestamp("expected_close_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    closedAt: timestamp("closed_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    lostReason: varchar("lost_reason", { length: 255 }),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",
@@ -260,6 +273,14 @@ export const deals = pgTable(
     index("deals_workspace_id_idx").on(table.workspaceId),
     index("deals_workspace_id_stage_idx").on(table.workspaceId, table.stage),
     index("deals_workspace_id_lead_id_idx").on(table.workspaceId, table.leadId),
+    index("deals_workspace_id_expected_close_idx").on(
+      table.workspaceId,
+      table.expectedCloseAt,
+    ),
+    index("deals_workspace_id_closed_at_idx").on(
+      table.workspaceId,
+      table.closedAt,
+    ),
     index("deals_workspace_id_owner_idx").on(table.workspaceId, table.ownerUserId),
     index("deals_user_id_idx").on(table.userId),
   ],

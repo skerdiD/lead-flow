@@ -18,6 +18,11 @@ export const DEAL_STAGE_LABELS: Record<DealStage, string> = {
   lost: "Lost",
 };
 
+export const DEAL_CURRENCIES = ["USD", "EUR", "GBP"] as const;
+export type DealCurrency = (typeof DEAL_CURRENCIES)[number];
+
+export const DEFAULT_DEAL_CURRENCY: DealCurrency = "USD";
+
 export const TASK_STATUSES = ["pending", "done", "overdue"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 

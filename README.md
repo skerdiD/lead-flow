@@ -1,6 +1,6 @@
 # Lead Flow
 
-**Lead Flow** is a modern full-stack CRM-style SaaS application built for managing leads, tracking pipeline activity, exporting lead data, and supporting sales workflows with an AI assistant.
+**Lead Flow** is a modern full-stack CRM-style SaaS application built for managing leads, follow-ups, deal pipeline value, revenue forecasting, exporting lead data, and supporting sales workflows with an AI assistant.
 
 It demonstrates authentication, protected dashboards, lead CRUD, per-user data ownership, dashboard analytics, validated server actions, AI-powered assistance, CSV/PDF exports, automated tests, CI, and production-minded SaaS UI/UX.
 
@@ -52,7 +52,7 @@ https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/
 
 Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product.
 
-The app includes authenticated users, protected dashboard routes, lead creation and editing, pipeline tracking, source analytics, CSV/PDF export, an AI assistant, server-side validation, database persistence, bot/rate-limit protection, and a responsive premium interface.
+The app includes authenticated users, protected dashboard routes, lead creation and editing, follow-up tasks, deal values, weighted revenue forecasting, source analytics, CSV/PDF export, an AI assistant, server-side validation, database persistence, bot/rate-limit protection, and a responsive premium interface.
 
 The goal was not only to build a working CRUD app, but to show product thinking, user experience, secure server-side logic, database design, testing, and business value.
 
@@ -82,10 +82,19 @@ The goal was not only to build a working CRUD app, but to show product thinking,
 ### Dashboard Analytics
 
 * Pipeline overview cards
+* Revenue cards for total pipeline, weighted forecast, expected revenue, won revenue, and lost revenue
 * Stage distribution charts
+* Pipeline value by deal stage
 * Lead source performance charts
 * Visual dashboard for understanding pipeline momentum
 * Activity timeline for recent lead movement
+
+### Business Pipeline
+
+* Deals track value, currency, probability, expected close date, closed date, and lost reason
+* Weighted forecast is calculated from deal value multiplied by probability
+* Expected-this-month revenue highlights open deals forecasted to close in the current month
+* Won and lost revenue make outcomes visible beyond simple lead counts
 
 ### AI Assistant
 
@@ -416,19 +425,21 @@ It demonstrates:
 
 ## Business Value
 
-Lead Flow represents the type of internal tool that freelancers, agencies, startups, and small sales teams need to organize pipeline activity and avoid losing potential customers.
+Lead Flow represents the type of internal tool that freelancers, agencies, startups, and small sales teams need to organize pipeline activity, forecast revenue, and avoid losing potential customers.
 
 From a business perspective, this project supports:
 
 * Better lead organization
 * Faster follow-up workflows
 * Clear pipeline visibility
+* Deal value tracking and weighted revenue forecasting
+* Expected revenue visibility for the current month
 * Better understanding of lead sources
 * Easier reporting through CSV/PDF exports
 * AI-assisted workflow support
 * A foundation for a paid CRM-style SaaS product
 
-The strongest business value is not only the lead table itself, but the system around it: authentication, per-user data ownership, dashboard analytics, secure server actions, export functionality, and an interface that can grow into a real sales productivity platform.
+The strongest business value is not only the lead table itself, but the system around it: authentication, workspace-scoped data, follow-up tasks, opportunity values, forecast metrics, secure server actions, export functionality, and an interface that can grow into a real sales productivity platform.
 
 ---
 

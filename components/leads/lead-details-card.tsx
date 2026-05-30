@@ -52,6 +52,12 @@ type LeadDetails = {
     id: string;
     name: string;
     stage: DealStage;
+    valueCents: number;
+    currency: string;
+    probability: number;
+    expectedCloseAt: Date | null;
+    closedAt: Date | null;
+    lostReason: string | null;
     createdAt: Date;
     updatedAt: Date;
   } | null;

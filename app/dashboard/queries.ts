@@ -2,6 +2,10 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { crmTasks, deals, leadNotes, leads } from "@/db/schema";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import {
+  calculateRevenueSummary,
+  type RevenueSummary,
+} from "@/lib/revenue";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type LeadPipelineDatum = {
@@ -17,6 +21,8 @@ export type SourcePerformanceDatum = {
   won: number;
   winRate: number;
 };
+
+export type RevenueDashboardData = RevenueSummary;
 
 export async function getDashboardStats() {
   const workspace = await getCurrentWorkspace();
@@ -123,6 +129,24 @@ export async function getLeadPipelineData() {
       share: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0,
     } satisfies LeadPipelineDatum;
   });
+}
+
+export async function getRevenueDashboardData(): Promise<RevenueDashboardData> {
+  const workspace = await getCurrentWorkspace();
+
+  const dealRows = await db
+    .select({
+      stage: deals.stage,
+      valueCents: deals.valueCents,
+      probability: deals.probability,
+      expectedCloseAt: deals.expectedCloseAt,
+      closedAt: deals.closedAt,
+      currency: deals.currency,
+    })
+    .from(deals)
+    .where(eq(deals.workspaceId, workspace.id));
+
+  return calculateRevenueSummary(dealRows);
 }
 
 export async function getSourcePerformanceData(limit = 6) {

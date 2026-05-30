@@ -3,8 +3,8 @@ import {
   ArrowRight,
   BadgeCheck,
   BriefcaseBusiness,
+  CircleDollarSign,
   Plus,
-  Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -12,26 +12,36 @@ import {
   getDashboardStats,
   getLeadPipelineData,
   getRecentLeads,
+  getRevenueDashboardData,
   getSourcePerformanceData,
 } from "@/app/dashboard/queries";
+import { DealRevenuePipelineChart } from "@/components/dashboard/charts/deal-revenue-pipeline-chart";
 import { LeadPipelineChart } from "@/components/dashboard/charts/lead-pipeline-chart";
 import { LeadSourcePerformanceChart } from "@/components/dashboard/charts/lead-source-performance-chart";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 import { RecentLeadsList } from "@/components/dashboard/recent-leads-list";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Button } from "@/components/ui/button";
+import { formatCurrencyFromCents } from "@/lib/revenue";
 
 function toPercent(value: number) {
   return `${Math.round(value)}%`;
 }
 
 export default async function DashboardPage() {
-  const [stats, recentLeads, leadPipelineData, sourcePerformanceData] =
+  const [
+    stats,
+    recentLeads,
+    leadPipelineData,
+    sourcePerformanceData,
+    revenueData,
+  ] =
     await Promise.all([
       getDashboardStats(),
       getRecentLeads(5),
       getLeadPipelineData(),
       getSourcePerformanceData(),
+      getRevenueDashboardData(),
     ]);
 
   const isEmpty = stats.totalLeads === 0;
@@ -41,6 +51,7 @@ export default async function DashboardPage() {
     stats.totalLeads > 0 ? (stats.closedLeads / stats.totalLeads) * 100 : 0;
   const lossRate =
     stats.totalLeads > 0 ? (stats.lostLeads / stats.totalLeads) * 100 : 0;
+  const revenueCurrency = revenueData.currency;
 
   return (
     <div className="space-y-7 lg:space-y-8">
@@ -64,7 +75,7 @@ export default async function DashboardPage() {
                 {stats.totalLeads} total leads
               </span>
               <span className="rounded-full border bg-background px-2.5 py-1">
-                {activePipeline} active in pipeline
+                {formatCurrencyFromCents(revenueData.totalPipelineValueCents, revenueCurrency)} pipeline
               </span>
               <span className="rounded-full border bg-background px-2.5 py-1">
                 {toPercent(winRate)} win rate
@@ -94,46 +105,76 @@ export default async function DashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Total Leads"
-          value={stats.totalLeads}
-          description="All opportunities currently tracked in your workspace."
-          icon={Users}
+          title="Total Pipeline"
+          value={formatCurrencyFromCents(revenueData.totalPipelineValueCents, revenueCurrency)}
+          description="Open deal value excluding won and lost opportunities."
+          icon={CircleDollarSign}
           tone="neutral"
-          helper={`${activePipeline} active`}
+          helper={`${stats.openDeals} open deals`}
         />
         <StatCard
-          title="New Leads"
-          value={stats.newLeads}
-          description="Fresh opportunities waiting for first-touch follow-up."
-          icon={Sparkles}
+          title="Weighted Forecast"
+          value={formatCurrencyFromCents(revenueData.weightedPipelineValueCents, revenueCurrency)}
+          description="Open pipeline value multiplied by deal probability."
+          icon={TrendingUp}
           tone="info"
-          badge={toPercent(stats.totalLeads > 0 ? (stats.newLeads / stats.totalLeads) * 100 : 0)}
-          helper="of total pipeline"
+          badge={`${stats.totalDeals} deals`}
+          helper="probability adjusted"
         />
         <StatCard
-          title="Open Deals"
-          value={stats.openDeals}
-          description="Active opportunities linked to qualified leads."
+          title="Expected This Month"
+          value={formatCurrencyFromCents(revenueData.expectedRevenueThisMonthCents, revenueCurrency)}
+          description="Weighted forecast for deals expected to close this month."
           icon={BriefcaseBusiness}
           tone="warning"
-          helper={`${stats.totalDeals} total deals`}
+          helper={`${activePipeline} active leads`}
           badge={`${stats.overdueTasks} overdue`}
         />
         <StatCard
-          title="Closed Won"
-          value={stats.wonDeals || stats.closedLeads}
-          description="Deals or leads converted into completed outcomes."
+          title="Won Revenue"
+          value={formatCurrencyFromCents(revenueData.wonRevenueCents, revenueCurrency)}
+          description="Value of opportunities marked won."
           icon={BadgeCheck}
           tone="positive"
           badge={toPercent(winRate)}
-          helper={`${toPercent(lossRate)} loss rate`}
+          helper={`${formatCurrencyFromCents(revenueData.lostRevenueCents, revenueCurrency)} lost`}
         />
       </section>
 
       {!isEmpty ? (
         <section className="grid gap-4 xl:grid-cols-2">
+          <DealRevenuePipelineChart
+            data={revenueData.pipelineByStage}
+            currency={revenueCurrency}
+          />
           <LeadPipelineChart data={leadPipelineData} />
+        </section>
+      ) : null}
+
+      {!isEmpty ? (
+        <section className="grid gap-4 xl:grid-cols-2">
           <LeadSourcePerformanceChart data={sourcePerformanceData} />
+          <section className="rounded-3xl border bg-background p-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Lead and revenue health
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {stats.totalLeads} leads, {stats.totalDeals} deals, and{" "}
+                  {formatCurrencyFromCents(
+                    revenueData.weightedPipelineValueCents,
+                    revenueCurrency,
+                  )}{" "}
+                  in weighted open forecast.
+                </p>
+              </div>
+              <p className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                {toPercent(lossRate)} loss rate
+              </p>
+            </div>
+          </section>
         </section>
       ) : null}
 

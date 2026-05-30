@@ -19,6 +19,9 @@ describe("leadFormSchema", () => {
     expect(result.phone).toBeUndefined();
     expect(result.notes).toBeUndefined();
     expect(result.source).toBe("referral");
+    expect(result.dealValue).toBe(0);
+    expect(result.dealProbability).toBe(10);
+    expect(result.dealCurrency).toBe("USD");
   });
 
   it("rejects invalid status", () => {
@@ -38,5 +41,33 @@ describe("leadFormSchema", () => {
     });
 
     expect(parsed.success).toBe(false);
+  });
+
+  it("validates deal value and probability", () => {
+    const valid = leadFormSchema.parse({
+      fullName: "Jane Doe",
+      status: "New",
+      dealValue: "1250.50",
+      dealProbability: "45",
+    });
+
+    expect(valid.dealValue).toBe(1250.5);
+    expect(valid.dealProbability).toBe(45);
+
+    expect(
+      leadFormSchema.safeParse({
+        fullName: "Jane Doe",
+        status: "New",
+        dealValue: "-1",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      leadFormSchema.safeParse({
+        fullName: "Jane Doe",
+        status: "New",
+        dealProbability: "101",
+      }).success,
+    ).toBe(false);
   });
 });

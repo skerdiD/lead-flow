@@ -11,7 +11,11 @@ import {
   createLeadAction,
   updateLeadAction,
 } from "@/app/dashboard/leads/actions";
-import { DEAL_STAGE_LABELS, DEAL_STAGES } from "@/lib/constants/crm";
+import {
+  DEAL_CURRENCIES,
+  DEAL_STAGE_LABELS,
+  DEAL_STAGES,
+} from "@/lib/constants/crm";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 import {
   leadFormSchema,
@@ -61,6 +65,12 @@ const defaultValues: LeadFormValues = {
   notes: undefined,
   dealName: undefined,
   dealStage: "new",
+  dealValue: 0,
+  dealCurrency: "USD",
+  dealProbability: 10,
+  expectedCloseDate: undefined,
+  closedDate: undefined,
+  lostReason: undefined,
 };
 
 export function LeadForm({
@@ -401,6 +411,170 @@ export function LeadForm({
                       </Select>
                       <FormDescription>
                         Tracks the sales pipeline after qualification.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dealValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deal value</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="5000"
+                          disabled={isPending}
+                          value={field.value ?? 0}
+                          onChange={(event) => field.onChange(event.target.value)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Estimated contract value for forecasting.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dealCurrency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DEAL_CURRENCIES.map((currency) => (
+                            <SelectItem key={currency} value={currency}>
+                              {currency}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Used for dashboard revenue display.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dealProbability"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Probability</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          placeholder="40"
+                          disabled={isPending}
+                          value={field.value ?? 0}
+                          onChange={(event) => field.onChange(event.target.value)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Percent chance used for weighted forecast.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="expectedCloseDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected close date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Used for this month forecast metrics.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="closedDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Closed date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional date for won or lost deals.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lostReason"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Lost reason</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Budget, timing, no decision..."
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional context when a deal is marked lost.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

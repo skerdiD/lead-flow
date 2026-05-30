@@ -106,6 +106,12 @@ export async function getLeadDetails(leadId: string) {
         id: deals.id,
         name: deals.name,
         stage: deals.stage,
+        valueCents: deals.valueCents,
+        currency: deals.currency,
+        probability: deals.probability,
+        expectedCloseAt: deals.expectedCloseAt,
+        closedAt: deals.closedAt,
+        lostReason: deals.lostReason,
         createdAt: deals.createdAt,
         updatedAt: deals.updatedAt,
       })

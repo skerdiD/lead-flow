@@ -98,6 +98,12 @@ const {
       contactId: "contact_id",
       name: "name",
       stage: "stage",
+      valueCents: "value_cents",
+      currency: "currency",
+      probability: "probability",
+      expectedCloseAt: "expected_close_at",
+      closedAt: "closed_at",
+      lostReason: "lost_reason",
       updatedAt: "updated_at",
     },
     crmTasksTable: {
@@ -246,6 +252,9 @@ const validLeadInput = {
   source: "Referral",
   notes: "Interested in onboarding",
   dealStage: "new" as const,
+  dealValue: 0,
+  dealCurrency: "USD" as const,
+  dealProbability: 10,
 };
 
 const leadId = "11111111-1111-4111-8111-111111111111";
@@ -280,6 +289,40 @@ describe("lead actions", () => {
     insertContactReturningMock.mockResolvedValue([{ id: "contact_123" }]);
     insertDealReturningMock.mockResolvedValue([{ id: "deal_123", stage: "new" }]);
     insertActivityValuesMock.mockResolvedValue(undefined);
+  });
+
+  it("createLeadAction saves deal revenue fields when an opportunity is provided", async () => {
+    selectResults.push([]);
+    insertLeadReturningMock.mockResolvedValue([
+      { id: leadId, fullName: "Jane Doe" },
+    ]);
+
+    const result = await createLeadAction({
+      ...validLeadInput,
+      dealName: "Website redesign",
+      dealStage: "proposal",
+      dealValue: 7500.5,
+      dealCurrency: "EUR",
+      dealProbability: 60,
+      expectedCloseDate: "2026-06-15",
+    });
+
+    expect(result.success).toBe(true);
+    expect(insertDealValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        leadId,
+        name: "Website redesign",
+        stage: "proposal",
+        valueCents: 750050,
+        currency: "EUR",
+        probability: 60,
+        lostReason: null,
+      }),
+    );
+    expect(insertDealValuesMock.mock.calls[0]?.[0].expectedCloseAt).toEqual(
+      new Date("2026-06-15T00:00:00.000Z"),
+    );
   });
 
   it("createLeadAction creates a lead and activity event", async () => {

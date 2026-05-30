@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { DEAL_STAGES } from "@/lib/constants/crm";
+import {
+  DEAL_CURRENCIES,
+  DEAL_STAGES,
+  DEFAULT_DEAL_CURRENCY,
+} from "@/lib/constants/crm";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 
 const optionalTrimmedString = (max: number) =>
@@ -30,6 +34,53 @@ const optionalEmail = z.preprocess(
     .optional(),
 );
 
+const optionalDateString = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
+  },
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date.")
+    .optional(),
+);
+
+const optionalMoney = z.preprocess(
+  (value) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed === "" ? 0 : Number(trimmed);
+    }
+
+    return value ?? 0;
+  },
+  z
+    .number()
+    .finite("Please enter a valid deal value.")
+    .min(0, "Deal value cannot be negative.")
+    .max(100_000_000, "Deal value is too large.")
+    .default(0),
+);
+
+const probabilityPercentage = z.preprocess(
+  (value) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed === "" ? 0 : Number(trimmed);
+    }
+
+    return value ?? 10;
+  },
+  z
+    .number()
+    .finite("Please enter a valid probability.")
+    .int("Probability must be a whole number.")
+    .min(0, "Probability cannot be less than 0%.")
+    .max(100, "Probability cannot be more than 100%.")
+    .default(10),
+);
+
 export const leadFormSchema = z.object({
   fullName: z
     .string()
@@ -48,6 +99,12 @@ export const leadFormSchema = z.object({
   dealStage: z.enum(DEAL_STAGES, {
     error: () => ({ message: "Please select a valid deal stage." }),
   }).default("new"),
+  dealValue: optionalMoney,
+  dealCurrency: z.enum(DEAL_CURRENCIES).default(DEFAULT_DEAL_CURRENCY),
+  dealProbability: probabilityPercentage,
+  expectedCloseDate: optionalDateString,
+  closedDate: optionalDateString,
+  lostReason: optionalTrimmedString(255),
 });
 
 export type LeadFormInput = z.input<typeof leadFormSchema>;

@@ -2,12 +2,19 @@ import { notFound } from "next/navigation";
 import { getLeadDetails } from "@/app/dashboard/leads/[id]/queries";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LeadForm } from "@/components/leads/lead-form";
+import { DEAL_CURRENCIES, type DealCurrency } from "@/lib/constants/crm";
 
 type EditLeadPageProps = {
   params: Promise<{
     id: string;
   }>;
 };
+
+function normalizeDealCurrency(currency?: string | null): DealCurrency {
+  return DEAL_CURRENCIES.includes(currency as DealCurrency)
+    ? (currency as DealCurrency)
+    : "USD";
+}
 
 export default async function EditLeadPage({
   params,
@@ -40,6 +47,16 @@ export default async function EditLeadPage({
           notes: lead.notes ?? undefined,
           dealName: lead.dealEntry?.name ?? undefined,
           dealStage: lead.dealEntry?.stage ?? "new",
+          dealValue: lead.dealEntry ? lead.dealEntry.valueCents / 100 : 0,
+          dealCurrency: normalizeDealCurrency(lead.dealEntry?.currency),
+          dealProbability: lead.dealEntry?.probability ?? 10,
+          expectedCloseDate: lead.dealEntry?.expectedCloseAt
+            ? lead.dealEntry.expectedCloseAt.toISOString().slice(0, 10)
+            : undefined,
+          closedDate: lead.dealEntry?.closedAt
+            ? lead.dealEntry.closedAt.toISOString().slice(0, 10)
+            : undefined,
+          lostReason: lead.dealEntry?.lostReason ?? undefined,
         }}
       />
     </div>

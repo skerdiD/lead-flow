@@ -19,6 +19,7 @@ import {
   type DealStage,
 } from "@/lib/constants/crm";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import { moneyToCents } from "@/lib/revenue";
 import {
   crmTaskFormSchema,
   type CrmTaskFormValues,
@@ -140,6 +141,31 @@ function parseTaskDueAt(value?: string) {
   return Number.isNaN(dueAt.getTime()) ? null : dueAt;
 }
 
+function parseDateInput(value?: string) {
+  if (!value) return null;
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function resolveClosedAt(params: {
+  stage: DealStage;
+  closedDate?: string;
+  existingClosedAt?: Date | null;
+}) {
+  const parsedClosedDate = parseDateInput(params.closedDate);
+
+  if (parsedClosedDate) {
+    return parsedClosedDate;
+  }
+
+  if (params.stage === "won" || params.stage === "lost") {
+    return params.existingClosedAt ?? new Date();
+  }
+
+  return null;
+}
+
 function getInitialTaskStatus(dueAt: Date | null) {
   return dueAt && dueAt.getTime() < Date.now() ? "overdue" : "pending";
 }
@@ -248,6 +274,12 @@ async function saveLeadDeal(params: {
   ownerUserId?: string | null;
   dealName?: string;
   dealStage: DealStage;
+  dealValue: number;
+  dealCurrency: string;
+  dealProbability: number;
+  expectedCloseDate?: string;
+  closedDate?: string;
+  lostReason?: string;
 }) {
   if (!params.dealName) return null;
 
@@ -255,6 +287,7 @@ async function saveLeadDeal(params: {
     .select({
       id: deals.id,
       stage: deals.stage,
+      closedAt: deals.closedAt,
     })
     .from(deals)
     .where(and(eq(deals.leadId, params.leadId), eq(deals.workspaceId, params.workspaceId)))
@@ -269,6 +302,16 @@ async function saveLeadDeal(params: {
         ownerUserId: params.ownerUserId ?? null,
         name: params.dealName,
         stage: params.dealStage,
+        valueCents: moneyToCents(params.dealValue),
+        currency: params.dealCurrency,
+        probability: params.dealProbability,
+        expectedCloseAt: parseDateInput(params.expectedCloseDate),
+        closedAt: resolveClosedAt({
+          stage: params.dealStage,
+          closedDate: params.closedDate,
+          existingClosedAt: existingDeal.closedAt,
+        }),
+        lostReason: params.dealStage === "lost" ? params.lostReason ?? null : null,
         updatedAt: new Date(),
       })
       .where(and(eq(deals.id, existingDeal.id), eq(deals.workspaceId, params.workspaceId)))
@@ -292,6 +335,15 @@ async function saveLeadDeal(params: {
       contactId: params.contactId ?? null,
       name: params.dealName,
       stage: params.dealStage,
+      valueCents: moneyToCents(params.dealValue),
+      currency: params.dealCurrency,
+      probability: params.dealProbability,
+      expectedCloseAt: parseDateInput(params.expectedCloseDate),
+      closedAt: resolveClosedAt({
+        stage: params.dealStage,
+        closedDate: params.closedDate,
+      }),
+      lostReason: params.dealStage === "lost" ? params.lostReason ?? null : null,
     })
     .returning({ id: deals.id, stage: deals.stage });
 
@@ -396,6 +448,12 @@ export async function createLeadAction(
       ownerUserId: userId,
       dealName: parsed.data.dealName,
       dealStage: parsed.data.dealStage,
+      dealValue: parsed.data.dealValue,
+      dealCurrency: parsed.data.dealCurrency,
+      dealProbability: parsed.data.dealProbability,
+      expectedCloseDate: parsed.data.expectedCloseDate,
+      closedDate: parsed.data.closedDate,
+      lostReason: parsed.data.lostReason,
     });
 
     await createLeadActivity({
@@ -542,6 +600,12 @@ export async function updateLeadAction(
       ownerUserId: existingLead.assignedOwnerUserId ?? userId,
       dealName: parsed.data.dealName,
       dealStage: parsed.data.dealStage,
+      dealValue: parsed.data.dealValue,
+      dealCurrency: parsed.data.dealCurrency,
+      dealProbability: parsed.data.dealProbability,
+      expectedCloseDate: parsed.data.expectedCloseDate,
+      closedDate: parsed.data.closedDate,
+      lostReason: parsed.data.lostReason,
     });
 
     await createLeadActivity({
@@ -764,6 +828,7 @@ export async function updateDealStageAction(
       .update(deals)
       .set({
         stage,
+        closedAt: stage === "won" || stage === "lost" ? new Date() : null,
         updatedAt: new Date(),
       })
       .where(and(eq(deals.id, dealId), eq(deals.workspaceId, workspace.id)))
