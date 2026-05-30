@@ -4,7 +4,10 @@ BEGIN
     'lead_created',
     'lead_updated',
     'lead_status_changed',
-    'lead_deleted'
+    'lead_deleted',
+    'lead_note_added',
+    'lead_note_updated',
+    'lead_note_deleted'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;

@@ -242,15 +242,24 @@ ARCJET_KEY=
 OPENAI_API_KEY=
 ```
 
+Required for local app use:
+
+* `DATABASE_URL` - PostgreSQL connection string used by Drizzle and the app
+* `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` - Clerk authentication
+* `ARCJET_KEY` - Arcjet protection
+* `OPENAI_API_KEY` - AI assistant route
+
 If your AI provider uses a different key name, use the exact variable name configured in the project.
 
-### 4. Push or migrate the database schema
+### 4. Run database migrations
 
 ```bash
-npm run db:push
+npm run db:migrate
 ```
 
-If the project uses migrations instead, run the migration command configured in the repository.
+This project uses committed Drizzle migrations. Use `npm run db:generate` only after changing `db/schema.ts`, review the generated SQL, then commit the new migration and snapshot files.
+
+Migration note: the file `db/migrations/0001_add_activity_events.sql` is intentionally retained under its original manual name for history. Drizzle applies migrations from `db/migrations/meta/_journal.json`, and that journal now includes the file in the safe migration order.
 
 ### 5. Start the development server
 
@@ -264,6 +273,20 @@ Open the app at:
 http://localhost:3000
 ```
 
+### 6. Run tests
+
+```bash
+npm run typecheck
+npm run test
+```
+
+For browser E2E tests, install the Playwright browser first:
+
+```bash
+npm run e2e:install
+npm run e2e
+```
+
 ---
 
 ## Available Scripts
@@ -273,7 +296,10 @@ npm run dev          # Start the development server
 npm run build        # Create a production build
 npm run start        # Start the production server
 npm run typecheck    # Run TypeScript checks
+npm run lint         # Run ESLint
 npm run test         # Run Vitest tests
+npm run db:generate  # Generate a Drizzle migration after schema changes
+npm run db:migrate   # Apply committed Drizzle migrations
 npm run e2e:install  # Install Playwright browsers
 npm run e2e          # Run Playwright E2E tests
 npm run e2e:headed   # Run Playwright E2E tests in headed mode
