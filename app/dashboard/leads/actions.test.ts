@@ -7,12 +7,23 @@ const {
   selectResults,
   insertLeadValuesMock,
   insertLeadReturningMock,
+  insertAccountValuesMock,
+  insertAccountReturningMock,
+  insertContactValuesMock,
+  insertContactReturningMock,
+  insertDealValuesMock,
+  insertDealReturningMock,
+  insertTaskValuesMock,
   insertActivityValuesMock,
   updateReturningMock,
   deleteReturningMock,
   protectLeadMutationMock,
   leadsTable,
+  accountsTable,
   activityEventsTable,
+  contactsTable,
+  dealsTable,
+  crmTasksTable,
   leadNotesTable,
 } = vi.hoisted(() => {
   const state = {
@@ -22,6 +33,13 @@ const {
     selectResults: [] as unknown[],
     insertLeadValuesMock: vi.fn(),
     insertLeadReturningMock: vi.fn(),
+    insertAccountValuesMock: vi.fn(),
+    insertAccountReturningMock: vi.fn(),
+    insertContactValuesMock: vi.fn(),
+    insertContactReturningMock: vi.fn(),
+    insertDealValuesMock: vi.fn(),
+    insertDealReturningMock: vi.fn(),
+    insertTaskValuesMock: vi.fn(),
     insertActivityValuesMock: vi.fn(),
     updateReturningMock: vi.fn(),
     deleteReturningMock: vi.fn(),
@@ -30,6 +48,9 @@ const {
       id: "id",
       workspaceId: "workspace_id",
       userId: "user_id",
+      assignedOwnerUserId: "assigned_owner_user_id",
+      accountId: "account_id",
+      primaryContactId: "primary_contact_id",
       fullName: "full_name",
       company: "company",
       email: "email",
@@ -38,6 +59,13 @@ const {
       source: "source",
       notes: "notes",
       createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
+    accountsTable: {
+      id: "id",
+      workspaceId: "workspace_id",
+      userId: "user_id",
+      name: "name",
       updatedAt: "updated_at",
     },
     activityEventsTable: {
@@ -49,6 +77,44 @@ const {
       leadId: "lead_id",
       leadName: "lead_name",
       createdAt: "created_at",
+    },
+    contactsTable: {
+      id: "id",
+      workspaceId: "workspace_id",
+      userId: "user_id",
+      accountId: "account_id",
+      fullName: "full_name",
+      email: "email",
+      phone: "phone",
+      updatedAt: "updated_at",
+    },
+    dealsTable: {
+      id: "id",
+      workspaceId: "workspace_id",
+      userId: "user_id",
+      ownerUserId: "owner_user_id",
+      leadId: "lead_id",
+      accountId: "account_id",
+      contactId: "contact_id",
+      name: "name",
+      stage: "stage",
+      updatedAt: "updated_at",
+    },
+    crmTasksTable: {
+      id: "id",
+      workspaceId: "workspace_id",
+      userId: "user_id",
+      ownerUserId: "owner_user_id",
+      leadId: "lead_id",
+      dealId: "deal_id",
+      contactId: "contact_id",
+      title: "title",
+      description: "description",
+      dueAt: "due_at",
+      status: "status",
+      priority: "priority",
+      completedAt: "completed_at",
+      updatedAt: "updated_at",
     },
     leadNotesTable: {
       id: "id",
@@ -81,7 +147,11 @@ function createSelectBuilder(result: unknown) {
 
 vi.mock("@/db/schema", () => ({
   leads: leadsTable,
+  accounts: accountsTable,
   activityEvents: activityEventsTable,
+  contacts: contactsTable,
+  deals: dealsTable,
+  crmTasks: crmTasksTable,
   leadNotes: leadNotesTable,
 }));
 
@@ -91,6 +161,30 @@ vi.mock("@/db", () => ({
       if (table === leadsTable) {
         return {
           values: insertLeadValuesMock,
+        };
+      }
+
+      if (table === accountsTable) {
+        return {
+          values: insertAccountValuesMock,
+        };
+      }
+
+      if (table === contactsTable) {
+        return {
+          values: insertContactValuesMock,
+        };
+      }
+
+      if (table === dealsTable) {
+        return {
+          values: insertDealValuesMock,
+        };
+      }
+
+      if (table === crmTasksTable) {
+        return {
+          values: insertTaskValuesMock,
         };
       }
 
@@ -137,6 +231,7 @@ vi.mock("next/cache", () => ({
 }));
 
 import {
+  createFollowUpTaskAction,
   createLeadAction,
   deleteLeadAction,
   updateLeadAction,
@@ -150,6 +245,7 @@ const validLeadInput = {
   status: "New" as const,
   source: "Referral",
   notes: "Interested in onboarding",
+  dealStage: "new" as const,
 };
 
 const leadId = "11111111-1111-4111-8111-111111111111";
@@ -170,6 +266,19 @@ describe("lead actions", () => {
     insertLeadValuesMock.mockImplementation(() => ({
       returning: insertLeadReturningMock,
     }));
+    insertAccountValuesMock.mockImplementation(() => ({
+      returning: insertAccountReturningMock,
+    }));
+    insertContactValuesMock.mockImplementation(() => ({
+      returning: insertContactReturningMock,
+    }));
+    insertDealValuesMock.mockImplementation(() => ({
+      returning: insertDealReturningMock,
+    }));
+    insertTaskValuesMock.mockResolvedValue(undefined);
+    insertAccountReturningMock.mockResolvedValue([{ id: "account_123" }]);
+    insertContactReturningMock.mockResolvedValue([{ id: "contact_123" }]);
+    insertDealReturningMock.mockResolvedValue([{ id: "deal_123", stage: "new" }]);
     insertActivityValuesMock.mockResolvedValue(undefined);
   });
 
@@ -194,11 +303,31 @@ describe("lead actions", () => {
       }),
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/leads");
+    expect(insertAccountValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        name: "Acme",
+      }),
+    );
+    expect(insertContactValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        accountId: "account_123",
+        fullName: "Jane Doe",
+      }),
+    );
   });
 
   it("updateLeadAction updates a lead and logs status change", async () => {
     selectResults.push([
-      { id: leadId, fullName: "Jane Doe", status: "New" },
+      {
+        id: leadId,
+        fullName: "Jane Doe",
+        status: "New",
+        accountId: null,
+        primaryContactId: null,
+        assignedOwnerUserId: null,
+      },
     ]);
     updateReturningMock.mockResolvedValue([
       { id: leadId, fullName: "Jane Doe", status: "Closed" },
@@ -222,6 +351,49 @@ describe("lead actions", () => {
       }),
     );
     expect(revalidatePathMock).toHaveBeenCalledWith(`/dashboard/leads/${leadId}`);
+  });
+
+  it("createFollowUpTaskAction creates a task and logs activity", async () => {
+    selectResults.push(
+      [
+        {
+          id: leadId,
+          fullName: "Jane Doe",
+          primaryContactId: "contact_123",
+          assignedOwnerUserId: "user_123",
+        },
+      ],
+      [{ id: "deal_123" }],
+    );
+
+    const result = await createFollowUpTaskAction(leadId, {
+      title: "Send proposal follow-up",
+      description: "Confirm decision timeline",
+      dueDate: "2026-06-01",
+      priority: "high",
+    });
+
+    expect(result).toEqual({
+      success: true,
+      message: "Follow-up task created.",
+    });
+    expect(insertTaskValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        leadId,
+        dealId: "deal_123",
+        contactId: "contact_123",
+        title: "Send proposal follow-up",
+        priority: "high",
+      }),
+    );
+    expect(insertActivityValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        eventType: "task_created",
+        leadId,
+      }),
+    );
   });
 
   it("deleteLeadAction deletes a lead and logs delete activity", async () => {

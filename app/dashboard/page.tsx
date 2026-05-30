@@ -70,7 +70,7 @@ export default async function DashboardPage() {
                 {toPercent(winRate)} win rate
               </span>
               <span className="rounded-full border bg-background px-2.5 py-1">
-                {stats.notesCount} notes logged
+                {stats.openTasks} open follow-ups
               </span>
             </div>
           </div>
@@ -111,18 +111,18 @@ export default async function DashboardPage() {
           helper="of total pipeline"
         />
         <StatCard
-          title="Pipeline In Motion"
-          value={activePipeline}
-          description="Contacted, interested, and proposal-stage leads combined."
+          title="Open Deals"
+          value={stats.openDeals}
+          description="Active opportunities linked to qualified leads."
           icon={BriefcaseBusiness}
           tone="warning"
-          helper={`${stats.proposalLeads} in proposal stage`}
-          badge={`${stats.notesCount} notes`}
+          helper={`${stats.totalDeals} total deals`}
+          badge={`${stats.overdueTasks} overdue`}
         />
         <StatCard
           title="Closed Won"
-          value={stats.closedLeads}
-          description="Leads converted into completed outcomes."
+          value={stats.wonDeals || stats.closedLeads}
+          description="Deals or leads converted into completed outcomes."
           icon={BadgeCheck}
           tone="positive"
           badge={toPercent(winRate)}

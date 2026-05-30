@@ -38,6 +38,8 @@ export default async function EditLeadPage({
           status: lead.status,
           source: lead.source ?? undefined,
           notes: lead.notes ?? undefined,
+          dealName: lead.dealEntry?.name ?? undefined,
+          dealStage: lead.dealEntry?.stage ?? "new",
         }}
       />
     </div>

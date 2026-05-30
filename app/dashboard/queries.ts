@@ -1,6 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { leadNotes, leads } from "@/db/schema";
+import { crmTasks, deals, leadNotes, leads } from "@/db/schema";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
@@ -21,7 +21,7 @@ export type SourcePerformanceDatum = {
 export async function getDashboardStats() {
   const workspace = await getCurrentWorkspace();
 
-  const [[stats], [notesStats]] = await Promise.all([
+  const [[stats], [notesStats], [dealStats], [taskStats]] = await Promise.all([
     db
       .select({
         totalLeads: sql<number>`count(*)`,
@@ -40,6 +40,21 @@ export async function getDashboardStats() {
       })
       .from(leadNotes)
       .where(eq(leadNotes.workspaceId, workspace.id)),
+    db
+      .select({
+        totalDeals: sql<number>`count(*)`,
+        openDeals: sql<number>`count(*) filter (where ${deals.stage} not in ('won', 'lost'))`,
+        wonDeals: sql<number>`count(*) filter (where ${deals.stage} = 'won')`,
+      })
+      .from(deals)
+      .where(eq(deals.workspaceId, workspace.id)),
+    db
+      .select({
+        openTasks: sql<number>`count(*) filter (where ${crmTasks.status} <> 'done')`,
+        overdueTasks: sql<number>`count(*) filter (where ${crmTasks.status} = 'overdue' or (${crmTasks.status} = 'pending' and ${crmTasks.dueAt} < now()))`,
+      })
+      .from(crmTasks)
+      .where(eq(crmTasks.workspaceId, workspace.id)),
   ]);
 
   return {
@@ -51,6 +66,11 @@ export async function getDashboardStats() {
     closedLeads: Number(stats?.closedLeads ?? 0),
     lostLeads: Number(stats?.lostLeads ?? 0),
     notesCount: Number(notesStats?.notesCount ?? 0),
+    totalDeals: Number(dealStats?.totalDeals ?? 0),
+    openDeals: Number(dealStats?.openDeals ?? 0),
+    wonDeals: Number(dealStats?.wonDeals ?? 0),
+    openTasks: Number(taskStats?.openTasks ?? 0),
+    overdueTasks: Number(taskStats?.overdueTasks ?? 0),
   };
 }
 

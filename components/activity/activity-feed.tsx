@@ -33,6 +33,14 @@ function eventTypeLabel(eventType: ActivityFeedItem["eventType"]) {
       return "Note updated";
     case "lead_note_deleted":
       return "Note deleted";
+    case "task_created":
+      return "Task created";
+    case "task_completed":
+      return "Task completed";
+    case "deal_stage_changed":
+      return "Deal stage changed";
+    case "lead_qualified":
+      return "Lead qualified";
     default:
       return "Activity";
   }
@@ -46,7 +54,11 @@ function eventTypeVariant(
       return "default";
     case "lead_status_changed":
       return "secondary";
+    case "deal_stage_changed":
+    case "lead_qualified":
     case "lead_note_added":
+    case "task_created":
+    case "task_completed":
       return "secondary";
     case "lead_note_updated":
       return "outline";

@@ -11,6 +11,7 @@ import {
   createLeadAction,
   updateLeadAction,
 } from "@/app/dashboard/leads/actions";
+import { DEAL_STAGE_LABELS, DEAL_STAGES } from "@/lib/constants/crm";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 import {
   leadFormSchema,
@@ -58,6 +59,8 @@ const defaultValues: LeadFormValues = {
   status: "New",
   source: undefined,
   notes: undefined,
+  dealName: undefined,
+  dealStage: "new",
 };
 
 export function LeadForm({
@@ -333,6 +336,71 @@ export function LeadForm({
                       </FormControl>
                       <FormDescription>
                         Keep helpful context here so future follow-up stays easy.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border bg-muted/20 p-4 sm:p-5">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Opportunity
+              </p>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="dealName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deal name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Website redesign package"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional opportunity linked to this lead.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dealStage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Deal stage</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select deal stage" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DEAL_STAGES.map((stage) => (
+                            <SelectItem key={stage} value={stage}>
+                              {DEAL_STAGE_LABELS[stage]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Tracks the sales pipeline after qualification.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

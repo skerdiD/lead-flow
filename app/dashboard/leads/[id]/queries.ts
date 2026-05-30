@@ -1,6 +1,14 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityEvents, leadNotes, leads } from "@/db/schema";
+import {
+  accounts,
+  activityEvents,
+  contacts,
+  crmTasks,
+  deals,
+  leadNotes,
+  leads,
+} from "@/db/schema";
 import { isUuid } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
@@ -21,10 +29,28 @@ export async function getLeadDetails(leadId: string) {
       status: leads.status,
       source: leads.source,
       notes: leads.notes,
+      assignedOwnerUserId: leads.assignedOwnerUserId,
+      accountId: leads.accountId,
+      accountName: accounts.name,
+      primaryContactId: leads.primaryContactId,
+      primaryContactName: contacts.fullName,
+      primaryContactEmail: contacts.email,
+      primaryContactPhone: contacts.phone,
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
     })
     .from(leads)
+    .leftJoin(
+      accounts,
+      and(eq(leads.accountId, accounts.id), eq(accounts.workspaceId, workspace.id)),
+    )
+    .leftJoin(
+      contacts,
+      and(
+        eq(leads.primaryContactId, contacts.id),
+        eq(contacts.workspaceId, workspace.id),
+      ),
+    )
     .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
     .limit(1);
 
@@ -32,7 +58,7 @@ export async function getLeadDetails(leadId: string) {
     return null;
   }
 
-  const [noteEntries, activityEntries] = await Promise.all([
+  const [noteEntries, activityEntries, taskEntries, dealEntry] = await Promise.all([
     db
       .select({
         id: leadNotes.id,
@@ -61,11 +87,38 @@ export async function getLeadDetails(leadId: string) {
       )
       .orderBy(desc(activityEvents.createdAt))
       .limit(8),
+    db
+      .select({
+        id: crmTasks.id,
+        title: crmTasks.title,
+        description: crmTasks.description,
+        dueAt: crmTasks.dueAt,
+        status: crmTasks.status,
+        priority: crmTasks.priority,
+        completedAt: crmTasks.completedAt,
+        createdAt: crmTasks.createdAt,
+      })
+      .from(crmTasks)
+      .where(and(eq(crmTasks.leadId, leadId), eq(crmTasks.workspaceId, workspace.id)))
+      .orderBy(desc(crmTasks.createdAt)),
+    db
+      .select({
+        id: deals.id,
+        name: deals.name,
+        stage: deals.stage,
+        createdAt: deals.createdAt,
+        updatedAt: deals.updatedAt,
+      })
+      .from(deals)
+      .where(and(eq(deals.leadId, leadId), eq(deals.workspaceId, workspace.id)))
+      .limit(1),
   ]);
 
   return {
     ...lead,
     noteEntries,
     activityEntries,
+    taskEntries,
+    dealEntry: dealEntry[0] ?? null,
   };
 }

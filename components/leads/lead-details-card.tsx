@@ -8,12 +8,16 @@ import {
   Pencil,
   Phone,
   Radio,
+  UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteLeadDialog } from "@/components/leads/delete-lead-dialog";
+import { LeadDealPanel } from "@/components/leads/lead-deal-panel";
 import { LeadNotesPanel } from "@/components/leads/lead-notes-panel";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
+import { LeadTasksPanel } from "@/components/leads/lead-tasks-panel";
 import { LeadWorkflowPanel } from "@/components/leads/lead-workflow-panel";
+import type { DealStage, TaskPriority, TaskStatus } from "@/lib/constants/crm";
 
 type LeadEventType =
   | "lead_created"
@@ -22,7 +26,11 @@ type LeadEventType =
   | "lead_deleted"
   | "lead_note_added"
   | "lead_note_updated"
-  | "lead_note_deleted";
+  | "lead_note_deleted"
+  | "task_created"
+  | "task_completed"
+  | "deal_stage_changed"
+  | "lead_qualified";
 
 type LeadDetails = {
   id: string;
@@ -33,6 +41,30 @@ type LeadDetails = {
   status: "New" | "Contacted" | "Interested" | "Proposal Sent" | "Closed" | "Lost";
   source: string | null;
   notes: string | null;
+  assignedOwnerUserId: string | null;
+  accountId: string | null;
+  accountName: string | null;
+  primaryContactId: string | null;
+  primaryContactName: string | null;
+  primaryContactEmail: string | null;
+  primaryContactPhone: string | null;
+  dealEntry: {
+    id: string;
+    name: string;
+    stage: DealStage;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
+  taskEntries: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    dueAt: Date | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    completedAt: Date | null;
+    createdAt: Date;
+  }>;
   noteEntries: Array<{
     id: string;
     content: string;
@@ -98,6 +130,14 @@ function eventTypeLabel(eventType: LeadEventType) {
       return "Note updated";
     case "lead_note_deleted":
       return "Note deleted";
+    case "task_created":
+      return "Task created";
+    case "task_completed":
+      return "Task completed";
+    case "deal_stage_changed":
+      return "Deal stage changed";
+    case "lead_qualified":
+      return "Lead qualified";
     default:
       return "Activity";
   }
@@ -165,7 +205,8 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
           <p className="mb-4 text-sm font-semibold tracking-tight text-foreground">Lead information</p>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <DetailItem icon={<Building2 className="h-4 w-4" />} label="Company" value={lead.company} />
+            <DetailItem icon={<Building2 className="h-4 w-4" />} label="Account" value={lead.accountName ?? lead.company} />
+            <DetailItem icon={<UserRound className="h-4 w-4" />} label="Primary contact" value={lead.primaryContactName ?? lead.fullName} />
             <DetailItem icon={<Mail className="h-4 w-4" />} label="Email" value={lead.email} />
             <DetailItem icon={<Phone className="h-4 w-4" />} label="Phone" value={lead.phone} />
             <DetailItem icon={<Radio className="h-4 w-4" />} label="Source" value={lead.source} />
@@ -180,6 +221,11 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
           currentStatus={lead.status}
           nextStep={nextStep}
         />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} />
+        <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">

@@ -12,7 +12,11 @@ export type ActivityFeedItem = {
     | "lead_deleted"
     | "lead_note_added"
     | "lead_note_updated"
-    | "lead_note_deleted";
+    | "lead_note_deleted"
+    | "task_created"
+    | "task_completed"
+    | "deal_stage_changed"
+    | "lead_qualified";
   message: string;
   leadId: string | null;
   leadName: string | null;

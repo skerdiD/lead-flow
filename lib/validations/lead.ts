@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEAL_STAGES } from "@/lib/constants/crm";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 
 const optionalTrimmedString = (max: number) =>
@@ -43,6 +44,10 @@ export const leadFormSchema = z.object({
   }),
   source: optionalTrimmedString(100),
   notes: optionalTrimmedString(5000),
+  dealName: optionalTrimmedString(160),
+  dealStage: z.enum(DEAL_STAGES, {
+    error: () => ({ message: "Please select a valid deal stage." }),
+  }).default("new"),
 });
 
 export type LeadFormInput = z.input<typeof leadFormSchema>;
