@@ -10,6 +10,7 @@ import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
 import { leadNoteSchema } from "@/lib/validations/lead-note";
 import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 import { isUuid, normalizeUuidList } from "@/lib/uuid";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type LeadMutationState =
   | {
@@ -95,6 +96,7 @@ function revalidateLeadPaths(leadId: string) {
 }
 
 async function createLeadActivity(params: {
+  workspaceId: string;
   userId: string;
   eventType: LeadActivityEventType;
   message: string;
@@ -103,6 +105,7 @@ async function createLeadActivity(params: {
 }) {
   try {
     await db.insert(activityEvents).values({
+      workspaceId: params.workspaceId,
       userId: params.userId,
       eventType: params.eventType,
       message: params.message,
@@ -122,6 +125,7 @@ export async function createLeadAction(
   input: LeadFormValues,
 ): Promise<LeadMutationState> {
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
 
@@ -144,6 +148,7 @@ export async function createLeadAction(
     const [createdLead] = await db
       .insert(leads)
       .values({
+        workspaceId: workspace.id,
         userId,
         fullName: parsed.data.fullName,
         company: parsed.data.company ?? null,
@@ -159,6 +164,7 @@ export async function createLeadAction(
       });
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_created",
       message: `Lead created: ${createdLead.fullName}`,
@@ -195,6 +201,7 @@ export async function updateLeadAction(
   }
 
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
 
@@ -221,7 +228,7 @@ export async function updateLeadAction(
         status: leads.status,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .limit(1);
 
     if (!existingLead) {
@@ -243,7 +250,7 @@ export async function updateLeadAction(
         notes: parsed.data.notes ?? null,
         updatedAt: new Date(),
       })
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .returning({
         id: leads.id,
         fullName: leads.fullName,
@@ -260,6 +267,7 @@ export async function updateLeadAction(
     const statusChanged = existingLead.status !== updatedLead.status;
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: statusChanged ? "lead_status_changed" : "lead_updated",
       message: statusChanged
@@ -300,6 +308,7 @@ export async function updateLeadStatusQuickAction(
   }
 
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
   if (!protection.ok) {
@@ -324,7 +333,7 @@ export async function updateLeadStatusQuickAction(
         status: leads.status,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .limit(1);
 
     if (!existingLead) {
@@ -348,7 +357,7 @@ export async function updateLeadStatusQuickAction(
         status,
         updatedAt: new Date(),
       })
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .returning({
         id: leads.id,
         fullName: leads.fullName,
@@ -363,6 +372,7 @@ export async function updateLeadStatusQuickAction(
     }
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_status_changed",
       message: `Lead status changed: ${updatedLead.fullName} (${existingLead.status} -> ${updatedLead.status})`,
@@ -396,6 +406,7 @@ export async function deleteLeadAction(
   }
 
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
   if (!protection.ok) {
@@ -408,7 +419,7 @@ export async function deleteLeadAction(
   try {
     const [deletedLead] = await db
       .delete(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .returning({
         id: leads.id,
         fullName: leads.fullName,
@@ -422,6 +433,7 @@ export async function deleteLeadAction(
     }
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_deleted",
       message: `Lead deleted: ${deletedLead.fullName}`,
@@ -450,6 +462,7 @@ export async function bulkUpdateLeadStatusAction(
   status: string,
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
 
@@ -481,7 +494,7 @@ export async function bulkUpdateLeadStatusAction(
         status: leads.status,
       })
       .from(leads)
-      .where(and(eq(leads.userId, userId), inArray(leads.id, normalizedIds)));
+      .where(and(eq(leads.workspaceId, workspace.id), inArray(leads.id, normalizedIds)));
 
     if (ownedLeads.length === 0) {
       return {
@@ -508,9 +521,10 @@ export async function bulkUpdateLeadStatusAction(
         status,
         updatedAt: new Date(),
       })
-      .where(and(eq(leads.userId, userId), inArray(leads.id, leadIdsToUpdate)));
+      .where(and(eq(leads.workspaceId, workspace.id), inArray(leads.id, leadIdsToUpdate)));
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_status_changed",
       message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} moved to ${status}.`,
@@ -537,6 +551,7 @@ export async function bulkDeleteLeadsAction(
   leadIds: string[],
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
 
@@ -557,7 +572,7 @@ export async function bulkDeleteLeadsAction(
   try {
     const deletedLeads = await db
       .delete(leads)
-      .where(and(eq(leads.userId, userId), inArray(leads.id, normalizedIds)))
+      .where(and(eq(leads.workspaceId, workspace.id), inArray(leads.id, normalizedIds)))
       .returning({
         id: leads.id,
       });
@@ -572,6 +587,7 @@ export async function bulkDeleteLeadsAction(
     }
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_deleted",
       message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} deleted in bulk.`,
@@ -606,6 +622,7 @@ export async function createLeadNoteAction(
   }
 
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
 
@@ -631,7 +648,7 @@ export async function createLeadNoteAction(
         fullName: leads.fullName,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .limit(1);
 
     if (!lead) {
@@ -642,12 +659,14 @@ export async function createLeadNoteAction(
     }
 
     await db.insert(leadNotes).values({
+      workspaceId: workspace.id,
       userId,
       leadId,
       content: parsed.data.content,
     });
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_note_added",
       message: `Note added to ${lead.fullName}`,
@@ -682,6 +701,7 @@ export async function updateLeadNoteAction(
   }
 
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
 
@@ -707,7 +727,7 @@ export async function updateLeadNoteAction(
         fullName: leads.fullName,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .limit(1);
 
     if (!lead) {
@@ -727,7 +747,7 @@ export async function updateLeadNoteAction(
         and(
           eq(leadNotes.id, noteId),
           eq(leadNotes.leadId, leadId),
-          eq(leadNotes.userId, userId),
+          eq(leadNotes.workspaceId, workspace.id),
         ),
       )
       .returning({ id: leadNotes.id });
@@ -740,6 +760,7 @@ export async function updateLeadNoteAction(
     }
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_note_updated",
       message: `Note updated for ${lead.fullName}`,
@@ -773,6 +794,7 @@ export async function deleteLeadNoteAction(
   }
 
   const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
   if (!protection.ok) {
@@ -789,7 +811,7 @@ export async function deleteLeadNoteAction(
         fullName: leads.fullName,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
       .limit(1);
 
     if (!lead) {
@@ -805,7 +827,7 @@ export async function deleteLeadNoteAction(
         and(
           eq(leadNotes.id, noteId),
           eq(leadNotes.leadId, leadId),
-          eq(leadNotes.userId, userId),
+          eq(leadNotes.workspaceId, workspace.id),
         ),
       )
       .returning({ id: leadNotes.id });
@@ -818,6 +840,7 @@ export async function deleteLeadNoteAction(
     }
 
     await createLeadActivity({
+      workspaceId: workspace.id,
       userId,
       eventType: "lead_note_deleted",
       message: `Note removed from ${lead.fullName}`,

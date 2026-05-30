@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
-import { requireUserId } from "@/lib/auth";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 import {
   DEFAULT_LEADS_TABLE_PAGE_SIZE,
   DEFAULT_LEADS_TABLE_SORT_DIRECTION,
@@ -112,11 +112,11 @@ export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLead
 }
 
 export function buildLeadsWhereConditions(
-  userId: string,
+  workspaceId: string,
   filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source">,
 ) {
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
-  const conditions = [eq(leads.userId, userId)];
+  const conditions = [eq(leads.workspaceId, workspaceId)];
 
   if (filters.search) {
     conditions.push(
@@ -173,7 +173,7 @@ export function getLeadsSortOrder(
 }
 
 export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsListResult> {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const {
     search,
     status,
@@ -183,7 +183,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     requestedPage,
     pageSize,
   } = normalizeLeadsFilters(filters);
-  const { conditions, sourceLabel } = buildLeadsWhereConditions(userId, {
+  const { conditions, sourceLabel } = buildLeadsWhereConditions(workspace.id, {
     search,
     status,
     source,
@@ -228,7 +228,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       count: sourceCount,
     })
     .from(leads)
-    .where(eq(leads.userId, userId))
+    .where(eq(leads.workspaceId, workspace.id))
     .groupBy(sourceLabel)
     .orderBy(desc(sourceCount), asc(sourceLabel));
 

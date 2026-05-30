@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   requireUserIdMock,
+  getCurrentWorkspaceMock,
   revalidatePathMock,
   selectResults,
   insertLeadValuesMock,
@@ -16,6 +17,7 @@ const {
 } = vi.hoisted(() => {
   const state = {
     requireUserIdMock: vi.fn(),
+    getCurrentWorkspaceMock: vi.fn(),
     revalidatePathMock: vi.fn(),
     selectResults: [] as unknown[],
     insertLeadValuesMock: vi.fn(),
@@ -26,6 +28,7 @@ const {
     protectLeadMutationMock: vi.fn(),
     leadsTable: {
       id: "id",
+      workspaceId: "workspace_id",
       userId: "user_id",
       fullName: "full_name",
       company: "company",
@@ -39,6 +42,7 @@ const {
     },
     activityEventsTable: {
       id: "id",
+      workspaceId: "workspace_id",
       userId: "user_id",
       eventType: "event_type",
       message: "message",
@@ -48,6 +52,7 @@ const {
     },
     leadNotesTable: {
       id: "id",
+      workspaceId: "workspace_id",
       userId: "user_id",
       leadId: "lead_id",
       content: "content",
@@ -119,6 +124,10 @@ vi.mock("@/lib/auth", () => ({
   requireUserId: requireUserIdMock,
 }));
 
+vi.mock("@/lib/workspaces", () => ({
+  getCurrentWorkspace: getCurrentWorkspaceMock,
+}));
+
 vi.mock("@/lib/arcjet", () => ({
   protectLeadMutation: protectLeadMutationMock,
 }));
@@ -150,6 +159,12 @@ describe("lead actions", () => {
     vi.clearAllMocks();
     selectResults.length = 0;
     requireUserIdMock.mockResolvedValue("user_123");
+    getCurrentWorkspaceMock.mockResolvedValue({
+      id: "workspace_123",
+      name: "Personal Workspace",
+      ownerUserId: "user_123",
+      role: "owner",
+    });
     protectLeadMutationMock.mockResolvedValue({ ok: true });
 
     insertLeadValuesMock.mockImplementation(() => ({
@@ -172,6 +187,7 @@ describe("lead actions", () => {
     });
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        workspaceId: "workspace_123",
         userId: "user_123",
         eventType: "lead_created",
         leadId,
@@ -200,6 +216,7 @@ describe("lead actions", () => {
     });
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        workspaceId: "workspace_123",
         eventType: "lead_status_changed",
         leadId,
       }),
@@ -220,6 +237,7 @@ describe("lead actions", () => {
     });
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        workspaceId: "workspace_123",
         eventType: "lead_deleted",
         leadId,
       }),

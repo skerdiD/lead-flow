@@ -1,8 +1,8 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { leadNotes, leads } from "@/db/schema";
-import { requireUserId } from "@/lib/auth";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type LeadPipelineDatum = {
   status: LeadStatus;
@@ -19,7 +19,7 @@ export type SourcePerformanceDatum = {
 };
 
 export async function getDashboardStats() {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
 
   const [[stats], [notesStats]] = await Promise.all([
     db
@@ -33,13 +33,13 @@ export async function getDashboardStats() {
         lostLeads: sql<number>`count(*) filter (where ${leads.status} = 'Lost')`,
       })
       .from(leads)
-      .where(eq(leads.userId, userId)),
+      .where(eq(leads.workspaceId, workspace.id)),
     db
       .select({
         notesCount: sql<number>`count(*)`,
       })
       .from(leadNotes)
-      .where(eq(leadNotes.userId, userId)),
+      .where(eq(leadNotes.workspaceId, workspace.id)),
   ]);
 
   return {
@@ -55,7 +55,7 @@ export async function getDashboardStats() {
 }
 
 export async function getRecentLeads(limit = 5) {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
 
   return db
     .select({
@@ -66,13 +66,13 @@ export async function getRecentLeads(limit = 5) {
       createdAt: leads.createdAt,
     })
     .from(leads)
-    .where(eq(leads.userId, userId))
+    .where(eq(leads.workspaceId, workspace.id))
     .orderBy(desc(leads.createdAt))
     .limit(limit);
 }
 
 export async function getLeadPipelineData() {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
 
   const rows = await db
     .select({
@@ -80,7 +80,7 @@ export async function getLeadPipelineData() {
       total: sql<number>`count(*)`,
     })
     .from(leads)
-    .where(eq(leads.userId, userId))
+    .where(eq(leads.workspaceId, workspace.id))
     .groupBy(leads.status);
 
   const countByStatus = new Map<LeadStatus, number>();
@@ -106,7 +106,7 @@ export async function getLeadPipelineData() {
 }
 
 export async function getSourcePerformanceData(limit = 6) {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
 
   const rows = await db
@@ -117,7 +117,7 @@ export async function getSourcePerformanceData(limit = 6) {
       won: sql<number>`count(*) filter (where ${leads.status} = 'Closed')`,
     })
     .from(leads)
-    .where(eq(leads.userId, userId))
+    .where(eq(leads.workspaceId, workspace.id))
     .groupBy(sourceLabel)
     .orderBy(desc(sql<number>`count(*)`))
     .limit(limit);

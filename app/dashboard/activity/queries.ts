@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activityEvents } from "@/db/schema";
-import { requireUserId } from "@/lib/auth";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type ActivityFeedItem = {
   id: string;
@@ -20,7 +20,7 @@ export type ActivityFeedItem = {
 };
 
 export async function getActivityFeed(limit = 40): Promise<ActivityFeedItem[]> {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
 
   return db
     .select({
@@ -32,7 +32,7 @@ export async function getActivityFeed(limit = 40): Promise<ActivityFeedItem[]> {
       createdAt: activityEvents.createdAt,
     })
     .from(activityEvents)
-    .where(eq(activityEvents.userId, userId))
+    .where(eq(activityEvents.workspaceId, workspace.id))
     .orderBy(desc(activityEvents.createdAt))
     .limit(limit);
 }

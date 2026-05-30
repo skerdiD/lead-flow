@@ -2,6 +2,7 @@ import { Bell, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
 import { requireCurrentUser } from "@/lib/auth";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 function SettingsSection({
   icon: Icon,
@@ -63,7 +64,10 @@ function SettingRow({
 }
 
 export default async function SettingsPage() {
-  const { userId, user } = await requireCurrentUser();
+  const [{ userId, user }, workspace] = await Promise.all([
+    requireCurrentUser(),
+    getCurrentWorkspace(),
+  ]);
   const userRecord = user as Record<string, unknown>;
   const firstName =
     typeof userRecord.firstName === "string" ? userRecord.firstName : "";
@@ -157,14 +161,14 @@ export default async function SettingsPage() {
           >
             <div className="space-y-4">
               <SettingRow
-                label="Workspace scope"
-                value="Personal workspace"
-                hint="Each lead is isolated by the authenticated user account."
+                label="Current workspace"
+                value={workspace.name}
+                hint={`Your role in this workspace is ${workspace.role}.`}
               />
               <SettingRow
                 label="Data ownership"
-                value="All lead records are scoped to your user ID."
-                hint="This keeps access control strict and prevents cross-user data access."
+                value="Workspace-scoped CRM records"
+                hint="Leads, notes, and activity are isolated by workspace membership."
               />
             </div>
           </SettingsSection>
@@ -182,8 +186,8 @@ export default async function SettingsPage() {
               />
               <SettingRow
                 label="Lead access control"
-                value="Owner-only access"
-                hint="Users can only view, edit, or delete their own leads."
+                value="Workspace member access"
+                hint="Only workspace members can read or manage CRM records in that workspace."
               />
             </div>
           </SettingsSection>

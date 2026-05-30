@@ -6,11 +6,13 @@ import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
 
 type DashboardShellProps = {
   children: React.ReactNode;
+  currentWorkspaceName: string;
   searchSlot?: React.ReactNode;
 };
 
 export function DashboardShell({
   children,
+  currentWorkspaceName,
   searchSlot,
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -26,6 +28,7 @@ export function DashboardShell({
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <DashboardTopbar
             onOpenSidebar={() => setMobileSidebarOpen(true)}
+            currentWorkspaceName={currentWorkspaceName}
             searchSlot={searchSlot}
           />
 

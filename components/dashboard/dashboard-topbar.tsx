@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Plus } from "lucide-react";
+import { Building2, Menu, Plus } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 
 type DashboardTopbarProps = {
   onOpenSidebar: () => void;
+  currentWorkspaceName: string;
   searchSlot?: React.ReactNode;
 };
 
@@ -66,6 +67,7 @@ function getPageMeta(pathname: string) {
 
 export function DashboardTopbar({
   onOpenSidebar,
+  currentWorkspaceName,
   searchSlot,
 }: DashboardTopbarProps) {
   const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
@@ -101,6 +103,13 @@ export function DashboardTopbar({
         ) : null}
 
         <div className="flex items-center gap-3">
+          <div className="hidden max-w-[180px] items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm sm:flex">
+            <Building2 className="h-4 w-4 shrink-0" />
+            <span className="truncate font-medium text-foreground">
+              {currentWorkspaceName}
+            </span>
+          </div>
+
           {!onCreatePage ? (
             <Link
               href="/dashboard/leads/new"

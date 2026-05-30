@@ -1,15 +1,15 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activityEvents, leadNotes, leads } from "@/db/schema";
-import { requireUserId } from "@/lib/auth";
 import { isUuid } from "@/lib/uuid";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export async function getLeadDetails(leadId: string) {
   if (!isUuid(leadId)) {
     return null;
   }
 
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
 
   const [lead] = await db
     .select({
@@ -25,7 +25,7 @@ export async function getLeadDetails(leadId: string) {
       updatedAt: leads.updatedAt,
     })
     .from(leads)
-    .where(and(eq(leads.id, leadId), eq(leads.userId, userId)))
+    .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
     .limit(1);
 
   if (!lead) {
@@ -41,7 +41,9 @@ export async function getLeadDetails(leadId: string) {
         updatedAt: leadNotes.updatedAt,
       })
       .from(leadNotes)
-      .where(and(eq(leadNotes.leadId, leadId), eq(leadNotes.userId, userId)))
+      .where(
+        and(eq(leadNotes.leadId, leadId), eq(leadNotes.workspaceId, workspace.id)),
+      )
       .orderBy(desc(leadNotes.createdAt)),
     db
       .select({
@@ -51,7 +53,12 @@ export async function getLeadDetails(leadId: string) {
         createdAt: activityEvents.createdAt,
       })
       .from(activityEvents)
-      .where(and(eq(activityEvents.leadId, leadId), eq(activityEvents.userId, userId)))
+      .where(
+        and(
+          eq(activityEvents.leadId, leadId),
+          eq(activityEvents.workspaceId, workspace.id),
+        ),
+      )
       .orderBy(desc(activityEvents.createdAt))
       .limit(8),
   ]);

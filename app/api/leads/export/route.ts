@@ -8,9 +8,9 @@ import {
   normalizeLeadsFilters,
   type LeadsListFilters,
 } from "@/app/dashboard/leads/queries";
-import { requireUserId } from "@/lib/auth";
 import { buildLeadsCsv, buildLeadsPdf } from "@/lib/leads-export";
 import { normalizeUuidList } from "@/lib/uuid";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export const runtime = "nodejs";
 
@@ -21,7 +21,7 @@ function normalizeSelectedIds(rawSelected: string | null) {
 }
 
 export async function GET(request: Request) {
-  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
   const { searchParams } = new URL(request.url);
   const format = (searchParams.get("format") || "csv").toLowerCase();
 
@@ -42,7 +42,10 @@ export async function GET(request: Request) {
 
   const normalized = normalizeLeadsFilters(filters);
   const selectedIds = normalizeSelectedIds(searchParams.get("selected"));
-  const { conditions, sourceLabel } = buildLeadsWhereConditions(userId, normalized);
+  const { conditions, sourceLabel } = buildLeadsWhereConditions(
+    workspace.id,
+    normalized,
+  );
   const { primarySort, secondarySort } = getLeadsSortOrder(
     normalized.sortBy,
     normalized.sortDir,

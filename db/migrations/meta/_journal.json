@@ -29,6 +29,13 @@
       "when": 1779696000001,
       "tag": "0001_add_activity_events",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780134512339,
+      "tag": "0004_add_workspace_foundation",
+      "breakpoints": true
     }
   ]
 }
