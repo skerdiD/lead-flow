@@ -2,7 +2,7 @@
 
 **Lead Flow** is a modern CRM-style SaaS application built with **Next.js**, **React**, **TypeScript**, **Clerk Auth**, **PostgreSQL**, **Drizzle ORM**, **Arcjet**, and a clean SaaS dashboard interface.
 
-It demonstrates authentication, protected dashboards, lead management, activity tracking, revenue pipeline metrics, weighted forecasting, CSV/PDF exports, AI assistant support, server-side validation, automated tests, CI, and production-minded UI/UX.
+It demonstrates authentication, protected dashboards, lead management, activity tracking, revenue pipeline metrics, weighted forecasting, CSV/PDF exports, server-side validation, automated tests, CI, and production-minded UI/UX.
 
 [Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) | [Repository](https://github.com/skerdiD/lead-flow)
 
@@ -33,7 +33,7 @@ Explore the deployed app: [lead-flow-jx61pjm6w-skerdids-projects.vercel.app](htt
 
 ## Overview
 
-Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product with authentication, protected dashboard routes, lead CRUD, activity tracking, revenue forecasting, exports, AI support, testing, and a polished interface.
+Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product with authentication, protected dashboard routes, lead CRUD, activity tracking, revenue forecasting, exports, testing, and a polished interface.
 
 The goal was to show more than CRUD: secure server actions, database modeling, dashboard analytics, business-focused pipeline tracking, export workflows, and product-focused UX.
 
@@ -86,14 +86,6 @@ For clients, it shows the foundation of a practical sales tool where users can m
 * Lead source performance charts
 * Activity timeline
 
-### AI Assistant
-
-* AI assistant inside the app
-* CRM workflow support
-* Auth-protected chat route
-* Content-type validation
-* Arcjet-protected API route
-
 ### Exports
 
 * CSV export for lead data
@@ -108,7 +100,7 @@ For clients, it shows the foundation of a practical sales tool where users can m
 * Server-side auth checks
 * User-scoped database access
 * Arcjet bot and rate-limit protection
-* API guardrails
+* Mutation guardrails
 * Responsive SaaS interface
 
 ---
@@ -133,10 +125,9 @@ For clients, it shows the foundation of a practical sales tool where users can m
 * Zod validation
 * Typed database schema
 
-### Auth, AI, and Security
+### Auth and Security
 
 * Clerk
-* OpenAI API
 * Arcjet
 * Environment-based secrets
 * Vercel deployment
@@ -161,7 +152,7 @@ Client UI
 
 Server Layer
   |-- Server Actions / API Routes / Zod Validation
-  |-- Auth Checks / Arcjet Protection / AI Chat Route
+  |-- Auth Checks / Arcjet Protection / Export Routes
 
 Database Layer
   |-- PostgreSQL / Drizzle ORM
@@ -204,7 +195,6 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 DATABASE_URL=
 ARCJET_KEY=
-OPENAI_API_KEY=
 ```
 
 ### 4. Run database migrations
@@ -249,7 +239,7 @@ npm run e2e:headed   # Run Playwright tests in headed mode
 
 ## Testing and Quality
 
-* Vitest validates lead logic, validators, queries, and API guardrails
+* Vitest validates lead logic, validators, queries, and mutation guardrails
 * Playwright validates protected dashboard flows and lead actions
 * TypeScript catches type-level regressions
 * ESLint keeps code quality consistent
