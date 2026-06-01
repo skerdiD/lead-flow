@@ -9,11 +9,11 @@ import {
   Clock3,
   LayoutDashboard,
   LockKeyhole,
-  Sparkles,
   Target,
   UsersRound,
   Workflow,
 } from "lucide-react";
+import { LeadFlowLogo } from "@/components/brand/lead-flow-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -225,12 +225,7 @@ export function HomePageMarketing() {
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <LoadIn delay={0} className="leadflow-nav-item">
             <Link href="/" className="inline-flex items-center gap-2.5 transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
-              <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-[0_12px_30px_-16px_rgba(14,165,233,0.75)]">
-                <Sparkles className="size-4" />
-              </span>
-              <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                LeadFlow
-              </span>
+              <LeadFlowLogo />
             </Link>
           </LoadIn>
 
@@ -684,7 +679,7 @@ export function HomePageMarketing() {
           <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] lg:items-start lg:px-8">
             <ScrollReveal>
               <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold tracking-[0.1em] text-emerald-700 uppercase dark:border-emerald-900/70 dark:bg-emerald-900/30 dark:text-emerald-300">
-                <Sparkles className="size-3.5" />
+                <Target className="size-3.5" />
                 Founder-focused positioning
               </p>
               <h2 className="mt-5 font-[family-name:var(--font-fraunces)] text-3xl tracking-tight text-slate-950 dark:text-slate-100 sm:text-4xl">
@@ -779,10 +774,10 @@ export function HomePageMarketing() {
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] lg:px-8">
           <div>
             <Link href="/" className="inline-flex items-center gap-2.5">
-              <span className="inline-flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-white">
-                <Sparkles className="size-4" />
-              </span>
-              <span className="text-sm font-semibold text-white">LeadFlow</span>
+              <LeadFlowLogo
+                markClassName="size-8 rounded-xl shadow-none"
+                wordmarkClassName="text-white"
+              />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-6 text-slate-400">
               Lean CRM workspace for founders and compact teams that need clear pipeline visibility and fast daily execution.

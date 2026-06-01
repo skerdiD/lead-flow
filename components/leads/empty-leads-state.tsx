@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox, Plus, SearchX, Sparkles } from "lucide-react";
+import { Inbox, ListChecks, Plus, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type EmptyLeadsStateProps = {
@@ -49,7 +49,7 @@ export function EmptyLeadsState({ hasFilters }: EmptyLeadsStateProps) {
         {!hasFilters ? (
           <div className="mt-8 rounded-2xl border bg-muted/30 px-4 py-3 text-left">
             <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Sparkles className="h-4 w-4 text-muted-foreground" />
+              <ListChecks className="h-4 w-4 text-muted-foreground" />
               Tips for a clean start
             </p>
             <p className="mt-2 text-sm text-muted-foreground">

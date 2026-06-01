@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
+import { LeadFlowLogo } from "@/components/brand/lead-flow-logo";
 import { dashboardNavItems } from "@/components/dashboard/dashboard-nav";
 import { cn } from "@/lib/utils";
 
@@ -39,17 +40,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           className="flex items-center gap-3"
           onClick={onClose}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
-            LF
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-tight text-foreground">
-              LeadFlow
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              Lead management
-            </p>
-          </div>
+          <LeadFlowLogo
+            subtitle="Lead management"
+            wordmarkClassName="text-foreground"
+          />
         </Link>
       </div>
 

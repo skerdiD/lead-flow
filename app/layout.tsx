@@ -23,6 +23,11 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "LeadFlow",
   description: "LeadFlow keeps every sales lead organized and actionable.",
+  icons: {
+    icon: [{ url: "/brand/leadflow-mark.svg", type: "image/svg+xml" }],
+    shortcut: "/brand/leadflow-mark.svg",
+    apple: "/brand/leadflow-mark.svg",
+  },
 };
 
 export default function RootLayout({
