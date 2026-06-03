@@ -1,7 +1,15 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { activityEvents, leadNotes, leads } from "@/db/schema";
+import {
+  accounts,
+  activityEvents,
+  contacts,
+  crmTasks,
+  deals,
+  leadNotes,
+  leads,
+} from "@/db/schema";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 export const runtime = "nodejs";
@@ -22,7 +30,11 @@ export async function POST(request: Request) {
 
   await db.delete(leadNotes).where(eq(leadNotes.userId, userId));
   await db.delete(activityEvents).where(eq(activityEvents.userId, userId));
+  await db.delete(crmTasks).where(eq(crmTasks.userId, userId));
+  await db.delete(deals).where(eq(deals.userId, userId));
   await db.delete(leads).where(eq(leads.userId, userId));
+  await db.delete(contacts).where(eq(contacts.userId, userId));
+  await db.delete(accounts).where(eq(accounts.userId, userId));
 
   return NextResponse.json({ ok: true });
 }

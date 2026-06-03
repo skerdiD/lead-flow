@@ -70,4 +70,22 @@ describe("leadFormSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("rejects impossible deal dates", () => {
+    expect(
+      leadFormSchema.safeParse({
+        fullName: "Jane Doe",
+        status: "New",
+        expectedCloseDate: "2026-99-99",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      leadFormSchema.safeParse({
+        fullName: "Jane Doe",
+        status: "New",
+        closedDate: "2026-02-31",
+      }).success,
+    ).toBe(false);
+  });
 });

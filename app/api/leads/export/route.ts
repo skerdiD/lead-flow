@@ -8,11 +8,14 @@ import {
   normalizeLeadsFilters,
   type LeadsListFilters,
 } from "@/app/dashboard/leads/queries";
+import { protectLeadExport } from "@/lib/arcjet";
 import { buildLeadsCsv, buildLeadsPdf } from "@/lib/leads-export";
 import { normalizeUuidList } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export const runtime = "nodejs";
+
+const EXPORT_ROW_LIMIT = 1000;
 
 function normalizeSelectedIds(rawSelected: string | null) {
   if (!rawSelected) return [];
@@ -21,6 +24,15 @@ function normalizeSelectedIds(rawSelected: string | null) {
 }
 
 export async function GET(request: Request) {
+  const protection = await protectLeadExport();
+
+  if (!protection.ok) {
+    return NextResponse.json(
+      { error: protection.message },
+      { status: protection.status },
+    );
+  }
+
   const workspace = await getCurrentWorkspace();
   const { searchParams } = new URL(request.url);
   const format = (searchParams.get("format") || "csv").toLowerCase();
@@ -68,7 +80,17 @@ export async function GET(request: Request) {
     })
     .from(leads)
     .where(and(...conditions))
-    .orderBy(primarySort, secondarySort, asc(leads.id));
+    .orderBy(primarySort, secondarySort, asc(leads.id))
+    .limit(EXPORT_ROW_LIMIT + 1);
+
+  if (rows.length > EXPORT_ROW_LIMIT) {
+    return NextResponse.json(
+      {
+        error: `Export is limited to ${EXPORT_ROW_LIMIT} leads. Narrow the filters or select specific leads and try again.`,
+      },
+      { status: 413 },
+    );
+  }
 
   const exportedAt = new Date();
   const metadata = {

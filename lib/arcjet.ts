@@ -37,7 +37,7 @@ function getDeniedMessage(decision: ArcjetDecision) {
   return "This request was blocked for security reasons.";
 }
 
-export async function protectLeadMutation() {
+async function protectRequest() {
   const req = await request();
   const decision = await aj.protect(req);
 
@@ -45,10 +45,19 @@ export async function protectLeadMutation() {
     return {
       ok: false as const,
       message: getDeniedMessage(decision),
+      status: decision.reason.isRateLimit() ? 429 : 403,
     };
   }
 
   return {
     ok: true as const,
   };
+}
+
+export async function protectLeadMutation() {
+  return protectRequest();
+}
+
+export async function protectLeadExport() {
+  return protectRequest();
 }

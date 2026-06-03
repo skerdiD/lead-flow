@@ -39,15 +39,33 @@ function toCsvDate(date: Date) {
 function escapeCsvValue(value: string) {
   const normalized = /^[\s]*[=+\-@]/.test(value) ? `'${value}` : value;
 
-  if (normalized.includes(",") || normalized.includes('"') || normalized.includes("\n")) {
+  if (
+    normalized.includes(",") ||
+    normalized.includes('"') ||
+    normalized.includes("\n") ||
+    normalized.includes("\r")
+  ) {
     return `"${normalized.replace(/"/g, '""')}"`;
   }
 
   return normalized;
 }
 
+function buildCsvRow(values: string[]) {
+  return values.map((value) => escapeCsvValue(value)).join(",");
+}
+
 function toDisplayValue(value: string | null) {
   return value?.trim() || "-";
+}
+
+function toPdfText(value: string, maxLength = 180) {
+  return value
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[^\x20-\x7E]/g, "?")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .slice(0, maxLength);
 }
 
 export function buildLeadsCsv(
@@ -55,14 +73,19 @@ export function buildLeadsCsv(
   metadata: LeadExportMetadata,
 ) {
   const headerLines = [
-    `LeadFlow Leads Export`,
-    `Exported At,${escapeCsvValue(toReadableTimestamp(metadata.exportedAt))}`,
-    `Total Leads,${metadata.totalCount}`,
-    `Filters,search="${metadata.search || "-"}" | status="${metadata.status || "All"}" | source="${metadata.source || "All"}"`,
+    buildCsvRow(["LeadFlow Leads Export"]),
+    buildCsvRow(["Exported At", toReadableTimestamp(metadata.exportedAt)]),
+    buildCsvRow(["Total Leads", String(metadata.totalCount)]),
+    buildCsvRow([
+      "Filters",
+      `search="${metadata.search || "-"}" | status="${metadata.status || "All"}" | source="${metadata.source || "All"}"`,
+    ]),
   ];
 
   if (metadata.selectedCount && metadata.selectedCount > 0) {
-    headerLines.push(`Selection,${metadata.selectedCount} selected lead(s)`);
+    headerLines.push(
+      buildCsvRow(["Selection", `${metadata.selectedCount} selected lead(s)`]),
+    );
   }
 
   const columnHeaders = [
@@ -76,7 +99,7 @@ export function buildLeadsCsv(
   ];
 
   const dataLines = rows.map((lead) =>
-    [
+    buildCsvRow([
       lead.fullName,
       toDisplayValue(lead.company),
       toDisplayValue(lead.email),
@@ -84,12 +107,10 @@ export function buildLeadsCsv(
       lead.status,
       lead.sourceLabel,
       toCsvDate(lead.createdAt),
-    ]
-      .map((value) => escapeCsvValue(value))
-      .join(","),
+    ]),
   );
 
-  return `${headerLines.join("\n")}\n\n${columnHeaders.join(",")}\n${dataLines.join("\n")}\n`;
+  return `${headerLines.join("\n")}\n\n${buildCsvRow(columnHeaders)}\n${dataLines.join("\n")}\n`;
 }
 
 export async function buildLeadsPdf(
@@ -129,7 +150,9 @@ export async function buildLeadsPdf(
       x?: number;
     },
   ) => {
-    page.drawText(text, {
+    const safeText = toPdfText(text, 220);
+
+    page.drawText(safeText, {
       x: options?.x ?? marginX,
       y,
       size: options?.size ?? 10,
