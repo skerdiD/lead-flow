@@ -139,6 +139,7 @@ const {
 function createSelectBuilder(result: unknown) {
   const builder = {
     from: vi.fn(() => builder),
+    innerJoin: vi.fn(() => builder),
     where: vi.fn(() => builder),
     groupBy: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
@@ -162,7 +163,8 @@ vi.mock("@/db/schema", () => ({
 }));
 
 vi.mock("@/db", () => ({
-  db: {
+  db: (() => {
+    const mockDb = {
     insert: vi.fn((table: unknown) => {
       if (table === leadsTable) {
         return {
@@ -217,7 +219,15 @@ vi.mock("@/db", () => ({
         returning: deleteReturningMock,
       })),
     })),
-  },
+    };
+
+    return {
+      ...mockDb,
+      transaction: vi.fn((callback: (tx: typeof mockDb) => unknown) =>
+        callback(mockDb),
+      ),
+    };
+  })(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -237,10 +247,13 @@ vi.mock("next/cache", () => ({
 }));
 
 import {
+  completeFollowUpTaskAction,
   createFollowUpTaskAction,
   createLeadAction,
   deleteLeadAction,
+  updateDealStageAction,
   updateLeadAction,
+  updateLeadStatusQuickAction,
 } from "@/app/dashboard/leads/actions";
 
 const validLeadInput = {
@@ -322,6 +335,34 @@ describe("lead actions", () => {
     );
     expect(insertDealValuesMock.mock.calls[0]?.[0].expectedCloseAt).toEqual(
       new Date("2026-06-15T00:00:00.000Z"),
+    );
+  });
+
+  it("createLeadAction keeps terminal lead and deal states consistent", async () => {
+    insertLeadReturningMock.mockResolvedValue([
+      { id: leadId, fullName: "Jane Doe" },
+    ]);
+
+    const result = await createLeadAction({
+      ...validLeadInput,
+      status: "Closed",
+      dealName: "Annual rollout",
+      dealStage: "proposal",
+      dealValue: 1000,
+      dealProbability: 25,
+    });
+
+    expect(result.success).toBe(true);
+    expect(insertLeadValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "Closed",
+      }),
+    );
+    expect(insertDealValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stage: "won",
+        probability: 100,
+      }),
     );
   });
 
@@ -437,6 +478,95 @@ describe("lead actions", () => {
         leadId,
       }),
     );
+  });
+
+  it("updateLeadStatusQuickAction syncs a closed lead to a won deal", async () => {
+    selectResults.push(
+      [
+        {
+          id: leadId,
+          fullName: "Jane Doe",
+          status: "Proposal Sent",
+        },
+      ],
+      [
+        {
+          id: "deal_123",
+          name: "Website redesign",
+          stage: "proposal",
+          lostReason: null,
+        },
+      ],
+    );
+    updateReturningMock
+      .mockResolvedValueOnce([
+        { id: leadId, fullName: "Jane Doe", status: "Closed" },
+      ])
+      .mockResolvedValueOnce([{ name: "Website redesign", stage: "won" }]);
+
+    const result = await updateLeadStatusQuickAction(leadId, "Closed");
+
+    expect(result).toEqual({
+      success: true,
+      status: "Closed",
+      message: "Lead stage updated to Closed.",
+    });
+    expect(updateReturningMock).toHaveBeenCalledTimes(2);
+    expect(insertActivityValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "deal_stage_changed",
+        leadId,
+      }),
+    );
+  });
+
+  it("updateDealStageAction syncs a won deal to a closed lead", async () => {
+    const dealId = "22222222-2222-4222-8222-222222222222";
+    selectResults.push([
+      {
+        id: dealId,
+        name: "Website redesign",
+        stage: "proposal",
+        probability: 60,
+        leadStatus: "Proposal Sent",
+        leadName: "Jane Doe",
+      },
+    ]);
+    updateReturningMock
+      .mockResolvedValueOnce([{ stage: "won" }])
+      .mockResolvedValueOnce([{ status: "Closed" }]);
+
+    const result = await updateDealStageAction(leadId, dealId, "won");
+
+    expect(result).toEqual({
+      success: true,
+      stage: "won",
+      message: "Deal stage updated to won.",
+    });
+    expect(updateReturningMock).toHaveBeenCalledTimes(2);
+    expect(insertActivityValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "lead_status_changed",
+        leadId,
+      }),
+    );
+  });
+
+  it("completeFollowUpTaskAction does not relog an already completed task", async () => {
+    const taskId = "33333333-3333-4333-8333-333333333333";
+    selectResults.push(
+      [{ id: leadId, fullName: "Jane Doe" }],
+      [{ id: taskId, title: "Send proposal", status: "done" }],
+    );
+
+    const result = await completeFollowUpTaskAction(leadId, taskId);
+
+    expect(result).toEqual({
+      success: true,
+      message: "Task is already done.",
+    });
+    expect(updateReturningMock).not.toHaveBeenCalled();
+    expect(insertActivityValuesMock).not.toHaveBeenCalled();
   });
 
   it("deleteLeadAction deletes a lead and logs delete activity", async () => {

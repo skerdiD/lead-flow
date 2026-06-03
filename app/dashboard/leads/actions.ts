@@ -29,6 +29,8 @@ import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
 import { isUuid, normalizeUuidList } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
+type DbClient = Pick<typeof db, "delete" | "insert" | "select" | "update">;
+
 export type LeadMutationState =
   | {
       success: true;
@@ -148,6 +150,38 @@ function parseDateInput(value?: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function reconcileLeadAndDealStage(status: LeadStatus, dealStage: DealStage) {
+  if (dealStage === "won") {
+    return { status: "Closed" as LeadStatus, dealStage };
+  }
+
+  if (dealStage === "lost") {
+    return { status: "Lost" as LeadStatus, dealStage };
+  }
+
+  if (status === "Closed") {
+    return { status, dealStage: "won" as DealStage };
+  }
+
+  if (status === "Lost") {
+    return { status, dealStage: "lost" as DealStage };
+  }
+
+  return { status, dealStage };
+}
+
+function leadStatusForDealStage(stage: DealStage): LeadStatus | null {
+  if (stage === "won") return "Closed";
+  if (stage === "lost") return "Lost";
+  return null;
+}
+
+function dealStageForLeadStatus(status: LeadStatus): DealStage | null {
+  if (status === "Closed") return "won";
+  if (status === "Lost") return "lost";
+  return null;
+}
+
 function resolveClosedAt(params: {
   stage: DealStage;
   closedDate?: string;
@@ -170,6 +204,12 @@ function getInitialTaskStatus(dueAt: Date | null) {
   return dueAt && dueAt.getTime() < Date.now() ? "overdue" : "pending";
 }
 
+function normalizeDealProbability(stage: DealStage, probability: number) {
+  if (stage === "won") return 100;
+  if (stage === "lost") return 0;
+  return probability;
+}
+
 function revalidateLeadPaths(leadId: string) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/leads");
@@ -179,15 +219,18 @@ function revalidateLeadPaths(leadId: string) {
 }
 
 async function saveLeadAccount(params: {
+  client?: DbClient;
   workspaceId: string;
   userId: string;
   existingAccountId?: string | null;
   company?: string;
 }) {
+  const client = params.client ?? db;
+
   if (!params.company) return null;
 
   if (params.existingAccountId) {
-    const [updatedAccount] = await db
+    const [updatedAccount] = await client
       .update(accounts)
       .set({
         name: params.company,
@@ -206,7 +249,7 @@ async function saveLeadAccount(params: {
     }
   }
 
-  const [createdAccount] = await db
+  const [createdAccount] = await client
     .insert(accounts)
     .values({
       workspaceId: params.workspaceId,
@@ -219,6 +262,7 @@ async function saveLeadAccount(params: {
 }
 
 async function saveLeadContact(params: {
+  client?: DbClient;
   workspaceId: string;
   userId: string;
   existingContactId?: string | null;
@@ -227,8 +271,10 @@ async function saveLeadContact(params: {
   email?: string;
   phone?: string;
 }) {
+  const client = params.client ?? db;
+
   if (params.existingContactId) {
-    const [updatedContact] = await db
+    const [updatedContact] = await client
       .update(contacts)
       .set({
         accountId: params.accountId ?? null,
@@ -250,7 +296,7 @@ async function saveLeadContact(params: {
     }
   }
 
-  const [createdContact] = await db
+  const [createdContact] = await client
     .insert(contacts)
     .values({
       workspaceId: params.workspaceId,
@@ -266,6 +312,7 @@ async function saveLeadContact(params: {
 }
 
 async function saveLeadDeal(params: {
+  client?: DbClient;
   workspaceId: string;
   userId: string;
   leadId: string;
@@ -281,9 +328,16 @@ async function saveLeadDeal(params: {
   closedDate?: string;
   lostReason?: string;
 }) {
+  const client = params.client ?? db;
+
   if (!params.dealName) return null;
 
-  const [existingDeal] = await db
+  const dealProbability = normalizeDealProbability(
+    params.dealStage,
+    params.dealProbability,
+  );
+
+  const [existingDeal] = await client
     .select({
       id: deals.id,
       stage: deals.stage,
@@ -294,7 +348,7 @@ async function saveLeadDeal(params: {
     .limit(1);
 
   if (existingDeal) {
-    const [updatedDeal] = await db
+    const [updatedDeal] = await client
       .update(deals)
       .set({
         accountId: params.accountId ?? null,
@@ -304,7 +358,7 @@ async function saveLeadDeal(params: {
         stage: params.dealStage,
         valueCents: moneyToCents(params.dealValue),
         currency: params.dealCurrency,
-        probability: params.dealProbability,
+        probability: dealProbability,
         expectedCloseAt: parseDateInput(params.expectedCloseDate),
         closedAt: resolveClosedAt({
           stage: params.dealStage,
@@ -324,7 +378,7 @@ async function saveLeadDeal(params: {
     };
   }
 
-  const [createdDeal] = await db
+  const [createdDeal] = await client
     .insert(deals)
     .values({
       workspaceId: params.workspaceId,
@@ -337,7 +391,7 @@ async function saveLeadDeal(params: {
       stage: params.dealStage,
       valueCents: moneyToCents(params.dealValue),
       currency: params.dealCurrency,
-      probability: params.dealProbability,
+      probability: dealProbability,
       expectedCloseAt: parseDateInput(params.expectedCloseDate),
       closedAt: resolveClosedAt({
         stage: params.dealStage,
@@ -404,56 +458,67 @@ export async function createLeadAction(
   }
 
   try {
-    const accountId = await saveLeadAccount({
-      workspaceId: workspace.id,
-      userId,
-      company: parsed.data.company,
-    });
-    const contactId = await saveLeadContact({
-      workspaceId: workspace.id,
-      userId,
-      accountId,
-      fullName: parsed.data.fullName,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-    });
-
-    const [createdLead] = await db
-      .insert(leads)
-      .values({
+    const reconciled = reconcileLeadAndDealStage(
+      parsed.data.status,
+      parsed.data.dealStage,
+    );
+    const { createdLead, createdDeal } = await db.transaction(async (tx) => {
+      const accountId = await saveLeadAccount({
+        client: tx,
         workspaceId: workspace.id,
         userId,
-        assignedOwnerUserId: userId,
+        company: parsed.data.company,
+      });
+      const contactId = await saveLeadContact({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
         accountId,
-        primaryContactId: contactId,
         fullName: parsed.data.fullName,
-        company: parsed.data.company ?? null,
-        email: parsed.data.email ?? null,
-        phone: parsed.data.phone ?? null,
-        status: parsed.data.status,
-        source: parsed.data.source ?? null,
-        notes: parsed.data.notes ?? null,
-      })
-      .returning({
-        id: leads.id,
-        fullName: leads.fullName,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
       });
 
-    const createdDeal = await saveLeadDeal({
-      workspaceId: workspace.id,
-      userId,
-      leadId: createdLead.id,
-      accountId,
-      contactId,
-      ownerUserId: userId,
-      dealName: parsed.data.dealName,
-      dealStage: parsed.data.dealStage,
-      dealValue: parsed.data.dealValue,
-      dealCurrency: parsed.data.dealCurrency,
-      dealProbability: parsed.data.dealProbability,
-      expectedCloseDate: parsed.data.expectedCloseDate,
-      closedDate: parsed.data.closedDate,
-      lostReason: parsed.data.lostReason,
+      const [lead] = await tx
+        .insert(leads)
+        .values({
+          workspaceId: workspace.id,
+          userId,
+          assignedOwnerUserId: userId,
+          accountId,
+          primaryContactId: contactId,
+          fullName: parsed.data.fullName,
+          company: parsed.data.company ?? null,
+          email: parsed.data.email ?? null,
+          phone: parsed.data.phone ?? null,
+          status: reconciled.status,
+          source: parsed.data.source ?? null,
+          notes: parsed.data.notes ?? null,
+        })
+        .returning({
+          id: leads.id,
+          fullName: leads.fullName,
+        });
+
+      const deal = await saveLeadDeal({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        leadId: lead.id,
+        accountId,
+        contactId,
+        ownerUserId: userId,
+        dealName: parsed.data.dealName,
+        dealStage: reconciled.dealStage,
+        dealValue: parsed.data.dealValue,
+        dealCurrency: parsed.data.dealCurrency,
+        dealProbability: parsed.data.dealProbability,
+        expectedCloseDate: parsed.data.expectedCloseDate,
+        closedDate: parsed.data.closedDate,
+        lostReason: parsed.data.lostReason,
+      });
+
+      return { createdLead: lead, createdDeal: deal };
     });
 
     await createLeadActivity({
@@ -470,7 +535,7 @@ export async function createLeadAction(
         workspaceId: workspace.id,
         userId,
         eventType: "deal_stage_changed",
-        message: `Opportunity opened: ${parsed.data.dealName} (${parsed.data.dealStage})`,
+        message: `Opportunity opened: ${parsed.data.dealName} (${reconciled.dealStage})`,
         leadId: createdLead.id,
         leadName: createdLead.fullName,
       });
@@ -545,43 +610,78 @@ export async function updateLeadAction(
       };
     }
 
-    const accountId = await saveLeadAccount({
-      workspaceId: workspace.id,
-      userId,
-      existingAccountId: existingLead.accountId,
-      company: parsed.data.company,
-    });
-    const contactId = await saveLeadContact({
-      workspaceId: workspace.id,
-      userId,
-      existingContactId: existingLead.primaryContactId,
-      accountId,
-      fullName: parsed.data.fullName,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-    });
-
-    const [updatedLead] = await db
-      .update(leads)
-      .set({
-        accountId,
-        primaryContactId: contactId,
-        assignedOwnerUserId: existingLead.assignedOwnerUserId ?? userId,
-        fullName: parsed.data.fullName,
-        company: parsed.data.company ?? null,
-        email: parsed.data.email ?? null,
-        phone: parsed.data.phone ?? null,
-        status: parsed.data.status,
-        source: parsed.data.source ?? null,
-        notes: parsed.data.notes ?? null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
-      .returning({
-        id: leads.id,
-        fullName: leads.fullName,
-        status: leads.status,
+    const reconciled = reconcileLeadAndDealStage(
+      parsed.data.status,
+      parsed.data.dealStage,
+    );
+    const { updatedLead, savedDeal } = await db.transaction(async (tx) => {
+      const accountId = await saveLeadAccount({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        existingAccountId: existingLead.accountId,
+        company: parsed.data.company,
       });
+      const contactId = await saveLeadContact({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        existingContactId: existingLead.primaryContactId,
+        accountId,
+        fullName: parsed.data.fullName,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+      });
+
+      const [lead] = await tx
+        .update(leads)
+        .set({
+          accountId,
+          primaryContactId: contactId,
+          assignedOwnerUserId: existingLead.assignedOwnerUserId ?? userId,
+          fullName: parsed.data.fullName,
+          company: parsed.data.company ?? null,
+          email: parsed.data.email ?? null,
+          phone: parsed.data.phone ?? null,
+          status: reconciled.status,
+          source: parsed.data.source ?? null,
+          notes: parsed.data.notes ?? null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+        .returning({
+          id: leads.id,
+          fullName: leads.fullName,
+          status: leads.status,
+        });
+
+      if (!lead) {
+        return {
+          updatedLead: null,
+          savedDeal: null,
+        };
+      }
+
+      const deal = await saveLeadDeal({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        leadId,
+        accountId,
+        contactId,
+        ownerUserId: existingLead.assignedOwnerUserId ?? userId,
+        dealName: parsed.data.dealName,
+        dealStage: reconciled.dealStage,
+        dealValue: parsed.data.dealValue,
+        dealCurrency: parsed.data.dealCurrency,
+        dealProbability: parsed.data.dealProbability,
+        expectedCloseDate: parsed.data.expectedCloseDate,
+        closedDate: parsed.data.closedDate,
+        lostReason: parsed.data.lostReason,
+      });
+
+      return { updatedLead: lead, savedDeal: deal };
+    });
 
     if (!updatedLead) {
       return {
@@ -591,22 +691,6 @@ export async function updateLeadAction(
     }
 
     const statusChanged = existingLead.status !== updatedLead.status;
-    const savedDeal = await saveLeadDeal({
-      workspaceId: workspace.id,
-      userId,
-      leadId,
-      accountId,
-      contactId,
-      ownerUserId: existingLead.assignedOwnerUserId ?? userId,
-      dealName: parsed.data.dealName,
-      dealStage: parsed.data.dealStage,
-      dealValue: parsed.data.dealValue,
-      dealCurrency: parsed.data.dealCurrency,
-      dealProbability: parsed.data.dealProbability,
-      expectedCloseDate: parsed.data.expectedCloseDate,
-      closedDate: parsed.data.closedDate,
-      lostReason: parsed.data.lostReason,
-    });
 
     await createLeadActivity({
       workspaceId: workspace.id,
@@ -715,18 +799,66 @@ export async function updateLeadStatusQuickAction(
       };
     }
 
-    const [updatedLead] = await db
-      .update(leads)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
-      .returning({
-        id: leads.id,
-        fullName: leads.fullName,
-        status: leads.status,
-      });
+    const syncedDealStage = dealStageForLeadStatus(status);
+    const { updatedLead, updatedDeal } = await db.transaction(async (tx) => {
+      const [lead] = await tx
+        .update(leads)
+        .set({
+          status,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+        .returning({
+          id: leads.id,
+          fullName: leads.fullName,
+          status: leads.status,
+        });
+
+      if (!lead || !syncedDealStage) {
+        return { updatedLead: lead ?? null, updatedDeal: null };
+      }
+
+      const [existingDeal] = await tx
+        .select({
+          id: deals.id,
+          name: deals.name,
+          stage: deals.stage,
+          lostReason: deals.lostReason,
+        })
+        .from(deals)
+        .where(and(eq(deals.leadId, leadId), eq(deals.workspaceId, workspace.id)))
+        .limit(1);
+
+      if (!existingDeal || existingDeal.stage === syncedDealStage) {
+        return { updatedLead: lead, updatedDeal: null };
+      }
+
+      const [deal] = await tx
+        .update(deals)
+        .set({
+          stage: syncedDealStage,
+          probability: normalizeDealProbability(syncedDealStage, 0),
+          closedAt: new Date(),
+          lostReason: syncedDealStage === "lost" ? existingDeal.lostReason : null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(deals.id, existingDeal.id), eq(deals.workspaceId, workspace.id)))
+        .returning({
+          name: deals.name,
+          stage: deals.stage,
+        });
+
+      return {
+        updatedLead: lead,
+        updatedDeal: deal
+          ? {
+              name: deal.name,
+              previousStage: existingDeal.stage,
+              stage: deal.stage,
+            }
+          : null,
+      };
+    });
 
     if (!updatedLead) {
       return {
@@ -743,6 +875,17 @@ export async function updateLeadStatusQuickAction(
       leadId: updatedLead.id,
       leadName: updatedLead.fullName,
     });
+
+    if (updatedDeal) {
+      await createLeadActivity({
+        workspaceId: workspace.id,
+        userId,
+        eventType: "deal_stage_changed",
+        message: `Deal stage changed: ${updatedDeal.name} (${updatedDeal.previousStage} -> ${updatedDeal.stage})`,
+        leadId: updatedLead.id,
+        leadName: updatedLead.fullName,
+      });
+    }
 
     revalidateLeadPaths(leadId);
 
@@ -795,6 +938,8 @@ export async function updateDealStageAction(
         id: deals.id,
         name: deals.name,
         stage: deals.stage,
+        probability: deals.probability,
+        leadStatus: leads.status,
         leadName: leads.fullName,
       })
       .from(deals)
@@ -824,15 +969,35 @@ export async function updateDealStageAction(
       };
     }
 
-    const [updatedDeal] = await db
-      .update(deals)
-      .set({
-        stage,
-        closedAt: stage === "won" || stage === "lost" ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(deals.id, dealId), eq(deals.workspaceId, workspace.id)))
-      .returning({ stage: deals.stage });
+    const syncedLeadStatus = leadStatusForDealStage(stage);
+    const { updatedDeal, updatedLead } = await db.transaction(async (tx) => {
+      const [deal] = await tx
+        .update(deals)
+        .set({
+          stage,
+          probability: normalizeDealProbability(stage, existingDeal.probability),
+          closedAt: stage === "won" || stage === "lost" ? new Date() : null,
+          lostReason: null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(deals.id, dealId), eq(deals.workspaceId, workspace.id)))
+        .returning({ stage: deals.stage });
+
+      if (!deal || !syncedLeadStatus || existingDeal.leadStatus === syncedLeadStatus) {
+        return { updatedDeal: deal ?? null, updatedLead: null };
+      }
+
+      const [lead] = await tx
+        .update(leads)
+        .set({
+          status: syncedLeadStatus,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+        .returning({ status: leads.status });
+
+      return { updatedDeal: deal, updatedLead: lead ?? null };
+    });
 
     if (!updatedDeal) {
       return {
@@ -849,6 +1014,17 @@ export async function updateDealStageAction(
       leadId,
       leadName: existingDeal.leadName,
     });
+
+    if (updatedLead) {
+      await createLeadActivity({
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_status_changed",
+        message: `Lead status changed: ${existingDeal.leadName} (${existingDeal.leadStatus} -> ${updatedLead.status})`,
+        leadId,
+        leadName: existingDeal.leadName,
+      });
+    }
 
     revalidateLeadPaths(leadId);
 
@@ -996,6 +1172,36 @@ export async function completeFollowUpTaskAction(
       return {
         success: false,
         message: "This lead could not be found.",
+      };
+    }
+
+    const [task] = await db
+      .select({
+        id: crmTasks.id,
+        title: crmTasks.title,
+        status: crmTasks.status,
+      })
+      .from(crmTasks)
+      .where(
+        and(
+          eq(crmTasks.id, taskId),
+          eq(crmTasks.leadId, leadId),
+          eq(crmTasks.workspaceId, workspace.id),
+        ),
+      )
+      .limit(1);
+
+    if (!task) {
+      return {
+        success: false,
+        message: "This task could not be found.",
+      };
+    }
+
+    if (task.status === "done") {
+      return {
+        success: true,
+        message: "Task is already done.",
       };
     }
 
