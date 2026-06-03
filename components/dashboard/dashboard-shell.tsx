@@ -1,8 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
+
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "leadflow:dashboard-sidebar-collapsed";
+const SIDEBAR_COLLAPSED_CHANGE_EVENT = "leadflow:sidebar-collapsed-change";
+let sidebarCollapsedFallback = false;
+
+function getServerSidebarCollapsedSnapshot() {
+  return false;
+}
+
+function getSidebarCollapsedSnapshot() {
+  if (typeof window === "undefined") {
+    return getServerSidebarCollapsedSnapshot();
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(
+      SIDEBAR_COLLAPSED_STORAGE_KEY,
+    );
+
+    if (storedValue === "true" || storedValue === "false") {
+      sidebarCollapsedFallback = storedValue === "true";
+    }
+  } catch {
+    // Keep using the in-memory preference if browser storage is blocked.
+  }
+
+  return sidebarCollapsedFallback;
+}
+
+function subscribeToSidebarCollapsedPreference(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  function handleStorage(event: StorageEvent) {
+    if (event.key === SIDEBAR_COLLAPSED_STORAGE_KEY) {
+      onStoreChange();
+    }
+  }
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(SIDEBAR_COLLAPSED_CHANGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(SIDEBAR_COLLAPSED_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function setSidebarCollapsedPreference(collapsed: boolean) {
+  sidebarCollapsedFallback = collapsed;
+
+  try {
+    window.localStorage.setItem(
+      SIDEBAR_COLLAPSED_STORAGE_KEY,
+      String(collapsed),
+    );
+  } catch {
+    // The in-memory fallback still lets the sidebar toggle for this session.
+  }
+
+  window.dispatchEvent(new Event(SIDEBAR_COLLAPSED_CHANGE_EVENT));
+}
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -16,6 +79,15 @@ export function DashboardShell({
   searchSlot,
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const sidebarCollapsed = useSyncExternalStore(
+    subscribeToSidebarCollapsedPreference,
+    getSidebarCollapsedSnapshot,
+    getServerSidebarCollapsedSnapshot,
+  );
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsedPreference(!sidebarCollapsed);
+  }
 
   return (
     <div className="h-dvh overflow-hidden bg-gradient-to-b from-muted/35 via-muted/20 to-background">
@@ -23,6 +95,8 @@ export function DashboardShell({
         <DashboardSidebar
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebarCollapsed}
         />
 
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
