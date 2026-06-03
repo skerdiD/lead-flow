@@ -205,7 +205,17 @@ npm run db:migrate
 
 Use `npm run db:generate` only after changing `db/schema.ts`, then review and commit the generated migration files.
 
-### 5. Start the development server
+### 5. Seed screenshot data
+
+To populate screenshot-ready CRM data for the existing Clerk user `skerdi0005@gmail.com`, make sure `DATABASE_URL` and `CLERK_SECRET_KEY` are set, then run:
+
+```bash
+npm run db:seed:screenshots
+```
+
+The seed finds that Clerk user by email, uses the matching Clerk user id for ownership, and replaces only the known fake screenshot leads in that user's workspace. Empty or seed-only workspaces are named `Lead Flow Demo Workspace`; workspaces with other leads keep their existing name. It does not create a public demo account or bypass authentication.
+
+### 6. Start the development server
 
 ```bash
 npm run dev
@@ -230,6 +240,7 @@ npm run typecheck    # Run TypeScript checks
 npm run test         # Run Vitest tests
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Apply Drizzle migrations
+npm run db:seed:screenshots # Seed screenshot-ready CRM data
 npm run e2e:install  # Install Playwright browsers
 npm run e2e          # Run Playwright E2E tests
 npm run e2e:headed   # Run Playwright tests in headed mode

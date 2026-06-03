@@ -15,7 +15,8 @@
     "e2e:ui": "playwright test --ui",
     "e2e:install": "playwright install --with-deps chromium",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed:screenshots": "tsx scripts/seed-screenshot-data.ts"
   },
   "dependencies": {
     "@arcjet/next": "^1.3.0",
@@ -51,6 +52,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.0"
   }
