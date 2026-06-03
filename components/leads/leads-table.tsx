@@ -297,9 +297,9 @@ export function LeadsTable({
 
   return (
     <>
-      <div className="space-y-3" data-testid="leads-table-section">
+      <div className="flex min-h-0 flex-1 flex-col gap-3" data-testid="leads-table-section">
         {selectedCount > 0 ? (
-          <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="shrink-0 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">
               {selectedCount} lead{selectedCount === 1 ? "" : "s"} selected
             </p>
@@ -358,57 +358,59 @@ export function LeadsTable({
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-3xl border bg-background shadow-sm" data-testid="leads-table-wrapper">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b bg-muted/35 hover:bg-muted/35">
-                  <TableHead className="w-10 px-3">
-                    <input
-                      ref={selectAllRef}
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={(event) => toggleSelectAll(event.target.checked)}
-                      className="h-4 w-4 rounded border border-input accent-primary"
-                      aria-label="Select all leads on page"
-                      data-testid="select-all-leads"
-                    />
-                  </TableHead>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border bg-background shadow-sm" data-testid="leads-table-wrapper">
+          <Table
+            containerClassName="min-h-0 flex-1 overflow-auto"
+            className="min-w-[1120px]"
+          >
+            <TableHeader>
+              <TableRow className="border-b bg-muted/45 hover:bg-muted/45">
+                <TableHead className="sticky top-0 z-10 w-10 bg-muted/95 px-3">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={(event) => toggleSelectAll(event.target.checked)}
+                    className="h-4 w-4 rounded border border-input accent-primary"
+                    aria-label="Select all leads on page"
+                    data-testid="select-all-leads"
+                  />
+                </TableHead>
 
-                  {sortableColumns.map((column) => (
-                    <TableHead
-                      key={column.field}
-                      className={cn(
-                        "h-12 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
-                        column.className,
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleSort(column.field)}
-                        className="inline-flex items-center gap-1.5 rounded-md py-0.5 transition-colors hover:text-foreground"
-                      >
-                        <span>{column.label}</span>
-                        <SortIcon active={sortBy === column.field} direction={sortDir} />
-                      </button>
-                    </TableHead>
-                  ))}
-
-                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone</TableHead>
-                  <TableHead className="w-[180px] px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {leads.map((lead) => (
-                  <TableRow
-                    key={lead.id}
-                    className="group border-b border-border/60 hover:bg-muted/10"
-                    data-testid={`lead-row-${lead.id}`}
+                {sortableColumns.map((column) => (
+                  <TableHead
+                    key={column.field}
+                    className={cn(
+                      "sticky top-0 z-10 h-12 bg-muted/95 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+                      column.className,
+                    )}
                   >
+                    <button
+                      type="button"
+                      onClick={() => handleSort(column.field)}
+                      className="inline-flex items-center gap-1.5 rounded-md py-0.5 transition-colors hover:text-foreground"
+                    >
+                      <span>{column.label}</span>
+                      <SortIcon active={sortBy === column.field} direction={sortDir} />
+                    </button>
+                  </TableHead>
+                ))}
+
+                <TableHead className="sticky top-0 z-10 bg-muted/95 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</TableHead>
+                <TableHead className="sticky top-0 z-10 bg-muted/95 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone</TableHead>
+                <TableHead className="sticky top-0 z-10 w-[180px] bg-muted/95 px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {leads.map((lead) => (
+                <TableRow
+                  key={lead.id}
+                  className="group border-b border-border/60 hover:bg-muted/10"
+                  data-testid={`lead-row-${lead.id}`}
+                >
                     <TableCell className="px-3 py-4 align-middle">
                       <input
                         type="checkbox"
@@ -491,14 +493,13 @@ export function LeadsTable({
                         <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} />
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="shrink-0 flex flex-col gap-3 rounded-2xl border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {rangeStart}-{rangeEnd} of {totalCount}
           </p>
@@ -522,15 +523,15 @@ export function LeadsTable({
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => goToPage(page - 1)}
-                  disabled={page <= 1 || isPending}
-                  data-testid="pagination-prev-btn"
-                >
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1 || isPending}
+                data-testid="pagination-prev-btn"
+              >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Prev
               </Button>

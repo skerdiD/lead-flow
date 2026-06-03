@@ -40,11 +40,12 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const rangeEnd = Math.min(tableData.page * tableData.pageSize, tableData.totalCount);
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
       <PageHeader
         eyebrow="Lead management"
         title="Leads"
         description="Search, filter, and manage every lead from one clean workspace."
+        className="shrink-0"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" />
@@ -58,7 +59,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         }
       />
 
-      <div className="rounded-3xl border bg-background p-4 shadow-sm sm:p-5">
+      <div className="shrink-0 rounded-3xl border bg-background p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             {tableData.totalCount === 0
@@ -76,7 +77,9 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       </div>
 
       {tableData.totalCount === 0 ? (
-        <EmptyLeadsState hasFilters={hasFilters} />
+        <div className="min-h-0 flex-1">
+          <EmptyLeadsState hasFilters={hasFilters} />
+        </div>
       ) : (
         <LeadsTable
           leads={tableData.leads}
