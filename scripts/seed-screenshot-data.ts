@@ -1,5 +1,4 @@
 import { loadEnvConfig } from "@next/env";
-import { clerkClient } from "@clerk/nextjs/server";
 import { and, eq, inArray, not, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -593,6 +592,7 @@ function addHours(date: Date, hours: number) {
 async function findClerkUserId(email: string) {
   requireEnv("CLERK_SECRET_KEY");
 
+  const { clerkClient } = await import("@clerk/nextjs/server");
   const client = await clerkClient();
   const users = await client.users.getUserList({
     emailAddress: [email],
