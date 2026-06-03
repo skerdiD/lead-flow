@@ -76,7 +76,7 @@ export function DashboardTopbar({
   const onCreatePage = pathname === "/dashboard/leads/new";
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <header className="z-30 shrink-0 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="flex min-h-[4.25rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <button
           type="button"

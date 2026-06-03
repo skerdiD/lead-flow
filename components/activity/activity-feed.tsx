@@ -73,41 +73,50 @@ function eventTypeVariant(
 
 export function ActivityFeed({ items }: ActivityFeedProps) {
   return (
-    <section className="rounded-3xl border bg-background p-4 shadow-sm sm:p-6">
-      <ol className="space-y-4">
-        {items.map((item) => {
-          const canOpenLead = item.leadId && item.eventType !== "lead_deleted";
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border bg-background shadow-sm">
+      <div className="shrink-0 border-b px-4 py-4 sm:px-6">
+        <p className="text-sm font-semibold text-foreground">Recent workspace events</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Showing the latest {items.length} activity update{items.length === 1 ? "" : "s"}.
+        </p>
+      </div>
 
-          return (
-            <li key={item.id} className="rounded-2xl border bg-background p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={eventTypeVariant(item.eventType)}>
-                  {eventTypeLabel(item.eventType)}
-                </Badge>
-                <p className="text-xs text-muted-foreground">
-                  {formatDateTime(item.createdAt)}
-                </p>
-              </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-gutter:stable] sm:p-6">
+        <ol className="space-y-4">
+          {items.map((item) => {
+            const canOpenLead = item.leadId && item.eventType !== "lead_deleted";
 
-              <p className="mt-3 text-sm font-medium leading-6 text-foreground">
-                {item.message}
-              </p>
-
-              {canOpenLead ? (
-                <div className="mt-3">
-                  <Link
-                    href={`/dashboard/leads/${item.leadId}`}
-                    className="inline-flex items-center text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                  >
-                    Open lead
-                    <ArrowUpRight className="ml-1 h-4 w-4" />
-                  </Link>
+            return (
+              <li key={item.id} className="rounded-2xl border bg-background p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={eventTypeVariant(item.eventType)}>
+                    {eventTypeLabel(item.eventType)}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateTime(item.createdAt)}
+                  </p>
                 </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
+
+                <p className="mt-3 text-sm font-medium leading-6 text-foreground">
+                  {item.message}
+                </p>
+
+                {canOpenLead ? (
+                  <div className="mt-3">
+                    <Link
+                      href={`/dashboard/leads/${item.leadId}`}
+                      className="inline-flex items-center text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      Open lead
+                      <ArrowUpRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }

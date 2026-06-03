@@ -173,7 +173,7 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
   const nextStep = getNextStep(lead.status);
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
       <section className="rounded-3xl border bg-background p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">

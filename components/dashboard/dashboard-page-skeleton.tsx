@@ -13,7 +13,7 @@ function Pulse({ className }: { className: string }) {
 
 export function DashboardOverviewSkeleton() {
   return (
-    <div className="space-y-7">
+    <div className="min-h-0 flex-1 space-y-7 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
       <div className="rounded-3xl border bg-background p-6 shadow-sm">
         <Pulse className="h-5 w-24" />
         <Pulse className="mt-4 h-9 w-[28rem] max-w-full" />
@@ -76,7 +76,7 @@ export function DashboardOverviewSkeleton() {
 
 export function LeadsTableSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden">
       <div className="rounded-3xl border bg-background p-6 shadow-sm">
         <Pulse className="h-4 w-32" />
         <Pulse className="mt-4 h-8 w-48" />
@@ -94,7 +94,7 @@ export function LeadsTableSkeleton() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border bg-background shadow-sm">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-3xl border bg-background shadow-sm">
         <div className="space-y-0">
           {Array.from({ length: 7 }).map((_, index) => (
             <div

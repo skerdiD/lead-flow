@@ -33,7 +33,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-16 items-center border-b px-5">
         <Link
           href="/dashboard"
@@ -47,7 +47,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </Link>
       </div>
 
-      <div className="flex-1 px-3 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">
         <nav className="space-y-1">
           {dashboardNavItems.map((item) => {
             const active = isActivePath(pathname, item.href, item.exact);
@@ -80,7 +80,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </nav>
       </div>
 
-      <div className="border-t px-4 py-4">
+      <div className="shrink-0 border-t px-4 py-4">
         <div className="rounded-2xl border bg-gradient-to-br from-muted/55 via-muted/35 to-background p-4">
           <p className="text-sm font-semibold tracking-tight text-foreground">
             Stay organized
@@ -100,7 +100,7 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   return (
     <>
-      <aside className="hidden h-screen w-72 shrink-0 border-r bg-background/95 backdrop-blur lg:block">
+      <aside className="hidden h-dvh w-72 shrink-0 border-r bg-background/95 backdrop-blur lg:block">
         <SidebarContent />
       </aside>
 

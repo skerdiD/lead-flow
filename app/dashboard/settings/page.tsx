@@ -91,7 +91,7 @@ export default async function SettingsPage() {
   const primaryEmail = primaryEmailAddress || "No email available";
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
       <PageHeader
         eyebrow="Workspace settings"
         title="Settings"

@@ -18,22 +18,22 @@ export function DashboardShell({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/35 via-muted/20 to-background">
-      <div className="flex min-h-screen">
+    <div className="h-dvh overflow-hidden bg-gradient-to-b from-muted/35 via-muted/20 to-background">
+      <div className="flex h-full min-h-0">
         <DashboardSidebar
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
         />
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
           <DashboardTopbar
             onOpenSidebar={() => setMobileSidebarOpen(true)}
             currentWorkspaceName={currentWorkspaceName}
             searchSlot={searchSlot}
           />
 
-          <main className="flex min-h-0 flex-1 px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
-            <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col">
+          <main className="flex min-h-0 flex-1 overflow-hidden px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
+            <div className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-1 flex-col">
               {children}
             </div>
           </main>
