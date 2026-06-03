@@ -6,7 +6,6 @@ import {
   CircleDollarSign,
   Plus,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import {
   getDashboardStats,
@@ -16,6 +15,7 @@ import {
   getSourcePerformanceData,
 } from "@/app/dashboard/queries";
 import { DealRevenuePipelineChart } from "@/components/dashboard/charts/deal-revenue-pipeline-chart";
+import { LeadRevenueHealthCard } from "@/components/dashboard/charts/lead-revenue-health-card";
 import { LeadPipelineChart } from "@/components/dashboard/charts/lead-pipeline-chart";
 import { LeadSourcePerformanceChart } from "@/components/dashboard/charts/lead-source-performance-chart";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
@@ -49,8 +49,6 @@ export default async function DashboardPage() {
     stats.contactedLeads + stats.interestedLeads + stats.proposalLeads;
   const winRate =
     stats.totalLeads > 0 ? (stats.closedLeads / stats.totalLeads) * 100 : 0;
-  const lossRate =
-    stats.totalLeads > 0 ? (stats.lostLeads / stats.totalLeads) * 100 : 0;
   const revenueCurrency = revenueData.currency;
 
   return (
@@ -154,27 +152,7 @@ export default async function DashboardPage() {
       {!isEmpty ? (
         <section className="grid gap-4 xl:grid-cols-2">
           <LeadSourcePerformanceChart data={sourcePerformanceData} />
-          <section className="rounded-3xl border bg-background p-5 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Lead and revenue health
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {stats.totalLeads} leads, {stats.totalDeals} deals, and{" "}
-                  {formatCurrencyFromCents(
-                    revenueData.weightedPipelineValueCents,
-                    revenueCurrency,
-                  )}{" "}
-                  in weighted open forecast.
-                </p>
-              </div>
-              <p className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Users className="h-3.5 w-3.5" />
-                {toPercent(lossRate)} loss rate
-              </p>
-            </div>
-          </section>
+          <LeadRevenueHealthCard stats={stats} revenueData={revenueData} />
         </section>
       ) : null}
 
