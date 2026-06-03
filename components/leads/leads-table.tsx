@@ -297,7 +297,7 @@ export function LeadsTable({
 
   return (
     <>
-      <div className="flex min-h-0 flex-col gap-3 lg:flex-1" data-testid="leads-table-section">
+      <div className="flex min-h-0 flex-col gap-3" data-testid="leads-table-section">
         {selectedCount > 0 ? (
           <div className="shrink-0 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">
@@ -358,9 +358,9 @@ export function LeadsTable({
           </div>
         ) : null}
 
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-background shadow-sm lg:flex-1" data-testid="leads-table-wrapper">
+        <div className="overflow-hidden rounded-3xl border bg-background shadow-sm" data-testid="leads-table-wrapper">
           <Table
-            containerClassName="overflow-x-auto lg:min-h-0 lg:flex-1 lg:overflow-auto lg:[scrollbar-gutter:stable]"
+            containerClassName="max-h-[clamp(24rem,56dvh,44rem)] overflow-auto [scrollbar-gutter:stable]"
             className="min-w-[1120px]"
           >
             <TableHeader className="sticky top-0 z-20 bg-muted shadow-sm">

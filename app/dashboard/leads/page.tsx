@@ -40,7 +40,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const rangeEnd = Math.min(tableData.page * tableData.pageSize, tableData.totalCount);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [scrollbar-gutter:stable] lg:overflow-hidden lg:pr-0 sm:gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [scrollbar-gutter:stable] sm:gap-6">
       <PageHeader
         eyebrow="Lead management"
         title="Leads"
