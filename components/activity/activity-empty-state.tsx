@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function ActivityEmptyState() {
   return (
-    <section className="flex min-h-0 flex-1 items-center justify-center rounded-3xl border border-dashed bg-background px-6 py-12 shadow-sm">
+    <section className="flex min-h-[420px] items-center justify-center rounded-3xl border border-dashed bg-background px-6 py-12 shadow-sm">
       <div className="mx-auto max-w-md text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border bg-muted/40">
           <Clock3 className="h-6 w-6 text-muted-foreground" />

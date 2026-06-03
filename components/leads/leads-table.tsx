@@ -297,7 +297,7 @@ export function LeadsTable({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col gap-3" data-testid="leads-table-section">
+      <div className="flex min-h-0 flex-col gap-3 lg:flex-1" data-testid="leads-table-section">
         {selectedCount > 0 ? (
           <div className="shrink-0 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">
@@ -358,14 +358,14 @@ export function LeadsTable({
           </div>
         ) : null}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border bg-background shadow-sm" data-testid="leads-table-wrapper">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-background shadow-sm lg:flex-1" data-testid="leads-table-wrapper">
           <Table
-            containerClassName="min-h-0 flex-1 overflow-auto"
+            containerClassName="overflow-x-auto lg:min-h-0 lg:flex-1 lg:overflow-auto lg:[scrollbar-gutter:stable]"
             className="min-w-[1120px]"
           >
-            <TableHeader>
-              <TableRow className="border-b bg-muted/45 hover:bg-muted/45">
-                <TableHead className="sticky top-0 z-10 w-10 bg-muted/95 px-3">
+            <TableHeader className="sticky top-0 z-20 bg-muted shadow-sm">
+              <TableRow className="border-b bg-muted hover:bg-muted">
+                <TableHead className="w-10 bg-muted px-3">
                   <input
                     ref={selectAllRef}
                     type="checkbox"
@@ -381,7 +381,7 @@ export function LeadsTable({
                   <TableHead
                     key={column.field}
                     className={cn(
-                      "sticky top-0 z-10 h-12 bg-muted/95 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+                      "h-12 bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground",
                       column.className,
                     )}
                   >
@@ -396,9 +396,9 @@ export function LeadsTable({
                   </TableHead>
                 ))}
 
-                <TableHead className="sticky top-0 z-10 bg-muted/95 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</TableHead>
-                <TableHead className="sticky top-0 z-10 bg-muted/95 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone</TableHead>
-                <TableHead className="sticky top-0 z-10 w-[180px] bg-muted/95 px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</TableHead>
+                <TableHead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone</TableHead>
+                <TableHead className="w-[180px] bg-muted px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </TableHead>
               </TableRow>

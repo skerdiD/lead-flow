@@ -73,15 +73,15 @@ function eventTypeVariant(
 
 export function ActivityFeed({ items }: ActivityFeedProps) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border bg-background shadow-sm">
-      <div className="shrink-0 border-b px-4 py-4 sm:px-6">
+    <section className="rounded-3xl border bg-background shadow-sm">
+      <div className="border-b px-4 py-4 sm:px-6">
         <p className="text-sm font-semibold text-foreground">Recent workspace events</p>
         <p className="mt-1 text-sm text-muted-foreground">
           Showing the latest {items.length} activity update{items.length === 1 ? "" : "s"}.
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-gutter:stable] sm:p-6">
+      <div className="p-4 sm:p-6">
         <ol className="space-y-4">
           {items.map((item) => {
             const canOpenLead = item.leadId && item.eventType !== "lead_deleted";
