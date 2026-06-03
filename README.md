@@ -6,28 +6,20 @@ It demonstrates authentication, protected dashboards, lead management, activity 
 
 [Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) | [Repository](https://github.com/skerdiD/lead-flow)
 
----
-
-## Preview
-
-Explore the deployed app: [lead-flow-jx61pjm6w-skerdids-projects.vercel.app](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/)
 
 ### Landing Page
 
-<img src="./public/screenshots/landing-hero.png" alt="Lead Flow landing page hero" width="100%">
-<img src="./public/screenshots/why-leadflow-section.png" alt="Lead Flow value section" width="100%">
-<img src="./public/screenshots/workflow-section.png" alt="Lead Flow workflow section" width="100%">
+<img src="./public/screenshots/dashboard-overview.png" alt="Lead Flow landing page dashboard preview" width="100%">
+<img src="./public/screenshots/leads-workspace.png" alt="Lead Flow landing page leads preview" width="100%">
 
 ### CRM Dashboard
 
-<img src="./public/screenshots/dashboard-overview.png" alt="Lead Flow dashboard overview" width="100%">
 <img src="./public/screenshots/dashboard-charts.png" alt="Lead Flow dashboard charts" width="100%">
+<img src="./public/screenshots/dashboard-source-revenue.png" alt="Lead Flow source and revenue analytics" width="100%">
 
 ### Leads Workspace
 
-<img src="./public/screenshots/leads-workspace.png" alt="Lead Flow leads workspace" width="100%">
 <img src="./public/screenshots/activity-timeline.png" alt="Lead Flow activity timeline" width="100%">
-<img src="./public/screenshots/create-lead-mobile.png" alt="Lead Flow mobile create lead view" width="100%">
 
 ---
 
