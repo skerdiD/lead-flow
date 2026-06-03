@@ -40,7 +40,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const rangeEnd = Math.min(tableData.page * tableData.pageSize, tableData.totalCount);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [scrollbar-gutter:stable] sm:gap-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         eyebrow="Lead management"
         title="Leads"
@@ -77,9 +77,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       </div>
 
       {tableData.totalCount === 0 ? (
-        <div className="min-h-0 flex-1">
-          <EmptyLeadsState hasFilters={hasFilters} />
-        </div>
+        <EmptyLeadsState hasFilters={hasFilters} />
       ) : (
         <LeadsTable
           leads={tableData.leads}

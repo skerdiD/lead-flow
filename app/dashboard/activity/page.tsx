@@ -7,7 +7,7 @@ export default async function ActivityPage() {
   const activities = await getActivityFeed();
 
   return (
-    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Workspace feed"
         title="Activity"

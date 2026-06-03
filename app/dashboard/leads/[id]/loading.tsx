@@ -6,7 +6,7 @@ function Pulse({ className }: { className: string }) {
 
 export default function LeadDetailsLoading() {
   return (
-    <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+    <div className="space-y-6">
       <div className="rounded-3xl border bg-background p-6 shadow-sm">
         <Pulse className="h-8 w-72 max-w-full" />
         <Pulse className="mt-3 h-4 w-full max-w-xl" />

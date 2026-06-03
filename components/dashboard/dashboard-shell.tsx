@@ -32,8 +32,8 @@ export function DashboardShell({
             searchSlot={searchSlot}
           />
 
-          <main className="flex min-h-0 flex-1 overflow-hidden px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
-            <div className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-1 flex-col">
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 py-7 sm:px-6 sm:py-8 lg:px-8 [scrollbar-gutter:stable]">
+            <div className="mx-auto w-full max-w-[1600px]">
               {children}
             </div>
           </main>
