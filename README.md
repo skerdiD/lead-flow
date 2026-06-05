@@ -14,11 +14,13 @@ It demonstrates authentication, protected dashboards, lead management, activity 
 
 ### CRM Dashboard
 
+<img src="./public/screenshots/product-dashboard-preview.png" alt="Lead Flow dashboard overview" width="100%">
 <img src="./public/screenshots/dashboard-charts.png" alt="Lead Flow dashboard charts" width="100%">
 <img src="./public/screenshots/dashboard-source-revenue.png" alt="Lead Flow source and revenue analytics" width="100%">
 
 ### Leads Workspace
 
+<img src="./public/screenshots/product-leads-workspace-preview.png" alt="Lead Flow leads workspace table" width="100%">
 <img src="./public/screenshots/activity-timeline.png" alt="Lead Flow activity timeline" width="100%">
 
 ---
