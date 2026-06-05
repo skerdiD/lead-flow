@@ -558,7 +558,7 @@ export function HomePageMarketing() {
                       <div className="p-4">
                         <div className="overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
                           <Image
-                            src="/screenshots/dashboard-overview.png"
+                            src="/screenshots/product-dashboard-preview.png"
                             alt="LeadFlow dashboard preview"
                             width={1440}
                             height={900}
@@ -595,7 +595,7 @@ export function HomePageMarketing() {
                       <div className="p-4">
                         <div className="overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
                           <Image
-                            src="/screenshots/leads-workspace.png"
+                            src="/screenshots/product-leads-workspace-preview.png"
                             alt="LeadFlow leads management preview"
                             width={1180}
                             height={760}
