@@ -1,20 +1,17 @@
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { getCurrentWorkspace } from "@/lib/workspaces";
 
 type DashboardLayoutProps = {
   children: ReactNode;
 };
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  const workspace = await getCurrentWorkspace();
-
   return (
     <>
-      <DashboardShell currentWorkspaceName={workspace.name}>
+      <DashboardShell currentWorkspaceName="Personal Workspace">
         {children}
       </DashboardShell>
       <Toaster richColors position="top-right" closeButton />
