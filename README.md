@@ -9,8 +9,8 @@ It demonstrates authentication, protected dashboards, lead management, activity 
 
 ### Landing Page
 
-<img src="./public/screenshots/product-dashboard-preview.png" alt="Lead Flow landing page dashboard preview" width="100%">
-<img src="./public/screenshots/product-leads-workspace-preview.png" alt="Lead Flow landing page leads preview" width="100%">
+<img src="./public/screenshots/landing-hero.png" alt="Lead Flow landing page hero" width="100%">
+<img src="./public/screenshots/landing-capabilities.png" alt="Lead Flow landing page capabilities" width="100%">
 
 ### CRM Dashboard
 
