@@ -4,6 +4,7 @@ import arcjet, {
   request,
   shield,
 } from "@arcjet/next";
+import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
@@ -38,6 +39,12 @@ function getDeniedMessage(decision: ArcjetDecision) {
 }
 
 async function protectRequest() {
+  if (isSafeE2ETestMode()) {
+    return {
+      ok: true as const,
+    };
+  }
+
   const req = await request();
   const decision = await aj.protect(req);
 

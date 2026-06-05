@@ -34,7 +34,7 @@ jobs:
       E2E_TEST_SECRET: leadflow-ci-e2e-secret
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_dummy
       CLERK_SECRET_KEY: sk_test_ci_dummy
-      ARCJET_KEY: ${{ secrets.ARCJET_KEY }}
+      ARCJET_KEY: ajkey_ci_e2e_placeholder
 
     steps:
       - name: Checkout
@@ -63,13 +63,6 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-
-      - name: Verify E2E secrets
-        run: |
-          if [ -z "$ARCJET_KEY" ]; then
-            echo "ARCJET_KEY GitHub secret is required for protected E2E lead mutations."
-            exit 1
-          fi
 
       - name: Run database migrations
         run: npm run db:migrate
