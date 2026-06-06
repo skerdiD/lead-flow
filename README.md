@@ -21,6 +21,7 @@ It demonstrates authentication, protected dashboards, lead management, activity 
 ### Leads Workspace
 
 <img src="./public/screenshots/product-leads-workspace-preview.png" alt="Lead Flow leads workspace table" width="100%">
+<img src="./public/screenshots/lead-data.png" alt="Lead Data and specific informations" width="100%">
 <img src="./public/screenshots/activity-timeline.png" alt="Lead Flow activity timeline" width="100%">
 
 ---
