@@ -27,6 +27,10 @@ function eventTypeLabel(eventType: ActivityFeedItem["eventType"]) {
       return "Status changed";
     case "lead_deleted":
       return "Lead deleted";
+    case "lead_archived":
+      return "Lead archived";
+    case "lead_restored":
+      return "Lead restored";
     case "lead_note_added":
       return "Note added";
     case "lead_note_updated":
@@ -64,7 +68,10 @@ function eventTypeVariant(
       return "outline";
     case "lead_note_deleted":
     case "lead_deleted":
+    case "lead_archived":
       return "destructive";
+    case "lead_restored":
+      return "secondary";
     case "lead_updated":
     default:
       return "outline";

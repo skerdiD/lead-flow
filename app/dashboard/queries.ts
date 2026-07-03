@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { crmTasks, deals, leadNotes, leads } from "@/db/schema";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
@@ -39,7 +39,7 @@ export async function getDashboardStats() {
         lostLeads: sql<number>`count(*) filter (where ${leads.status} = 'Lost')`,
       })
       .from(leads)
-      .where(eq(leads.workspaceId, workspace.id)),
+      .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false))),
     db
       .select({
         notesCount: sql<number>`count(*)`,
@@ -92,7 +92,7 @@ export async function getRecentLeads(limit = 5) {
       createdAt: leads.createdAt,
     })
     .from(leads)
-    .where(eq(leads.workspaceId, workspace.id))
+    .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false)))
     .orderBy(desc(leads.createdAt))
     .limit(limit);
 }
@@ -106,7 +106,7 @@ export async function getLeadPipelineData() {
       total: sql<number>`count(*)`,
     })
     .from(leads)
-    .where(eq(leads.workspaceId, workspace.id))
+    .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false)))
     .groupBy(leads.status);
 
   const countByStatus = new Map<LeadStatus, number>();
@@ -161,7 +161,7 @@ export async function getSourcePerformanceData(limit = 6) {
       won: sql<number>`count(*) filter (where ${leads.status} = 'Closed')`,
     })
     .from(leads)
-    .where(eq(leads.workspaceId, workspace.id))
+    .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false)))
     .groupBy(sourceLabel)
     .orderBy(desc(sql<number>`count(*)`))
     .limit(limit);

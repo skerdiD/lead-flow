@@ -23,6 +23,7 @@ type LeadFiltersProps = {
   initialSearch?: string;
   initialStatus?: string;
   initialSource?: string;
+  initialArchived?: "active" | "archived";
   sourceOptions?: SourceOption[];
 };
 
@@ -30,6 +31,7 @@ export function LeadFilters({
   initialSearch = "",
   initialStatus = "",
   initialSource = "",
+  initialArchived = "active",
   sourceOptions = [],
 }: LeadFiltersProps) {
   const router = useRouter();
@@ -40,9 +42,10 @@ export function LeadFilters({
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
   const [source, setSource] = useState(initialSource);
+  const [archived, setArchived] = useState(initialArchived);
 
   const pushFilters = useCallback(
-    (nextSearch: string, nextStatus: string, nextSource: string) => {
+    (nextSearch: string, nextStatus: string, nextSource: string, nextArchived: "active" | "archived") => {
       const params = new URLSearchParams(searchParams);
 
       if (nextSearch.trim()) {
@@ -63,6 +66,12 @@ export function LeadFilters({
         params.delete("source");
       }
 
+      if (nextArchived === "archived") {
+        params.set("archived", "archived");
+      } else {
+        params.delete("archived");
+      }
+
       params.delete("page");
 
       const queryString = params.toString();
@@ -78,18 +87,20 @@ export function LeadFilters({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    pushFilters(search, status, source);
+    pushFilters(search, status, source, archived);
   };
 
   const handleClear = () => {
     setSearch("");
     setStatus("");
     setSource("");
+    setArchived("active");
 
     const params = new URLSearchParams(searchParams);
     params.delete("search");
     params.delete("status");
     params.delete("source");
+    params.delete("archived");
     params.delete("page");
 
     const queryString = params.toString();
@@ -124,7 +135,7 @@ export function LeadFilters({
             onValueChange={(value) => {
               const nextStatus = value === "all" ? "" : (value as LeadStatus);
               setStatus(nextStatus);
-              pushFilters(search, nextStatus, source);
+              pushFilters(search, nextStatus, source, archived);
             }}
             disabled={isPending}
           >
@@ -148,7 +159,7 @@ export function LeadFilters({
             onValueChange={(value) => {
               const nextSource = value === "all" ? "" : value;
               setSource(nextSource);
-              pushFilters(search, status, nextSource);
+              pushFilters(search, status, nextSource, archived);
             }}
             disabled={isPending}
           >
@@ -162,6 +173,26 @@ export function LeadFilters({
                   {item.label} ({item.count})
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-[220px]">
+          <Select
+            value={archived}
+            onValueChange={(value) => {
+              const nextArchived = value === "archived" ? "archived" : "active";
+              setArchived(nextArchived);
+              pushFilters(search, status, source, nextArchived);
+            }}
+            disabled={isPending}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Lead view" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active leads</SelectItem>
+              <SelectItem value="archived">Archived leads</SelectItem>
             </SelectContent>
           </Select>
         </div>

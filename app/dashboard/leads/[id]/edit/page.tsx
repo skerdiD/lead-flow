@@ -45,6 +45,12 @@ export default async function EditLeadPage({
           status: lead.status,
           source: lead.source ?? undefined,
           notes: lead.notes ?? undefined,
+          nextFollowUpDate: lead.nextFollowUpDate
+            ? lead.nextFollowUpDate.toISOString().slice(0, 10)
+            : undefined,
+          followUpNote: lead.followUpNote ?? undefined,
+          followUpPriority: lead.followUpPriority,
+          followUpStatus: lead.followUpStatus,
           dealName: lead.dealEntry?.name ?? undefined,
           dealStage: lead.dealEntry?.stage ?? "new",
           dealValue: lead.dealEntry ? lead.dealEntry.valueCents / 100 : 0,

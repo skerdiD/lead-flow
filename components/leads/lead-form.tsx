@@ -16,7 +16,13 @@ import {
   DEAL_STAGE_LABELS,
   DEAL_STAGES,
 } from "@/lib/constants/crm";
-import { LEAD_STATUSES } from "@/lib/constants/leads";
+import {
+  FOLLOW_UP_PRIORITIES,
+  FOLLOW_UP_PRIORITY_LABELS,
+  FOLLOW_UP_STATUSES,
+  FOLLOW_UP_STATUS_LABELS,
+  LEAD_STATUSES,
+} from "@/lib/constants/leads";
 import {
   leadFormSchema,
   type LeadFormValues,
@@ -63,6 +69,10 @@ const defaultValues: LeadFormValues = {
   status: "New",
   source: undefined,
   notes: undefined,
+  nextFollowUpDate: undefined,
+  followUpNote: undefined,
+  followUpPriority: "medium",
+  followUpStatus: "pending",
   dealName: undefined,
   dealStage: "new",
   dealValue: 0,
@@ -346,6 +356,129 @@ export function LeadForm({
                       </FormControl>
                       <FormDescription>
                         Keep helpful context here so future follow-up stays easy.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border bg-muted/20 p-4 sm:p-5">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Follow-up reminder
+              </p>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nextFollowUpDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Next follow-up date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Shows as due today, overdue, or upcoming in the leads table.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="followUpPriority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {FOLLOW_UP_PRIORITIES.map((priority) => (
+                            <SelectItem key={priority} value={priority}>
+                              {FOLLOW_UP_PRIORITY_LABELS[priority]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Helps you spot the most important next touches.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="followUpStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reminder status</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {FOLLOW_UP_STATUSES.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {FOLLOW_UP_STATUS_LABELS[status]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Mark reminders completed or rescheduled as work moves.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="followUpNote"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Follow-up note</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="What should happen on the next touch?"
+                          className="min-h-24 resize-y"
+                          disabled={isPending}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Keep the next action focused and easy to act on.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

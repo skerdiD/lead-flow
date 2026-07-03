@@ -48,6 +48,7 @@ export async function GET(request: Request) {
     search: searchParams.get("search") || undefined,
     status: searchParams.get("status") || undefined,
     source: searchParams.get("source") || undefined,
+    archived: searchParams.get("archived") || undefined,
     sortBy: searchParams.get("sortBy") || undefined,
     sortDir: searchParams.get("sortDir") || undefined,
   };

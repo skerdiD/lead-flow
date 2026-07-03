@@ -53,7 +53,7 @@ test.describe("Leads e2e flows", () => {
     await expect(page.getByText("No leads found")).toBeVisible();
   });
 
-  test("create, edit, change status, delete lead and verify dashboard refresh", async ({ page }) => {
+  test("create, edit, change status, archive lead and verify dashboard refresh", async ({ page }) => {
     const leadName = "E2E Lead Alpha";
     const updatedCompany = "E2E Updated Company";
 
@@ -84,8 +84,8 @@ test.describe("Leads e2e flows", () => {
     await expect(page.getByText("Interested")).toBeVisible();
     await expect(page.getByText(updatedCompany)).toBeVisible();
 
-    await page.getByRole("button", { name: "Delete" }).click();
-    await page.getByRole("button", { name: "Delete lead" }).click();
+    await page.getByRole("button", { name: "Archive" }).click();
+    await page.getByRole("button", { name: "Archive lead" }).click();
     await expect(page).toHaveURL(/\/dashboard\/leads$/);
     await expect(page.getByRole("row").filter({ hasText: leadName })).toHaveCount(0);
 

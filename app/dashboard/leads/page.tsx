@@ -13,6 +13,7 @@ type LeadsPageProps = {
     search?: string;
     status?: string;
     source?: string;
+    archived?: string;
     sortBy?: string;
     sortDir?: string;
     page?: string;
@@ -27,6 +28,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     search: params.search,
     status: params.status,
     source: params.source,
+    archived: params.archived,
     sortBy: params.sortBy,
     sortDir: params.sortDir,
     page: params.page,
@@ -34,8 +36,12 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   });
 
   const hasFilters = Boolean(
-    tableData.search.trim() || tableData.status.trim() || tableData.source.trim(),
+    tableData.search.trim() ||
+      tableData.status.trim() ||
+      tableData.source.trim() ||
+      tableData.archived === "archived",
   );
+  const isArchiveView = tableData.archived === "archived";
   const rangeStart = tableData.totalCount === 0 ? 0 : (tableData.page - 1) * tableData.pageSize + 1;
   const rangeEnd = Math.min(tableData.page * tableData.pageSize, tableData.totalCount);
 
@@ -44,7 +50,11 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       <PageHeader
         eyebrow="Lead management"
         title="Leads"
-        description="Search, filter, and manage every lead from one clean workspace."
+        description={
+          isArchiveView
+            ? "Review archived leads and restore records when they need to return to active work."
+            : "Search, filter, and manage every lead from one clean workspace."
+        }
         className="shrink-0"
         action={
           <div className="flex flex-wrap items-center gap-2">
@@ -64,7 +74,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           <p className="text-sm text-muted-foreground">
             {tableData.totalCount === 0
               ? "No leads found"
-              : `Showing ${rangeStart}-${rangeEnd} of ${tableData.totalCount} leads`}
+              : `Showing ${rangeStart}-${rangeEnd} of ${tableData.totalCount} ${isArchiveView ? "archived " : ""}leads`}
           </p>
         </div>
 
@@ -72,12 +82,13 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           initialSearch={tableData.search}
           initialStatus={tableData.status}
           initialSource={tableData.source}
+          initialArchived={tableData.archived}
           sourceOptions={tableData.sourceOptions}
         />
       </div>
 
       {tableData.totalCount === 0 ? (
-        <EmptyLeadsState hasFilters={hasFilters} />
+        <EmptyLeadsState hasFilters={hasFilters} archiveView={isArchiveView} />
       ) : (
         <LeadsTable
           leads={tableData.leads}
@@ -87,6 +98,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           pageSize={tableData.pageSize}
           sortBy={tableData.sortBy}
           sortDir={tableData.sortDir}
+          archiveView={isArchiveView}
         />
       )}
     </div>

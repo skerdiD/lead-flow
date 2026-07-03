@@ -4,7 +4,11 @@ import {
   DEAL_STAGES,
   DEFAULT_DEAL_CURRENCY,
 } from "@/lib/constants/crm";
-import { LEAD_STATUSES } from "@/lib/constants/leads";
+import {
+  FOLLOW_UP_PRIORITIES,
+  FOLLOW_UP_STATUSES,
+  LEAD_STATUSES,
+} from "@/lib/constants/leads";
 
 const optionalTrimmedString = (max: number) =>
   z.preprocess(
@@ -110,6 +114,14 @@ export const leadFormSchema = z.object({
   }),
   source: optionalTrimmedString(100),
   notes: optionalTrimmedString(5000),
+  nextFollowUpDate: optionalDateString,
+  followUpNote: optionalTrimmedString(1000),
+  followUpPriority: z.enum(FOLLOW_UP_PRIORITIES, {
+    error: () => ({ message: "Please select a valid follow-up priority." }),
+  }).default("medium"),
+  followUpStatus: z.enum(FOLLOW_UP_STATUSES, {
+    error: () => ({ message: "Please select a valid follow-up status." }),
+  }).default("pending"),
   dealName: optionalTrimmedString(160),
   dealStage: z.enum(DEAL_STAGES, {
     error: () => ({ message: "Please select a valid deal stage." }),

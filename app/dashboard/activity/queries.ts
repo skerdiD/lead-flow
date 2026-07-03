@@ -10,6 +10,8 @@ export type ActivityFeedItem = {
     | "lead_updated"
     | "lead_status_changed"
     | "lead_deleted"
+    | "lead_archived"
+    | "lead_restored"
     | "lead_note_added"
     | "lead_note_updated"
     | "lead_note_deleted"

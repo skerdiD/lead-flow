@@ -13,6 +13,12 @@ const { getCurrentWorkspaceMock, selectResults, leadsTable } = vi.hoisted(() => 
     phone: "phone",
     status: "status",
     source: "source",
+    nextFollowUpDate: "next_follow_up_date",
+    followUpNote: "follow_up_note",
+    followUpPriority: "follow_up_priority",
+    followUpStatus: "follow_up_status",
+    isArchived: "is_archived",
+    archivedAt: "archived_at",
     createdAt: "created_at",
   },
 }));
@@ -73,6 +79,12 @@ describe("getLeadsList", () => {
           status: "Closed",
           source: "Referral",
           sourceLabel: "Referral",
+          nextFollowUpDate: new Date("2025-01-03T00:00:00.000Z"),
+          followUpNote: "Check in",
+          followUpPriority: "high",
+          followUpStatus: "pending",
+          isArchived: false,
+          archivedAt: null,
           createdAt: new Date("2025-01-01T10:00:00.000Z"),
         },
         {
@@ -84,6 +96,12 @@ describe("getLeadsList", () => {
           status: "Closed",
           source: null,
           sourceLabel: "Unspecified",
+          nextFollowUpDate: null,
+          followUpNote: null,
+          followUpPriority: "medium",
+          followUpStatus: "pending",
+          isArchived: false,
+          archivedAt: null,
           createdAt: new Date("2025-01-02T12:00:00.000Z"),
         },
       ],
@@ -106,6 +124,7 @@ describe("getLeadsList", () => {
     expect(result.search).toBe("acme");
     expect(result.status).toBe("Closed");
     expect(result.source).toBe("Referral");
+    expect(result.archived).toBe("active");
     expect(result.sortBy).toBe("createdAt");
     expect(result.sortDir).toBe("asc");
     expect(result.pageSize).toBe(10);

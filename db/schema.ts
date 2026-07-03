@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   pgEnum,
@@ -20,11 +21,24 @@ export const leadStatuses = [
 ] as const;
 
 export const leadStatusEnum = pgEnum("lead_status", leadStatuses);
+export const followUpPriorities = ["low", "medium", "high"] as const;
+export const followUpPriorityEnum = pgEnum(
+  "follow_up_priority",
+  followUpPriorities,
+);
+export const followUpStatuses = [
+  "pending",
+  "completed",
+  "rescheduled",
+] as const;
+export const followUpStatusEnum = pgEnum("follow_up_status", followUpStatuses);
 export const activityEventTypes = [
   "lead_created",
   "lead_updated",
   "lead_status_changed",
   "lead_deleted",
+  "lead_archived",
+  "lead_restored",
   "lead_note_added",
   "lead_note_updated",
   "lead_note_deleted",
@@ -190,6 +204,22 @@ export const leads = pgTable(
     status: leadStatusEnum("status").notNull().default("New"),
     source: varchar("source", { length: 100 }),
     notes: text("notes"),
+    nextFollowUpDate: timestamp("next_follow_up_date", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    followUpNote: text("follow_up_note"),
+    followUpPriority: followUpPriorityEnum("follow_up_priority")
+      .notNull()
+      .default("medium"),
+    followUpStatus: followUpStatusEnum("follow_up_status")
+      .notNull()
+      .default("pending"),
+    isArchived: boolean("is_archived").notNull().default(false),
+    archivedAt: timestamp("archived_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",
@@ -204,6 +234,14 @@ export const leads = pgTable(
   (table) => [
     index("leads_workspace_id_idx").on(table.workspaceId),
     index("leads_workspace_id_status_idx").on(table.workspaceId, table.status),
+    index("leads_workspace_id_archived_idx").on(
+      table.workspaceId,
+      table.isArchived,
+    ),
+    index("leads_workspace_id_follow_up_date_idx").on(
+      table.workspaceId,
+      table.nextFollowUpDate,
+    ),
     index("leads_workspace_id_created_at_idx").on(
       table.workspaceId,
       table.createdAt,

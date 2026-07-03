@@ -58,6 +58,12 @@ const {
       status: "status",
       source: "source",
       notes: "notes",
+      nextFollowUpDate: "next_follow_up_date",
+      followUpNote: "follow_up_note",
+      followUpPriority: "follow_up_priority",
+      followUpStatus: "follow_up_status",
+      isArchived: "is_archived",
+      archivedAt: "archived_at",
       createdAt: "created_at",
       updatedAt: "updated_at",
     },
@@ -251,6 +257,7 @@ import {
   createFollowUpTaskAction,
   createLeadAction,
   deleteLeadAction,
+  restoreLeadAction,
   updateDealStageAction,
   updateLeadAction,
   updateLeadStatusQuickAction,
@@ -264,6 +271,8 @@ const validLeadInput = {
   status: "New" as const,
   source: "Referral",
   notes: "Interested in onboarding",
+  followUpPriority: "medium" as const,
+  followUpStatus: "pending" as const,
   dealStage: "new" as const,
   dealValue: 0,
   dealCurrency: "USD" as const,
@@ -569,8 +578,8 @@ describe("lead actions", () => {
     expect(insertActivityValuesMock).not.toHaveBeenCalled();
   });
 
-  it("deleteLeadAction deletes a lead and logs delete activity", async () => {
-    deleteReturningMock.mockResolvedValue([
+  it("deleteLeadAction archives a lead and logs archive activity", async () => {
+    updateReturningMock.mockResolvedValue([
       { id: leadId, fullName: "Jane Doe" },
     ]);
 
@@ -578,16 +587,37 @@ describe("lead actions", () => {
 
     expect(result).toEqual({
       success: true,
-      message: "Lead deleted successfully.",
+      message: "Lead archived successfully.",
     });
     expect(insertActivityValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceId: "workspace_123",
-        eventType: "lead_deleted",
+        eventType: "lead_archived",
         leadId,
       }),
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/activity");
+  });
+
+  it("restoreLeadAction restores a lead and logs restore activity", async () => {
+    updateReturningMock.mockResolvedValue([
+      { id: leadId, fullName: "Jane Doe" },
+    ]);
+
+    const result = await restoreLeadAction(leadId);
+
+    expect(result).toEqual({
+      success: true,
+      message: "Lead restored successfully.",
+    });
+    expect(insertActivityValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        eventType: "lead_restored",
+        leadId,
+      }),
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/leads");
   });
 
   it("rejects invalid lead ids before querying the database", async () => {

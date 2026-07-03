@@ -11,12 +11,18 @@ import {
   type LeadsTableSortDirection,
   type LeadsTableSortField,
 } from "@/lib/constants/leads-table";
-import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import {
+  LEAD_STATUSES,
+  type FollowUpPriority,
+  type FollowUpStatus,
+  type LeadStatus,
+} from "@/lib/constants/leads";
 
 export type LeadsListFilters = {
   search?: string;
   status?: string;
   source?: string;
+  archived?: string;
   sortBy?: string;
   sortDir?: string;
   page?: string;
@@ -27,6 +33,7 @@ export type NormalizedLeadsFilters = {
   search: string;
   status: string;
   source: string;
+  archived: "active" | "archived";
   sortBy: LeadsTableSortField;
   sortDir: LeadsTableSortDirection;
   requestedPage: number;
@@ -42,6 +49,12 @@ export type LeadsListItem = {
   status: LeadStatus;
   source: string | null;
   sourceLabel: string;
+  nextFollowUpDate: string | null;
+  followUpNote: string | null;
+  followUpPriority: FollowUpPriority;
+  followUpStatus: FollowUpStatus;
+  isArchived: boolean;
+  archivedAt: string | null;
   createdAt: string;
 };
 
@@ -54,6 +67,7 @@ export type LeadsListResult = {
   search: string;
   status: string;
   source: string;
+  archived: "active" | "archived";
   sortBy: LeadsTableSortField;
   sortDir: LeadsTableSortDirection;
   sourceOptions: Array<{ label: string; count: number }>;
@@ -70,6 +84,10 @@ function normalizeStatus(value?: string) {
 
 function normalizeSource(value?: string) {
   return value?.trim().slice(0, 100) ?? "";
+}
+
+function normalizeArchived(value?: string): "active" | "archived" {
+  return value === "archived" ? "archived" : "active";
 }
 
 function normalizeSortBy(value?: string): LeadsTableSortField {
@@ -104,6 +122,7 @@ export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLead
     search: normalizeSearch(filters.search),
     status: normalizeStatus(filters.status),
     source: normalizeSource(filters.source),
+    archived: normalizeArchived(filters.archived),
     sortBy: normalizeSortBy(filters.sortBy),
     sortDir: normalizeSortDirection(filters.sortDir),
     requestedPage: normalizePositiveInteger(filters.page),
@@ -113,10 +132,13 @@ export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLead
 
 export function buildLeadsWhereConditions(
   workspaceId: string,
-  filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source">,
+  filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source" | "archived">,
 ) {
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
-  const conditions = [eq(leads.workspaceId, workspaceId)];
+  const conditions = [
+    eq(leads.workspaceId, workspaceId),
+    eq(leads.isArchived, filters.archived === "archived"),
+  ];
 
   if (filters.search) {
     conditions.push(
@@ -178,6 +200,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     search,
     status,
     source,
+    archived,
     sortBy,
     sortDir,
     requestedPage,
@@ -187,6 +210,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     search,
     status,
     source,
+    archived,
   });
   const sourceCount = sql<number>`count(*)`;
 
@@ -214,6 +238,12 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       status: leads.status,
       source: leads.source,
       sourceLabel,
+      nextFollowUpDate: leads.nextFollowUpDate,
+      followUpNote: leads.followUpNote,
+      followUpPriority: leads.followUpPriority,
+      followUpStatus: leads.followUpStatus,
+      isArchived: leads.isArchived,
+      archivedAt: leads.archivedAt,
       createdAt: leads.createdAt,
     })
     .from(leads)
@@ -228,7 +258,12 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       count: sourceCount,
     })
     .from(leads)
-    .where(eq(leads.workspaceId, workspace.id))
+    .where(
+      and(
+        eq(leads.workspaceId, workspace.id),
+        eq(leads.isArchived, archived === "archived"),
+      ),
+    )
     .groupBy(sourceLabel)
     .orderBy(desc(sourceCount), asc(sourceLabel));
 
@@ -242,6 +277,12 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       status: row.status,
       source: row.source,
       sourceLabel: row.sourceLabel,
+      nextFollowUpDate: row.nextFollowUpDate?.toISOString() ?? null,
+      followUpNote: row.followUpNote,
+      followUpPriority: row.followUpPriority,
+      followUpStatus: row.followUpStatus,
+      isArchived: row.isArchived,
+      archivedAt: row.archivedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
     })),
     totalCount,
@@ -251,6 +292,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     search,
     status,
     source,
+    archived,
     sortBy,
     sortDir,
     sourceOptions: sourceRows.map((item) => ({

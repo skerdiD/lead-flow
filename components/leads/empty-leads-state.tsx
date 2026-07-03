@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 
 type EmptyLeadsStateProps = {
   hasFilters: boolean;
+  archiveView?: boolean;
 };
 
-export function EmptyLeadsState({ hasFilters }: EmptyLeadsStateProps) {
+export function EmptyLeadsState({ hasFilters, archiveView = false }: EmptyLeadsStateProps) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-dashed bg-background px-6 py-12 shadow-sm">
       <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-muted/50 blur-3xl" />
@@ -27,7 +28,9 @@ export function EmptyLeadsState({ hasFilters }: EmptyLeadsStateProps) {
 
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {hasFilters
-            ? "No leads matched your current search and filters. Try broadening stage or source to surface more results."
+            ? archiveView
+              ? "No archived leads match your current filters. Active leads stay in the main view until you archive them."
+              : "No leads matched your current search and filters. Try broadening stage or source to surface more results."
             : "Start by adding your first lead. Once records are in, you can sort, filter, and manage them from one table."}
         </p>
 

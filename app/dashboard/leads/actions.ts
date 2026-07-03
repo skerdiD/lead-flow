@@ -116,6 +116,8 @@ type LeadActivityEventType =
   | "lead_updated"
   | "lead_status_changed"
   | "lead_deleted"
+  | "lead_archived"
+  | "lead_restored"
   | "lead_note_added"
   | "lead_note_updated"
   | "lead_note_deleted"
@@ -494,6 +496,10 @@ export async function createLeadAction(
           status: reconciled.status,
           source: parsed.data.source ?? null,
           notes: parsed.data.notes ?? null,
+          nextFollowUpDate: parseDateInput(parsed.data.nextFollowUpDate),
+          followUpNote: parsed.data.followUpNote ?? null,
+          followUpPriority: parsed.data.followUpPriority,
+          followUpStatus: parsed.data.followUpStatus,
         })
         .returning({
           id: leads.id,
@@ -646,6 +652,10 @@ export async function updateLeadAction(
           status: reconciled.status,
           source: parsed.data.source ?? null,
           notes: parsed.data.notes ?? null,
+          nextFollowUpDate: parseDateInput(parsed.data.nextFollowUpDate),
+          followUpNote: parsed.data.followUpNote ?? null,
+          followUpPriority: parsed.data.followUpPriority,
+          followUpStatus: parsed.data.followUpStatus,
           updatedAt: new Date(),
         })
         .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
@@ -1276,15 +1286,26 @@ export async function deleteLeadAction(
   }
 
   try {
-    const [deletedLead] = await db
-      .delete(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+    const [archivedLead] = await db
+      .update(leads)
+      .set({
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(leads.id, leadId),
+          eq(leads.workspaceId, workspace.id),
+          eq(leads.isArchived, false),
+        ),
+      )
       .returning({
         id: leads.id,
         fullName: leads.fullName,
       });
 
-    if (!deletedLead) {
+    if (!archivedLead) {
       return {
         success: false,
         message: "This lead could not be found or you do not have access to it.",
@@ -1294,24 +1315,93 @@ export async function deleteLeadAction(
     await createLeadActivity({
       workspaceId: workspace.id,
       userId,
-      eventType: "lead_deleted",
-      message: `Lead deleted: ${deletedLead.fullName}`,
-      leadId: deletedLead.id,
-      leadName: deletedLead.fullName,
+      eventType: "lead_archived",
+      message: `Lead archived: ${archivedLead.fullName}`,
+      leadId: archivedLead.id,
+      leadName: archivedLead.fullName,
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/leads");
-    revalidatePath("/dashboard/activity");
+    revalidateLeadPaths(archivedLead.id);
 
     return {
       success: true,
-      message: "Lead deleted successfully.",
+      message: "Lead archived successfully.",
     };
   } catch {
     return {
       success: false,
-      message: "We couldn't delete this lead right now. Please try again.",
+      message: "We couldn't archive this lead right now. Please try again.",
+    };
+  }
+}
+
+export async function restoreLeadAction(
+  leadId: string,
+): Promise<DeleteLeadActionState> {
+  if (!isUuid(leadId)) {
+    return {
+      success: false,
+      message: "This lead could not be found or you do not have access to it.",
+    };
+  }
+
+  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
+  const protection = await ensureLeadMutationAllowed();
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
+
+  try {
+    const [restoredLead] = await db
+      .update(leads)
+      .set({
+        isArchived: false,
+        archivedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(leads.id, leadId),
+          eq(leads.workspaceId, workspace.id),
+          eq(leads.isArchived, true),
+        ),
+      )
+      .returning({
+        id: leads.id,
+        fullName: leads.fullName,
+      });
+
+    if (!restoredLead) {
+      return {
+        success: false,
+        message: "This lead could not be found or you do not have access to it.",
+      };
+    }
+
+    await createLeadActivity({
+      workspaceId: workspace.id,
+      userId,
+      eventType: "lead_restored",
+      message: `Lead restored: ${restoredLead.fullName}`,
+      leadId: restoredLead.id,
+      leadName: restoredLead.fullName,
+    });
+
+    revalidateLeadPaths(restoredLead.id);
+
+    return {
+      success: true,
+      message: "Lead restored successfully.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't restore this lead right now. Please try again.",
     };
   }
 }
@@ -1353,7 +1443,13 @@ export async function bulkUpdateLeadStatusAction(
         status: leads.status,
       })
       .from(leads)
-      .where(and(eq(leads.workspaceId, workspace.id), inArray(leads.id, normalizedIds)));
+      .where(
+        and(
+          eq(leads.workspaceId, workspace.id),
+          eq(leads.isArchived, false),
+          inArray(leads.id, normalizedIds),
+        ),
+      );
 
     if (ownedLeads.length === 0) {
       return {
@@ -1380,7 +1476,13 @@ export async function bulkUpdateLeadStatusAction(
         status,
         updatedAt: new Date(),
       })
-      .where(and(eq(leads.workspaceId, workspace.id), inArray(leads.id, leadIdsToUpdate)));
+      .where(
+        and(
+          eq(leads.workspaceId, workspace.id),
+          eq(leads.isArchived, false),
+          inArray(leads.id, leadIdsToUpdate),
+        ),
+      );
 
     await createLeadActivity({
       workspaceId: workspace.id,
@@ -1424,19 +1526,30 @@ export async function bulkDeleteLeadsAction(
   if (normalizedIds.length === 0) {
     return {
       success: false,
-      message: "Select at least one lead to delete.",
+      message: "Select at least one lead to archive.",
     };
   }
 
   try {
-    const deletedLeads = await db
-      .delete(leads)
-      .where(and(eq(leads.workspaceId, workspace.id), inArray(leads.id, normalizedIds)))
+    const archivedLeads = await db
+      .update(leads)
+      .set({
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(leads.workspaceId, workspace.id),
+          eq(leads.isArchived, false),
+          inArray(leads.id, normalizedIds),
+        ),
+      )
       .returning({
         id: leads.id,
       });
 
-    const affectedCount = deletedLeads.length;
+    const affectedCount = archivedLeads.length;
 
     if (affectedCount === 0) {
       return {
@@ -1448,8 +1561,8 @@ export async function bulkDeleteLeadsAction(
     await createLeadActivity({
       workspaceId: workspace.id,
       userId,
-      eventType: "lead_deleted",
-      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} deleted in bulk.`,
+      eventType: "lead_archived",
+      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} archived in bulk.`,
     });
 
     revalidatePath("/dashboard");
@@ -1459,12 +1572,12 @@ export async function bulkDeleteLeadsAction(
     return {
       success: true,
       affectedCount,
-      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} deleted successfully.`,
+      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} archived successfully.`,
     };
   } catch {
     return {
       success: false,
-      message: "We couldn't delete the selected leads right now. Please try again.",
+      message: "We couldn't archive the selected leads right now. Please try again.",
     };
   }
 }

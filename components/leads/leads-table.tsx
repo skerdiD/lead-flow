@@ -7,20 +7,21 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Archive,
   ChevronLeft,
   ChevronRight,
   Eye,
   Loader2,
   Pencil,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   bulkDeleteLeadsAction,
   bulkUpdateLeadStatusAction,
 } from "@/app/dashboard/leads/actions";
-import { DeleteLeadDialog } from "@/components/leads/delete-lead-dialog";
+import { DeleteLeadDialog, RestoreLeadButton } from "@/components/leads/delete-lead-dialog";
 import { ExportLeadsMenu } from "@/components/leads/export-leads-menu";
+import { LeadFollowUpBadge } from "@/components/leads/lead-follow-up-badge";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import {
   AlertDialog,
@@ -53,7 +54,12 @@ import {
   type LeadsTableSortDirection,
   type LeadsTableSortField,
 } from "@/lib/constants/leads-table";
-import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
+import {
+  LEAD_STATUSES,
+  type FollowUpPriority,
+  type FollowUpStatus,
+  type LeadStatus,
+} from "@/lib/constants/leads";
 import { cn } from "@/lib/utils";
 
 type LeadRow = {
@@ -65,6 +71,12 @@ type LeadRow = {
   status: LeadStatus;
   source: string | null;
   sourceLabel: string;
+  nextFollowUpDate: string | null;
+  followUpNote: string | null;
+  followUpPriority: FollowUpPriority;
+  followUpStatus: FollowUpStatus;
+  isArchived: boolean;
+  archivedAt: string | null;
   createdAt: string;
 };
 
@@ -76,6 +88,7 @@ type LeadsTableProps = {
   pageSize: number;
   sortBy: LeadsTableSortField;
   sortDir: LeadsTableSortDirection;
+  archiveView?: boolean;
 };
 
 type SortableColumn = {
@@ -158,6 +171,7 @@ export function LeadsTable({
   pageSize,
   sortBy,
   sortDir,
+  archiveView = false,
 }: LeadsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -311,49 +325,53 @@ export function LeadsTable({
                 testId="export-selected-leads"
               />
 
-              <div className="w-[170px]">
-                <Select value={bulkStatus || "none"} onValueChange={setBulkStatus} disabled={isPending}>
-                  <SelectTrigger data-testid="bulk-status-select">
-                    <SelectValue placeholder="Set stage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Set stage</SelectItem>
-                    {LEAD_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!archiveView ? (
+                <>
+                  <div className="w-[170px]">
+                    <Select value={bulkStatus || "none"} onValueChange={setBulkStatus} disabled={isPending}>
+                      <SelectTrigger data-testid="bulk-status-select">
+                        <SelectValue placeholder="Set stage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Set stage</SelectItem>
+                        {LEAD_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBulkStatusApply}
-                disabled={!bulkStatus || bulkStatus === "none" || isPending}
-                data-testid="bulk-apply-stage-btn"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Apply stage"
-                )}
-              </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBulkStatusApply}
+                    disabled={!bulkStatus || bulkStatus === "none" || isPending}
+                    data-testid="bulk-apply-stage-btn"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Apply stage"
+                    )}
+                  </Button>
 
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setDeleteOpen(true)}
-                disabled={isPending}
-                data-testid="bulk-delete-btn"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete selected
-              </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDeleteOpen(true)}
+                    disabled={isPending}
+                    data-testid="bulk-delete-btn"
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    Archive selected
+                  </Button>
+                </>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -361,7 +379,7 @@ export function LeadsTable({
         <div className="overflow-hidden rounded-3xl border bg-background shadow-sm" data-testid="leads-table-wrapper">
           <Table
             containerClassName="overflow-x-auto"
-            className="min-w-[1120px]"
+            className="min-w-[1240px]"
           >
             <TableHeader className="bg-muted">
               <TableRow className="border-b bg-muted hover:bg-muted">
@@ -396,6 +414,7 @@ export function LeadsTable({
                   </TableHead>
                 ))}
 
+                <TableHead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">Follow-up</TableHead>
                 <TableHead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</TableHead>
                 <TableHead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone</TableHead>
                 <TableHead className="w-[180px] bg-muted px-6 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -464,6 +483,18 @@ export function LeadsTable({
                     <TableCell className="py-4 align-middle text-muted-foreground">{formatDate(lead.createdAt)}</TableCell>
 
                     <TableCell className="py-4 align-middle">
+                      <div className="min-w-[190px]">
+                        <LeadFollowUpBadge
+                          date={lead.nextFollowUpDate}
+                          note={lead.followUpNote}
+                          priority={lead.followUpPriority}
+                          status={lead.followUpStatus}
+                          compact
+                        />
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="py-4 align-middle">
                       <div className="min-w-[200px]">
                         <CellFallback value={lead.email} />
                       </div>
@@ -490,7 +521,11 @@ export function LeadsTable({
                           </Link>
                         </Button>
 
-                        <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} />
+                        {archiveView || lead.isArchived ? (
+                          <RestoreLeadButton leadId={lead.id} />
+                        ) : (
+                          <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} />
+                        )}
                       </div>
                     </TableCell>
                 </TableRow>
@@ -576,9 +611,9 @@ export function LeadsTable({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete selected leads?</AlertDialogTitle>
+            <AlertDialogTitle>Archive selected leads?</AlertDialogTitle>
             <AlertDialogDescription className="leading-6">
-              This will permanently remove {selectedCount} selected lead{selectedCount === 1 ? "" : "s"}. This action cannot be undone.
+              This will hide {selectedCount} selected lead{selectedCount === 1 ? "" : "s"} from active views, but all notes, activity, and history will remain saved.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -590,15 +625,14 @@ export function LeadsTable({
                 handleBulkDelete();
               }}
               disabled={isPending || selectedCount === 0}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
+                  Archiving...
                 </>
               ) : (
-                "Delete leads"
+                "Archive leads"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

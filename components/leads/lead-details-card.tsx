@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Archive,
   Building2,
   CalendarDays,
   Clock3,
@@ -10,20 +11,25 @@ import {
   Radio,
   UserRound,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DeleteLeadDialog } from "@/components/leads/delete-lead-dialog";
+import { DeleteLeadDialog, RestoreLeadButton } from "@/components/leads/delete-lead-dialog";
 import { LeadDealPanel } from "@/components/leads/lead-deal-panel";
+import { LeadFollowUpBadge } from "@/components/leads/lead-follow-up-badge";
 import { LeadNotesPanel } from "@/components/leads/lead-notes-panel";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import { LeadTasksPanel } from "@/components/leads/lead-tasks-panel";
 import { LeadWorkflowPanel } from "@/components/leads/lead-workflow-panel";
 import type { DealStage, TaskPriority, TaskStatus } from "@/lib/constants/crm";
+import type { FollowUpPriority, FollowUpStatus } from "@/lib/constants/leads";
 
 type LeadEventType =
   | "lead_created"
   | "lead_updated"
   | "lead_status_changed"
   | "lead_deleted"
+  | "lead_archived"
+  | "lead_restored"
   | "lead_note_added"
   | "lead_note_updated"
   | "lead_note_deleted"
@@ -41,6 +47,12 @@ type LeadDetails = {
   status: "New" | "Contacted" | "Interested" | "Proposal Sent" | "Closed" | "Lost";
   source: string | null;
   notes: string | null;
+  nextFollowUpDate: Date | null;
+  followUpNote: string | null;
+  followUpPriority: FollowUpPriority;
+  followUpStatus: FollowUpStatus;
+  isArchived: boolean;
+  archivedAt: Date | null;
   assignedOwnerUserId: string | null;
   accountId: string | null;
   accountName: string | null;
@@ -130,6 +142,10 @@ function eventTypeLabel(eventType: LeadEventType) {
       return "Status changed";
     case "lead_deleted":
       return "Lead deleted";
+    case "lead_archived":
+      return "Lead archived";
+    case "lead_restored":
+      return "Lead restored";
     case "lead_note_added":
       return "Note added";
     case "lead_note_updated":
@@ -180,6 +196,12 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="truncate text-3xl font-semibold tracking-tight text-foreground">{lead.fullName}</h1>
               <LeadStatusBadge status={lead.status} />
+              {lead.isArchived ? (
+                <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 bg-muted/30 text-muted-foreground">
+                  <Archive className="h-3.5 w-3.5" />
+                  Archived
+                </Badge>
+              ) : null}
             </div>
 
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -190,6 +212,9 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
               <span className="rounded-full border bg-muted/20 px-2.5 py-1">Source: {lead.source?.trim() || "Unspecified"}</span>
               <span className="rounded-full border bg-muted/20 px-2.5 py-1">Created {formatDateTime(lead.createdAt)}</span>
               <span className="rounded-full border bg-muted/20 px-2.5 py-1">Updated {formatDateTime(lead.updatedAt)}</span>
+              {lead.archivedAt ? (
+                <span className="rounded-full border bg-muted/20 px-2.5 py-1">Archived {formatDateTime(lead.archivedAt)}</span>
+              ) : null}
             </div>
           </div>
 
@@ -201,10 +226,28 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
               </Link>
             </Button>
 
-            <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} variant="button" />
+            {lead.isArchived ? (
+              <RestoreLeadButton leadId={lead.id} variant="button" />
+            ) : (
+              <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} variant="button" />
+            )}
           </div>
         </div>
       </section>
+
+      {lead.isArchived ? (
+        <section className="rounded-3xl border bg-muted/20 p-5 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold tracking-tight text-foreground">Archived lead</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                This lead is hidden from active views. Notes, activity, tasks, and history are still saved.
+              </p>
+            </div>
+            <RestoreLeadButton leadId={lead.id} variant="button" />
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
         <div className="rounded-3xl border bg-background p-5 shadow-sm">
@@ -231,7 +274,33 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
 
       <section className="grid gap-4 xl:grid-cols-2">
         <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} />
-        <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} />
+        <section className="space-y-4">
+          <section className="rounded-3xl border bg-background p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold tracking-tight text-foreground">Follow-up reminder</p>
+                <p className="mt-1 text-sm text-muted-foreground">The next planned touch for this lead.</p>
+              </div>
+              <LeadFollowUpBadge
+                date={lead.nextFollowUpDate}
+                note={lead.followUpNote}
+                priority={lead.followUpPriority}
+                status={lead.followUpStatus}
+                compact
+              />
+            </div>
+
+            <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
+              <p className="text-sm leading-6 text-foreground">
+                {lead.followUpNote?.trim()
+                  ? lead.followUpNote
+                  : "No follow-up note has been added yet."}
+              </p>
+            </div>
+          </section>
+
+          <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} />
+        </section>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
