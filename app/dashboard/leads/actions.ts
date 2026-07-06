@@ -25,7 +25,12 @@ import {
   type CrmTaskFormValues,
 } from "@/lib/validations/crm-task";
 import { leadNoteSchema } from "@/lib/validations/lead-note";
-import { leadFormSchema, type LeadFormValues } from "@/lib/validations/lead";
+import {
+  leadFollowUpSchema,
+  leadFormSchema,
+  type LeadFollowUpValues,
+  type LeadFormValues,
+} from "@/lib/validations/lead";
 import { isUuid, normalizeUuidList } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
@@ -109,6 +114,17 @@ export type LeadQuickStatusState =
   | {
       success: false;
       message: string;
+    };
+
+export type LeadFollowUpMutationState =
+  | {
+      success: true;
+      message: string;
+    }
+  | {
+      success: false;
+      message: string;
+      fieldErrors?: Partial<Record<keyof LeadFollowUpValues, string[]>>;
     };
 
 type LeadActivityEventType =
@@ -211,6 +227,14 @@ function normalizeDealProbability(stage: DealStage, probability: number) {
   if (stage === "won") return 100;
   if (stage === "lost") return 0;
   return probability;
+}
+
+function formatActivityDate(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
 function revalidateLeadPaths(leadId: string) {
@@ -1049,6 +1073,103 @@ export async function updateDealStageAction(
     return {
       success: false,
       message: "We couldn't update this deal right now. Please try again.",
+    };
+  }
+}
+
+export async function updateLeadFollowUpAction(
+  leadId: string,
+  input: LeadFollowUpValues,
+): Promise<LeadFollowUpMutationState> {
+  if (!isUuid(leadId)) {
+    return {
+      success: false,
+      message: "This lead could not be found.",
+    };
+  }
+
+  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
+  const protection = await ensureLeadMutationAllowed();
+  const parsed = leadFollowUpSchema.safeParse(input);
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please review the follow-up details and try again.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  try {
+    const [existingLead] = await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+        nextFollowUpDate: leads.nextFollowUpDate,
+        followUpNote: leads.followUpNote,
+      })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+      .limit(1);
+
+    if (!existingLead) {
+      return {
+        success: false,
+        message: "This lead could not be found.",
+      };
+    }
+
+    const nextFollowUpDate = parseDateInput(parsed.data.nextFollowUpDate);
+    const followUpNote = parsed.data.followUpNote ?? null;
+
+    await db
+      .update(leads)
+      .set({
+        nextFollowUpDate,
+        followUpNote,
+        followUpPriority: parsed.data.followUpPriority,
+        followUpStatus: parsed.data.followUpStatus,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)));
+
+    const hadFollowUp =
+      Boolean(existingLead.nextFollowUpDate) ||
+      Boolean(existingLead.followUpNote?.trim());
+    const hasFollowUp = Boolean(nextFollowUpDate) || Boolean(followUpNote?.trim());
+    const timelineMessage = !hasFollowUp
+      ? `Follow-up cleared for ${existingLead.fullName}`
+      : !hadFollowUp
+        ? `Follow-up scheduled for ${existingLead.fullName} on ${formatActivityDate(nextFollowUpDate ?? new Date())}`
+        : `Follow-up updated for ${existingLead.fullName}${nextFollowUpDate ? ` to ${formatActivityDate(nextFollowUpDate)}` : ""}`;
+
+    await createLeadActivity({
+      workspaceId: workspace.id,
+      userId,
+      eventType: "lead_updated",
+      message: timelineMessage,
+      leadId,
+      leadName: existingLead.fullName,
+    });
+
+    revalidateLeadPaths(leadId);
+
+    return {
+      success: true,
+      message: hasFollowUp ? "Follow-up updated." : "Follow-up cleared.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't update this follow-up right now. Please try again.",
     };
   }
 }

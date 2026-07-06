@@ -85,7 +85,7 @@ export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
   };
 
   return (
-    <section className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section id="lead-tasks" className="rounded-3xl border bg-background p-6 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-semibold tracking-tight text-foreground">
@@ -174,18 +174,18 @@ export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
         <TaskSections
           sections={[
             {
-              key: "dueToday",
-              title: "Due today",
-              description: "Tasks that should move this lead forward today.",
-              emptyMessage: "No tasks due today",
-              tasks: groupedTasks.dueToday,
-            },
-            {
               key: "overdue",
               title: "Overdue",
               description: "Tasks that slipped and need a fresh follow-through.",
               emptyMessage: "No overdue tasks",
               tasks: groupedTasks.overdue,
+            },
+            {
+              key: "dueToday",
+              title: "Due today",
+              description: "Tasks that should move this lead forward today.",
+              emptyMessage: "No tasks due today",
+              tasks: groupedTasks.dueToday,
             },
             {
               key: "upcoming",

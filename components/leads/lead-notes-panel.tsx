@@ -11,10 +11,12 @@ import {
 } from "@/app/dashboard/leads/actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type LeadNoteItem = {
   id: string;
   content: string;
+  userId: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -22,6 +24,7 @@ type LeadNoteItem = {
 type LeadNotesPanelProps = {
   leadId: string;
   notes: LeadNoteItem[];
+  currentUserId: string;
 };
 
 const MAX_NOTE_LENGTH = 2000;
@@ -36,7 +39,24 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
+function getAuthorLabel(noteUserId: string, currentUserId: string) {
+  return noteUserId === currentUserId ? "You" : "Workspace member";
+}
+
+function getAuthorInitials(label: string) {
+  return label
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+export function LeadNotesPanel({
+  leadId,
+  notes,
+  currentUserId,
+}: LeadNotesPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [draft, setDraft] = useState("");
@@ -112,10 +132,10 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
         </p>
       </div>
 
-      <div className="mt-5 rounded-2xl border bg-muted/20 p-4">
+      <div id="lead-note-editor" className="mt-5 rounded-2xl border bg-muted/20 p-4">
         <Textarea
           id="lead-notes-input"
-          placeholder="Add a note about this lead..."
+          placeholder="Capture what changed, what was said, or what should happen next..."
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           className="min-h-24 resize-y"
@@ -153,14 +173,23 @@ export function LeadNotesPanel({ leadId, notes }: LeadNotesPanelProps) {
           sortedNotes.map((note) => {
             const isEditing = editingNoteId === note.id;
             const wasUpdated = note.updatedAt.getTime() !== note.createdAt.getTime();
+            const authorLabel = getAuthorLabel(note.userId, currentUserId);
 
             return (
               <article key={note.id} className="rounded-2xl border bg-background p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    Added {formatDateTime(note.createdAt)}
-                    {wasUpdated ? ` - Updated ${formatDateTime(note.updatedAt)}` : null}
-                  </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <Avatar size="sm">
+                      <AvatarFallback>{getAuthorInitials(authorLabel)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">{authorLabel}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Added {formatDateTime(note.createdAt)}
+                        {wasUpdated ? ` - Updated ${formatDateTime(note.updatedAt)}` : null}
+                      </p>
+                    </div>
+                  </div>
 
                   {isEditing ? (
                     <div className="flex items-center gap-2">

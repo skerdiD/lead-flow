@@ -63,7 +63,10 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
 
   if (!deal) {
     return (
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+      <section
+        id="lead-opportunity"
+        className="rounded-3xl border bg-background p-5 shadow-sm"
+      >
         <p className="text-sm font-semibold tracking-tight text-foreground">
           Opportunity
         </p>
@@ -93,7 +96,10 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
   };
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
+    <section
+      id="lead-opportunity"
+      className="rounded-3xl border bg-background p-5 shadow-sm"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold tracking-tight text-foreground">
@@ -167,7 +173,7 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        {deal.closedAt ? `Closed ${formatDate(deal.closedAt)} · ` : ""}
+        {deal.closedAt ? `Closed ${formatDate(deal.closedAt)} | ` : ""}
         Last updated {formatDateTime(deal.updatedAt)}
       </p>
       {deal.lostReason ? (

@@ -1,106 +1,32 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
-  Archive,
   Building2,
   CalendarDays,
+  CheckCheck,
   Clock3,
   History,
   Mail,
-  Pencil,
   Phone,
   Radio,
   UserRound,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DeleteLeadDialog, RestoreLeadButton } from "@/components/leads/delete-lead-dialog";
+import type { LeadDetailsResult } from "@/app/dashboard/leads/[id]/queries";
 import { LeadDealPanel } from "@/components/leads/lead-deal-panel";
 import { LeadFollowUpBadge } from "@/components/leads/lead-follow-up-badge";
+import { LeadFollowUpPanel } from "@/components/leads/lead-follow-up-panel";
 import { LeadNotesPanel } from "@/components/leads/lead-notes-panel";
+import { LeadQuickActions } from "@/components/leads/lead-quick-actions";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import { LeadTasksPanel } from "@/components/leads/lead-tasks-panel";
 import { LeadWorkflowPanel } from "@/components/leads/lead-workflow-panel";
-import type { DealStage, TaskPriority, TaskStatus } from "@/lib/constants/crm";
-import type { FollowUpPriority, FollowUpStatus } from "@/lib/constants/leads";
-
-type LeadEventType =
-  | "lead_created"
-  | "lead_updated"
-  | "lead_status_changed"
-  | "lead_deleted"
-  | "lead_archived"
-  | "lead_restored"
-  | "lead_note_added"
-  | "lead_note_updated"
-  | "lead_note_deleted"
-  | "task_created"
-  | "task_completed"
-  | "deal_stage_changed"
-  | "lead_qualified";
-
-type LeadDetails = {
-  id: string;
-  fullName: string;
-  company: string | null;
-  email: string | null;
-  phone: string | null;
-  status: "New" | "Contacted" | "Interested" | "Proposal Sent" | "Closed" | "Lost";
-  source: string | null;
-  notes: string | null;
-  nextFollowUpDate: Date | null;
-  followUpNote: string | null;
-  followUpPriority: FollowUpPriority;
-  followUpStatus: FollowUpStatus;
-  isArchived: boolean;
-  archivedAt: Date | null;
-  assignedOwnerUserId: string | null;
-  accountId: string | null;
-  accountName: string | null;
-  primaryContactId: string | null;
-  primaryContactName: string | null;
-  primaryContactEmail: string | null;
-  primaryContactPhone: string | null;
-  dealEntry: {
-    id: string;
-    name: string;
-    stage: DealStage;
-    valueCents: number;
-    currency: string;
-    probability: number;
-    expectedCloseAt: Date | null;
-    closedAt: Date | null;
-    lostReason: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
-  taskEntries: Array<{
-    id: string;
-    title: string;
-    description: string | null;
-    dueAt: Date | null;
-    status: TaskStatus;
-    priority: TaskPriority;
-    completedAt: Date | null;
-    createdAt: Date;
-  }>;
-  noteEntries: Array<{
-    id: string;
-    content: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
-  activityEntries: Array<{
-    id: string;
-    eventType: LeadEventType;
-    message: string;
-    createdAt: Date;
-  }>;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { Badge } from "@/components/ui/badge";
+import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
+import { formatCurrencyFromCents } from "@/lib/revenue";
+import { groupTasksByTimeline } from "@/lib/tasks";
 
 type LeadDetailsCardProps = {
-  lead: LeadDetails;
+  lead: LeadDetailsResult;
 };
 
 function formatDateTime(date: Date) {
@@ -113,55 +39,124 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-function getNextStep(status: LeadDetails["status"]) {
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function getNextStep(status: LeadDetailsResult["status"]) {
   switch (status) {
     case "New":
-      return "Send first outreach today and capture response quality in a note.";
+      return "Send the first outreach and capture the response quality in a note.";
     case "Contacted":
-      return "Book a qualification call and confirm timeline, budget, and decision maker.";
+      return "Confirm timing, budget, and the real decision maker on the next conversation.";
     case "Interested":
-      return "Prepare a tailored proposal with clear scope and expected delivery window.";
+      return "Move toward a concrete proposal with scope, budget, and close timing.";
     case "Proposal Sent":
-      return "Set a follow-up date and track any objections before final decision.";
+      return "Follow up on the proposal, surface objections, and get the final decision path.";
     case "Closed":
-      return "Start onboarding checklist and log kickoff notes for a smooth handoff.";
+      return "Hand off smoothly and capture onboarding context before the conversation cools down.";
     case "Lost":
-      return "Record loss reason and set a re-engagement reminder for a later quarter.";
+      return "Document the reason clearly and set a later re-engagement point if the fit may return.";
     default:
-      return "Add a clear next step and date in notes to keep momentum.";
+      return "Capture the next step with a date so this lead stays active.";
   }
 }
 
-function eventTypeLabel(eventType: LeadEventType) {
-  switch (eventType) {
+function getTimelineMeta(
+  entry: LeadDetailsResult["activityEntries"][number],
+) {
+  if (entry.eventType === "lead_updated" && entry.message.startsWith("Follow-up scheduled")) {
+    return {
+      label: "Follow-up scheduled",
+      className: "border-sky-200 bg-sky-50 text-sky-700",
+    };
+  }
+
+  if (entry.eventType === "lead_updated" && entry.message.startsWith("Follow-up updated")) {
+    return {
+      label: "Follow-up updated",
+      className: "border-sky-200 bg-sky-50 text-sky-700",
+    };
+  }
+
+  if (entry.eventType === "lead_updated" && entry.message.startsWith("Follow-up cleared")) {
+    return {
+      label: "Follow-up cleared",
+      className: "border-slate-200 bg-slate-50 text-slate-700",
+    };
+  }
+
+  switch (entry.eventType) {
     case "lead_created":
-      return "Lead created";
-    case "lead_updated":
-      return "Lead updated";
+      return {
+        label: "Lead created",
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
     case "lead_status_changed":
-      return "Status changed";
-    case "lead_deleted":
-      return "Lead deleted";
-    case "lead_archived":
-      return "Lead archived";
-    case "lead_restored":
-      return "Lead restored";
-    case "lead_note_added":
-      return "Note added";
-    case "lead_note_updated":
-      return "Note updated";
-    case "lead_note_deleted":
-      return "Note deleted";
-    case "task_created":
-      return "Task created";
-    case "task_completed":
-      return "Task completed";
+      return {
+        label: "Status changed",
+        className: "border-violet-200 bg-violet-50 text-violet-700",
+      };
     case "deal_stage_changed":
-      return "Deal stage changed";
+      return {
+        label: "Deal stage changed",
+        className: "border-indigo-200 bg-indigo-50 text-indigo-700",
+      };
+    case "lead_note_added":
+      return {
+        label: "Note added",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    case "task_created":
+      return {
+        label: "Task created",
+        className: "border-sky-200 bg-sky-50 text-sky-700",
+      };
+    case "task_completed":
+      return {
+        label: "Task completed",
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
+    case "lead_archived":
+      return {
+        label: "Archived",
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+      };
+    case "lead_restored":
+      return {
+        label: "Restored",
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
+    case "lead_note_updated":
+      return {
+        label: "Note updated",
+        className: "border-slate-200 bg-slate-50 text-slate-700",
+      };
+    case "lead_note_deleted":
+      return {
+        label: "Note deleted",
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+      };
     case "lead_qualified":
-      return "Lead qualified";
+      return {
+        label: "Lead qualified",
+        className: "border-indigo-200 bg-indigo-50 text-indigo-700",
+      };
+    case "lead_deleted":
+      return {
+        label: "Lead deleted",
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+      };
+    case "lead_updated":
     default:
-      return "Activity";
+      return {
+        label: "Lead updated",
+        className: "border-slate-200 bg-slate-50 text-slate-700",
+      };
   }
 }
 
@@ -169,117 +164,199 @@ function DetailItem({
   icon,
   label,
   value,
+  href,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
-  value: string | null;
+  value: string;
+  href?: string;
 }) {
+  const content = href ? (
+    <Link
+      href={href}
+      className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+    >
+      {value}
+    </Link>
+  ) : (
+    <p className="text-sm font-medium text-foreground">{value}</p>
+  );
+
   return (
     <div className="rounded-2xl border bg-background p-4">
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-3 text-sm font-medium text-foreground">{value && value.trim() ? value : "-"}</p>
+      <div className="mt-3">{content}</div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+}) {
+  return (
+    <div className="rounded-2xl border bg-background/95 p-4 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+        {value}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">{helper}</p>
     </div>
   );
 }
 
 export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
   const nextStep = getNextStep(lead.status);
+  const groupedTasks = groupTasksByTimeline(
+    lead.taskEntries.map((task) => ({
+      ...task,
+      leadId: lead.id,
+      leadName: lead.fullName,
+      leadCompany: lead.company,
+    })),
+  );
+  const openTaskCount = lead.taskEntries.filter((task) => !task.completedAt).length;
+  const overdueTaskCount = groupedTasks.overdue.length;
+  const completedTaskCount = groupedTasks.completed.length;
+  const lastActivity = lead.activityEntries[0] ?? null;
+  const companyName = lead.company?.trim() || lead.accountName?.trim() || "No company added";
+  const contactEmail = lead.primaryContactEmail?.trim() || lead.email?.trim() || "No email added";
+  const contactPhone = lead.primaryContactPhone?.trim() || lead.phone?.trim() || "No phone added";
+  const dealValue = lead.dealEntry
+    ? formatCurrencyFromCents(lead.dealEntry.valueCents, lead.dealEntry.currency)
+    : "No deal value";
+  const dealStageLabel = lead.dealEntry
+    ? DEAL_STAGE_LABELS[lead.dealEntry.stage]
+    : "No opportunity";
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border bg-background p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="truncate text-3xl font-semibold tracking-tight text-foreground">{lead.fullName}</h1>
-              <LeadStatusBadge status={lead.status} />
-              {lead.isArchived ? (
-                <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 bg-muted/30 text-muted-foreground">
-                  <Archive className="h-3.5 w-3.5" />
-                  Archived
+      <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/35 p-6 shadow-sm sm:p-7">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+
+        <div className="relative flex flex-col gap-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 max-w-4xl">
+              <p className="inline-flex items-center rounded-full border bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Lead workspace
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  {lead.fullName}
+                </h1>
+                <LeadStatusBadge status={lead.status} />
+                <Badge variant="outline" className="bg-background/80">
+                  Source: {lead.source?.trim() || "Unspecified"}
                 </Badge>
-              ) : null}
+                <Badge variant="outline" className="bg-background/80">
+                  {dealStageLabel}
+                </Badge>
+                {lead.isArchived ? (
+                  <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
+                    Archived
+                  </Badge>
+                ) : null}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  {companyName}
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Created {formatDate(lead.createdAt)}
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <Clock3 className="h-4 w-4" />
+                  Updated {formatDateTime(lead.updatedAt)}
+                </span>
+              </div>
+
+              <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                Understand the relationship, move the pipeline forward, and capture every next step from one focused CRM workspace.
+              </p>
             </div>
 
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Workflow view for this lead: update stage, capture notes, and track recent activity in one place.
-            </p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="rounded-full border bg-muted/20 px-2.5 py-1">Source: {lead.source?.trim() || "Unspecified"}</span>
-              <span className="rounded-full border bg-muted/20 px-2.5 py-1">Created {formatDateTime(lead.createdAt)}</span>
-              <span className="rounded-full border bg-muted/20 px-2.5 py-1">Updated {formatDateTime(lead.updatedAt)}</span>
-              {lead.archivedAt ? (
-                <span className="rounded-full border bg-muted/20 px-2.5 py-1">Archived {formatDateTime(lead.archivedAt)}</span>
-              ) : null}
-            </div>
+            <LeadQuickActions
+              leadId={lead.id}
+              leadName={lead.fullName}
+              dealId={lead.dealEntry?.id ?? null}
+              isArchived={lead.isArchived}
+              currentStatus={lead.status}
+            />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-              <Link href={`/dashboard/leads/${lead.id}/edit`}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Link>
-            </Button>
-
-            {lead.isArchived ? (
-              <RestoreLeadButton leadId={lead.id} variant="button" />
-            ) : (
-              <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} variant="button" />
-            )}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryCard
+              label="Deal value"
+              value={dealValue}
+              helper={lead.dealEntry ? `${dealStageLabel} opportunity` : "Add an opportunity when this lead becomes active pipeline"}
+            />
+            <SummaryCard
+              label="Next follow-up"
+              value={
+                lead.nextFollowUpDate
+                  ? formatDate(lead.nextFollowUpDate)
+                  : "Not scheduled"
+              }
+              helper={
+                lead.followUpNote?.trim()
+                  ? lead.followUpNote
+                  : "No follow-up note has been added yet."
+              }
+            />
+            <SummaryCard
+              label="Open tasks"
+              value={`${openTaskCount}`}
+              helper={
+                overdueTaskCount > 0
+                  ? `${overdueTaskCount} overdue, ${completedTaskCount} completed`
+                  : `${completedTaskCount} completed so far`
+              }
+            />
+            <SummaryCard
+              label="Latest activity"
+              value={lastActivity ? formatDateTime(lastActivity.createdAt) : "No activity yet"}
+              helper={lastActivity ? lastActivity.message : "Your notes, task updates, and status changes will appear here."}
+            />
           </div>
         </div>
       </section>
 
       {lead.isArchived ? (
-        <section className="rounded-3xl border bg-muted/20 p-5 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold tracking-tight text-foreground">Archived lead</p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                This lead is hidden from active views. Notes, activity, tasks, and history are still saved.
-              </p>
-            </div>
-            <RestoreLeadButton leadId={lead.id} variant="button" />
-          </div>
+        <section className="rounded-3xl border border-rose-100 bg-rose-50/60 p-5 shadow-sm">
+          <p className="text-sm font-semibold tracking-tight text-foreground">
+            Archived lead
+          </p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            This lead is hidden from active pipeline views, but the full workspace history remains intact.
+          </p>
         </section>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-        <div className="rounded-3xl border bg-background p-5 shadow-sm">
-          <p className="mb-4 text-sm font-semibold tracking-tight text-foreground">Lead information</p>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <DetailItem icon={<Building2 className="h-4 w-4" />} label="Account" value={lead.accountName ?? lead.company} />
-            <DetailItem icon={<UserRound className="h-4 w-4" />} label="Primary contact" value={lead.primaryContactName ?? lead.fullName} />
-            <DetailItem icon={<Mail className="h-4 w-4" />} label="Email" value={lead.email} />
-            <DetailItem icon={<Phone className="h-4 w-4" />} label="Phone" value={lead.phone} />
-            <DetailItem icon={<Radio className="h-4 w-4" />} label="Source" value={lead.source} />
-            <DetailItem icon={<CalendarDays className="h-4 w-4" />} label="Created" value={formatDateTime(lead.createdAt)} />
-            <DetailItem icon={<Clock3 className="h-4 w-4" />} label="Last updated" value={formatDateTime(lead.updatedAt)} />
-          </div>
-        </div>
-
-        <LeadWorkflowPanel
-          leadId={lead.id}
-          fullName={lead.fullName}
-          currentStatus={lead.status}
-          nextStep={nextStep}
-        />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} />
-        <section className="space-y-4">
-          <section className="rounded-3xl border bg-background p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)]">
+        <div className="space-y-4">
+          <section className="rounded-3xl border bg-background p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold tracking-tight text-foreground">Follow-up reminder</p>
-                <p className="mt-1 text-sm text-muted-foreground">The next planned touch for this lead.</p>
+                <p className="text-sm font-semibold tracking-tight text-foreground">
+                  Contact and lead context
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The practical details your team needs before the next conversation.
+                </p>
               </div>
               <LeadFollowUpBadge
                 date={lead.nextFollowUpDate}
@@ -290,67 +367,153 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
-              <p className="text-sm leading-6 text-foreground">
-                {lead.followUpNote?.trim()
-                  ? lead.followUpNote
-                  : "No follow-up note has been added yet."}
-              </p>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <DetailItem
+                icon={<Building2 className="h-4 w-4" />}
+                label="Company"
+                value={companyName}
+              />
+              <DetailItem
+                icon={<UserRound className="h-4 w-4" />}
+                label="Primary contact"
+                value={lead.primaryContactName?.trim() || lead.fullName}
+              />
+              <DetailItem
+                icon={<Mail className="h-4 w-4" />}
+                label="Email"
+                value={contactEmail}
+                href={contactEmail === "No email added" ? undefined : `mailto:${contactEmail}`}
+              />
+              <DetailItem
+                icon={<Phone className="h-4 w-4" />}
+                label="Phone"
+                value={contactPhone}
+                href={contactPhone === "No phone added" ? undefined : `tel:${contactPhone}`}
+              />
+              <DetailItem
+                icon={<Radio className="h-4 w-4" />}
+                label="Lead source"
+                value={lead.source?.trim() || "Unspecified"}
+              />
+              <DetailItem
+                icon={<Clock3 className="h-4 w-4" />}
+                label="Workspace owner"
+                value={lead.assignedOwnerUserId === lead.viewerUserId ? "You" : "Assigned teammate"}
+              />
             </div>
           </section>
 
-          <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} />
-        </section>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <section className="rounded-3xl border bg-background p-6 shadow-sm">
-          <div className="space-y-3">
+          <section className="rounded-3xl border bg-background p-6 shadow-sm">
             <div>
-              <p className="text-sm font-semibold tracking-tight text-foreground">Profile notes</p>
-              <p className="mt-1 text-sm text-muted-foreground">Static context saved directly on this lead profile.</p>
-            </div>
-
-            <div className="rounded-2xl border bg-muted/20 p-4">
-              <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
-                {lead.notes && lead.notes.trim() ? lead.notes : "No profile notes have been added yet."}
+              <p className="text-sm font-semibold tracking-tight text-foreground">
+                Profile context
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Persistent background saved on the lead record itself.
               </p>
             </div>
-          </div>
-        </section>
 
-        <section className="rounded-3xl border bg-background p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+            <div className="mt-5 rounded-2xl border bg-muted/20 p-4">
+              <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
+                {lead.notes?.trim()
+                  ? lead.notes
+                  : "No profile context has been added yet. Use the editable notes section below for live conversation notes and decisions."}
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <div className="space-y-4">
+          <LeadWorkflowPanel
+            leadId={lead.id}
+            fullName={lead.fullName}
+            currentStatus={lead.status}
+            nextStep={nextStep}
+          />
+          <LeadFollowUpPanel
+            key={`${lead.nextFollowUpDate?.toISOString() ?? "none"}:${lead.followUpPriority}:${lead.followUpStatus}:${lead.followUpNote ?? ""}`}
+            leadId={lead.id}
+            followUp={{
+              date: lead.nextFollowUpDate,
+              note: lead.followUpNote,
+              priority: lead.followUpPriority,
+              status: lead.followUpStatus,
+            }}
+          />
+          <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} />
+        </div>
+      </section>
+
+      <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} />
+
+      <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <LeadNotesPanel
+          leadId={lead.id}
+          notes={lead.noteEntries}
+          currentUserId={lead.viewerUserId}
+        />
+
+        <section
+          id="lead-activity"
+          className="rounded-3xl border bg-background p-6 shadow-sm"
+        >
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold tracking-tight text-foreground">Recent activity</p>
-              <p className="mt-1 text-sm text-muted-foreground">Latest timeline events for this lead.</p>
+              <p className="text-sm font-semibold tracking-tight text-foreground">
+                Activity timeline
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A readable history of what happened on this lead and when.
+              </p>
             </div>
             <History className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {lead.activityEntries.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-              No activity yet. Your updates and notes will appear here.
+            <div className="mt-5 rounded-2xl border border-dashed bg-muted/20 px-4 py-8 text-center">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border bg-background">
+                <CheckCheck className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-foreground">
+                No activity yet
+              </p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Status changes, notes, task updates, and follow-up scheduling will appear here automatically.
+              </p>
             </div>
           ) : (
-            <ol className="space-y-3">
-              {lead.activityEntries.map((entry) => (
-                <li key={entry.id} className="rounded-2xl border bg-background p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                      {eventTypeLabel(entry.eventType)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{formatDateTime(entry.createdAt)}</span>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-foreground">{entry.message}</p>
-                </li>
-              ))}
+            <ol className="mt-5 space-y-4">
+              {lead.activityEntries.map((entry, index) => {
+                const timelineMeta = getTimelineMeta(entry);
+
+                return (
+                  <li key={entry.id} className="relative pl-6">
+                    <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-primary/70" />
+                    {index < lead.activityEntries.length - 1 ? (
+                      <span className="absolute left-[4px] top-5 h-[calc(100%-0.25rem)] w-px bg-border" />
+                    ) : null}
+                    <div className="rounded-2xl border bg-background p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium ${timelineMeta.className}`}
+                        >
+                          {timelineMeta.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDateTime(entry.createdAt)}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-foreground">
+                        {entry.message}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </section>
       </section>
-
-      <LeadNotesPanel leadId={lead.id} notes={lead.noteEntries} />
     </div>
   );
 }

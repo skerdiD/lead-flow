@@ -51,11 +51,13 @@ export function LeadWorkflowPanel({
   };
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
+    <section id="lead-stage" className="rounded-3xl border bg-background p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">Workflow</p>
-          <p className="mt-1 text-sm text-muted-foreground">Quick actions for {fullName}</p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">Pipeline status</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Update where {fullName} sits in the pipeline without leaving this page.
+          </p>
         </div>
         <div className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs font-medium text-muted-foreground">
           Next action

@@ -260,6 +260,7 @@ import {
   restoreLeadAction,
   updateDealStageAction,
   updateLeadAction,
+  updateLeadFollowUpAction,
   updateLeadStatusQuickAction,
 } from "@/app/dashboard/leads/actions";
 
@@ -485,6 +486,38 @@ describe("lead actions", () => {
         workspaceId: "workspace_123",
         eventType: "task_created",
         leadId,
+      }),
+    );
+  });
+
+  it("updateLeadFollowUpAction saves follow-up details and logs activity", async () => {
+    selectResults.push([
+      {
+        id: leadId,
+        fullName: "Jane Doe",
+        nextFollowUpDate: null,
+        followUpNote: null,
+      },
+    ]);
+    updateReturningMock.mockResolvedValue([{ id: leadId }]);
+
+    const result = await updateLeadFollowUpAction(leadId, {
+      nextFollowUpDate: "2026-07-12",
+      followUpNote: "Confirm the final stakeholder review.",
+      followUpPriority: "high",
+      followUpStatus: "pending",
+    });
+
+    expect(result).toEqual({
+      success: true,
+      message: "Follow-up updated.",
+    });
+    expect(insertActivityValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace_123",
+        eventType: "lead_updated",
+        leadId,
+        message: expect.stringContaining("Follow-up scheduled for Jane Doe"),
       }),
     );
   });

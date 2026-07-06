@@ -134,5 +134,22 @@ export const leadFormSchema = z.object({
   lostReason: optionalTrimmedString(255),
 });
 
+export const leadFollowUpSchema = z.object({
+  nextFollowUpDate: optionalDateString,
+  followUpNote: optionalTrimmedString(1000),
+  followUpPriority: z
+    .enum(FOLLOW_UP_PRIORITIES, {
+      error: () => ({ message: "Please select a valid follow-up priority." }),
+    })
+    .default("medium"),
+  followUpStatus: z
+    .enum(FOLLOW_UP_STATUSES, {
+      error: () => ({ message: "Please select a valid follow-up status." }),
+    })
+    .default("pending"),
+});
+
 export type LeadFormInput = z.input<typeof leadFormSchema>;
 export type LeadFormValues = z.output<typeof leadFormSchema>;
+export type LeadFollowUpInput = z.input<typeof leadFollowUpSchema>;
+export type LeadFollowUpValues = z.output<typeof leadFollowUpSchema>;
