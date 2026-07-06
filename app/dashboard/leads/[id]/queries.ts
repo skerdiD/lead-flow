@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts,
@@ -10,6 +10,7 @@ import {
   leads,
 } from "@/db/schema";
 import { isUuid } from "@/lib/uuid";
+import { requireUserId } from "@/lib/auth";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export async function getLeadDetails(leadId: string) {
@@ -18,6 +19,7 @@ export async function getLeadDetails(leadId: string) {
   }
 
   const workspace = await getCurrentWorkspace();
+  const userId = await requireUserId();
 
   const [lead] = await db
     .select({
@@ -103,9 +105,19 @@ export async function getLeadDetails(leadId: string) {
         priority: crmTasks.priority,
         completedAt: crmTasks.completedAt,
         createdAt: crmTasks.createdAt,
+        updatedAt: crmTasks.updatedAt,
       })
       .from(crmTasks)
-      .where(and(eq(crmTasks.leadId, leadId), eq(crmTasks.workspaceId, workspace.id)))
+      .where(
+        and(
+          eq(crmTasks.leadId, leadId),
+          eq(crmTasks.workspaceId, workspace.id),
+          or(
+            eq(crmTasks.ownerUserId, userId),
+            and(isNull(crmTasks.ownerUserId), eq(crmTasks.userId, userId)),
+          ),
+        ),
+      )
       .orderBy(desc(crmTasks.createdAt)),
     db
       .select({

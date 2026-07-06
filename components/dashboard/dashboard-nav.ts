@@ -5,6 +5,7 @@ import {
   PlusSquare,
   Clock3,
   Settings,
+  ListTodo,
 } from "lucide-react";
 
 export type DashboardNavItem = {
@@ -36,6 +37,12 @@ export const dashboardNavItems: DashboardNavItem[] = [
     title: "Activity",
     href: "/dashboard/activity",
     icon: Clock3,
+    exact: true,
+  },
+  {
+    title: "Tasks",
+    href: "/dashboard/tasks",
+    icon: ListTodo,
     exact: true,
   },
   {

@@ -23,8 +23,13 @@ export type DealCurrency = (typeof DEAL_CURRENCIES)[number];
 
 export const DEFAULT_DEAL_CURRENCY: DealCurrency = "USD";
 
-export const TASK_STATUSES = ["pending", "done", "overdue"] as const;
+export const TASK_STATUSES = ["pending", "completed"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  pending: "Pending",
+  completed: "Completed",
+};
 
 export const TASK_PRIORITIES = ["low", "medium", "high"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];

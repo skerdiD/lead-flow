@@ -2,18 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, CheckCircle2, Loader2, Plus } from "lucide-react";
+import { CalendarClock, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import {
-  completeFollowUpTaskAction,
-  createFollowUpTaskAction,
-} from "@/app/dashboard/leads/actions";
+import { createFollowUpTaskAction } from "@/app/dashboard/leads/actions";
 import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
   type TaskPriority,
-  type TaskStatus,
 } from "@/lib/constants/crm";
+import { groupTasksByTimeline, type LegacyTaskStatus } from "@/lib/tasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TaskSections } from "@/components/tasks/task-sections";
 import { Textarea } from "@/components/ui/textarea";
 
 type LeadTask = {
@@ -31,10 +29,14 @@ type LeadTask = {
   title: string;
   description: string | null;
   dueAt: Date | null;
-  status: TaskStatus;
+  status: LegacyTaskStatus;
   priority: TaskPriority;
   completedAt: Date | null;
   createdAt: Date;
+  updatedAt?: Date | null;
+  leadId?: string | null;
+  leadName?: string | null;
+  leadCompany?: string | null;
 };
 
 type LeadTasksPanelProps = {
@@ -42,42 +44,22 @@ type LeadTasksPanelProps = {
   tasks: LeadTask[];
 };
 
-function formatDate(date: Date | null) {
-  if (!date) return "No due date";
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
-function getDisplayStatus(task: LeadTask) {
-  if (task.status === "done") return "done";
-  if (task.dueAt && task.dueAt.getTime() < Date.now()) return "overdue";
-  return task.status;
-}
-
-function statusLabel(status: TaskStatus) {
-  switch (status) {
-    case "done":
-      return "Done";
-    case "overdue":
-      return "Overdue";
-    case "pending":
-    default:
-      return "Pending";
-  }
-}
-
 export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
   const router = useRouter();
   const [isCreating, startCreateTransition] = useTransition();
-  const [isCompleting, startCompleteTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const groupedTasks = groupTasksByTimeline(
+    tasks.map((task) => ({
+      ...task,
+      leadId,
+      leadName: null,
+      leadCompany: null,
+      updatedAt: task.updatedAt ?? task.createdAt,
+    })),
+  );
 
   const handleCreateTask = () => {
     startCreateTransition(async () => {
@@ -97,20 +79,6 @@ export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
       setDescription("");
       setDueDate("");
       setPriority("medium");
-      toast.success(result.message);
-      router.refresh();
-    });
-  };
-
-  const handleCompleteTask = (taskId: string) => {
-    startCompleteTransition(async () => {
-      const result = await completeFollowUpTaskAction(leadId, taskId);
-
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-
       toast.success(result.message);
       router.refresh();
     });
@@ -203,59 +171,42 @@ export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
       </div>
 
       <div className="mt-5 space-y-3">
-        {tasks.length === 0 ? (
-          <div className="rounded-2xl border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-            No follow-up tasks yet.
-          </div>
-        ) : (
-          tasks.map((task) => {
-            const displayStatus = getDisplayStatus(task);
-            const isDone = displayStatus === "done";
-
-            return (
-              <article key={task.id} className="rounded-2xl border bg-background p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-foreground">{task.title}</p>
-                      <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        {statusLabel(displayStatus)}
-                      </span>
-                      <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        {TASK_PRIORITY_LABELS[task.priority]}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Due {formatDate(task.dueAt)}
-                    </p>
-                    {task.description ? (
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                        {task.description}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {!isDone ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCompleteTask(task.id)}
-                      disabled={isCompleting}
-                    >
-                      {isCompleting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                      )}
-                      Done
-                    </Button>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })
-        )}
+        <TaskSections
+          sections={[
+            {
+              key: "dueToday",
+              title: "Due today",
+              description: "Tasks that should move this lead forward today.",
+              emptyMessage: "No tasks due today",
+              tasks: groupedTasks.dueToday,
+            },
+            {
+              key: "overdue",
+              title: "Overdue",
+              description: "Tasks that slipped and need a fresh follow-through.",
+              emptyMessage: "No overdue tasks",
+              tasks: groupedTasks.overdue,
+            },
+            {
+              key: "upcoming",
+              title: "Upcoming",
+              description: "Next planned tasks already tied to this lead.",
+              emptyMessage: "No upcoming tasks",
+              tasks: groupedTasks.upcoming,
+            },
+            {
+              key: "completed",
+              title: "Completed",
+              description: "Closed-out tasks that can be reopened if needed.",
+              emptyMessage: "No completed tasks yet",
+              tasks: groupedTasks.completed,
+            },
+          ]}
+          showLeadContext={false}
+          showEmptySections={tasks.length > 0}
+          globalEmptyTitle="No follow-up tasks yet"
+          globalEmptyDescription="Add the next action for this lead so nothing slips through the cracks."
+        />
       </div>
     </section>
   );

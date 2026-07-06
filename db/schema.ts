@@ -65,7 +65,7 @@ export const dealStages = [
 ] as const;
 export const dealStageEnum = pgEnum("deal_stage", dealStages);
 
-export const taskStatuses = ["pending", "done", "overdue"] as const;
+export const taskStatuses = ["pending", "completed"] as const;
 export const taskStatusEnum = pgEnum("task_status", taskStatuses);
 
 export const taskPriorities = ["low", "medium", "high"] as const;

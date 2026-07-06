@@ -56,8 +56,8 @@ export async function getDashboardStats() {
       .where(eq(deals.workspaceId, workspace.id)),
     db
       .select({
-        openTasks: sql<number>`count(*) filter (where ${crmTasks.status} <> 'done')`,
-        overdueTasks: sql<number>`count(*) filter (where ${crmTasks.status} = 'overdue' or (${crmTasks.status} = 'pending' and ${crmTasks.dueAt} < now()))`,
+        openTasks: sql<number>`count(*) filter (where ${crmTasks.status} <> 'completed')`,
+        overdueTasks: sql<number>`count(*) filter (where ${crmTasks.status} = 'pending' and ${crmTasks.dueAt} < now())`,
       })
       .from(crmTasks)
       .where(eq(crmTasks.workspaceId, workspace.id)),

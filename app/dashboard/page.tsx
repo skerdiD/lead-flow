@@ -14,11 +14,13 @@ import {
   getRevenueDashboardData,
   getSourcePerformanceData,
 } from "@/app/dashboard/queries";
+import { getDashboardAttentionData } from "@/app/dashboard/tasks/queries";
 import { DealRevenuePipelineChart } from "@/components/dashboard/charts/deal-revenue-pipeline-chart";
 import { LeadRevenueHealthCard } from "@/components/dashboard/charts/lead-revenue-health-card";
 import { LeadPipelineChart } from "@/components/dashboard/charts/lead-pipeline-chart";
 import { LeadSourcePerformanceChart } from "@/components/dashboard/charts/lead-source-performance-chart";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
+import { NeedsAttentionPanel } from "@/components/dashboard/needs-attention-panel";
 import { RecentLeadsList } from "@/components/dashboard/recent-leads-list";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ export default async function DashboardPage() {
     leadPipelineData,
     sourcePerformanceData,
     revenueData,
+    attentionData,
   ] =
     await Promise.all([
       getDashboardStats(),
@@ -42,6 +45,7 @@ export default async function DashboardPage() {
       getLeadPipelineData(),
       getSourcePerformanceData(),
       getRevenueDashboardData(),
+      getDashboardAttentionData(),
     ]);
 
   const isEmpty = stats.totalLeads === 0;
@@ -138,6 +142,8 @@ export default async function DashboardPage() {
           helper={`${formatCurrencyFromCents(revenueData.lostRevenueCents, revenueCurrency)} lost`}
         />
       </section>
+
+      <NeedsAttentionPanel data={attentionData} />
 
       {!isEmpty ? (
         <section className="grid gap-4 xl:grid-cols-2">

@@ -222,7 +222,7 @@ const seedLeads: SeedLead[] = [
         title: "Follow up on proposal questions",
         description: "Clarify user count, import timing, and reporting cadence.",
         dueOffsetDays: -1,
-        status: "overdue",
+        status: "pending",
         priority: "high",
       },
     ],
@@ -438,7 +438,7 @@ const seedLeads: SeedLead[] = [
         title: "Send ROI summary",
         description: "Frame value around faster follow-up and cleaner owner accountability.",
         dueOffsetDays: -2,
-        status: "done",
+        status: "completed",
         priority: "medium",
       },
     ],
@@ -501,7 +501,7 @@ const seedLeads: SeedLead[] = [
         title: "Archive feedback for positioning",
         description: "Use notes to refine comparison against operations suites.",
         dueOffsetDays: -3,
-        status: "done",
+        status: "completed",
         priority: "low",
       },
     ],
@@ -908,7 +908,7 @@ async function main() {
         }
 
         for (const task of seed.tasks) {
-          const completedAt = task.status === "done" ? dayOffset(-1) : null;
+          const completedAt = task.status === "completed" ? dayOffset(-1) : null;
           const taskCreatedAt = addHours(createdAt, 28);
 
           await tx.insert(crmTasks).values({
@@ -932,9 +932,10 @@ async function main() {
           await tx.insert(activityEvents).values({
             workspaceId: workspace.id,
             userId,
-            eventType: task.status === "done" ? "task_completed" : "task_created",
+            eventType:
+              task.status === "completed" ? "task_completed" : "task_created",
             message:
-              task.status === "done"
+              task.status === "completed"
                 ? `Task completed for ${seed.contactName}: ${task.title}`
                 : `Task created for ${seed.contactName}: ${task.title}`,
             leadId: lead.id,

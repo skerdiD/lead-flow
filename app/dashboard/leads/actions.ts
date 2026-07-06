@@ -203,7 +203,8 @@ function resolveClosedAt(params: {
 }
 
 function getInitialTaskStatus(dueAt: Date | null) {
-  return dueAt && dueAt.getTime() < Date.now() ? "overdue" : "pending";
+  void dueAt;
+  return "pending" as const;
 }
 
 function normalizeDealProbability(stage: DealStage, probability: number) {
@@ -214,6 +215,7 @@ function normalizeDealProbability(stage: DealStage, probability: number) {
 
 function revalidateLeadPaths(leadId: string) {
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tasks");
   revalidatePath("/dashboard/leads");
   revalidatePath("/dashboard/activity");
   revalidatePath(`/dashboard/leads/${leadId}`);
@@ -1208,17 +1210,17 @@ export async function completeFollowUpTaskAction(
       };
     }
 
-    if (task.status === "done") {
+    if (task.status === "completed") {
       return {
         success: true,
-        message: "Task is already done.",
+        message: "Task is already completed.",
       };
     }
 
     const [completedTask] = await db
       .update(crmTasks)
       .set({
-        status: "done",
+        status: "completed",
         completedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -1254,7 +1256,7 @@ export async function completeFollowUpTaskAction(
 
     return {
       success: true,
-      message: "Task marked done.",
+      message: "Task marked complete.",
     };
   } catch {
     return {

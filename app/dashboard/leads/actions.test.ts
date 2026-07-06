@@ -565,14 +565,14 @@ describe("lead actions", () => {
     const taskId = "33333333-3333-4333-8333-333333333333";
     selectResults.push(
       [{ id: leadId, fullName: "Jane Doe" }],
-      [{ id: taskId, title: "Send proposal", status: "done" }],
+      [{ id: taskId, title: "Send proposal", status: "completed" }],
     );
 
     const result = await completeFollowUpTaskAction(leadId, taskId);
 
     expect(result).toEqual({
       success: true,
-      message: "Task is already done.",
+      message: "Task is already completed.",
     });
     expect(updateReturningMock).not.toHaveBeenCalled();
     expect(insertActivityValuesMock).not.toHaveBeenCalled();
