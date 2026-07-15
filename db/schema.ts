@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -12,6 +13,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { NOTIFICATION_TYPES } from "@/lib/constants/notifications";
 
 export const leadStatuses = [
   "New",
@@ -83,6 +85,10 @@ export const taskStatusEnum = pgEnum("task_status", taskStatuses);
 
 export const taskPriorities = ["low", "medium", "high"] as const;
 export const taskPriorityEnum = pgEnum("task_priority", taskPriorities);
+export const notificationTypeEnum = pgEnum(
+  "notification_type",
+  NOTIFICATION_TYPES,
+);
 
 export const workspaces = pgTable(
   "workspaces",
@@ -513,6 +519,48 @@ export const activityEvents = pgTable(
     index("activity_events_user_id_event_type_idx").on(
       table.userId,
       table.eventType,
+    ),
+  ],
+);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    type: notificationTypeEnum("type").notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+    message: varchar("message", { length: 255 }).notNull(),
+    actionUrl: varchar("action_url", { length: 255 }),
+    metadata: jsonb("metadata").$type<Record<string, string> | null>(),
+    dedupeKey: varchar("dedupe_key", { length: 255 }),
+    readAt: timestamp("read_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("notifications_workspace_user_created_at_idx").on(
+      table.workspaceId,
+      table.userId,
+      table.createdAt,
+    ),
+    index("notifications_workspace_user_read_at_idx").on(
+      table.workspaceId,
+      table.userId,
+      table.readAt,
+    ),
+    uniqueIndex("notifications_workspace_user_dedupe_key_unique").on(
+      table.workspaceId,
+      table.userId,
+      table.dedupeKey,
     ),
   ],
 );

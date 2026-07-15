@@ -1,5 +1,5 @@
 import { loadEnvConfig } from "@next/env";
-import { and, eq, inArray, not, or, sql } from "drizzle-orm";
+import { and, eq, inArray, like, not, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -10,6 +10,7 @@ import {
   deals,
   leadNotes,
   leads,
+  notifications,
   workspaceMembers,
   workspaces,
   type dealStages,
@@ -17,6 +18,7 @@ import {
   type taskPriorities,
   type taskStatuses,
 } from "../db/schema";
+import { DEAL_STAGE_LABELS } from "../lib/constants/crm";
 
 loadEnvConfig(process.cwd());
 
@@ -720,6 +722,15 @@ async function main() {
 
       if (existingLeadIds.length > 0) {
         await tx
+          .delete(notifications)
+          .where(
+            and(
+              eq(notifications.workspaceId, workspace.id),
+              eq(notifications.userId, userId),
+              like(notifications.dedupeKey, "screenshot:%"),
+            ),
+          );
+        await tx
           .delete(activityEvents)
           .where(
             and(
@@ -760,8 +771,9 @@ async function main() {
       let createdTasks = 0;
       let createdNotes = 0;
       let createdEvents = 0;
+      let createdNotifications = 0;
 
-      for (const seed of seedLeads) {
+      for (const [seedIndex, seed] of seedLeads.entries()) {
         const createdAt = dayOffset(seed.createdOffsetDays);
         const updatedAt =
           seed.dealStage === "won" || seed.dealStage === "lost"
@@ -845,6 +857,22 @@ async function main() {
             updatedAt,
           })
           .returning({ id: deals.id });
+
+        if (seedIndex < 3) {
+          await tx.insert(notifications).values({
+            workspaceId: workspace.id,
+            userId,
+            type: "deal_stage_changed",
+            title: "Deal stage updated",
+            message: `${seed.dealName} moved to ${DEAL_STAGE_LABELS[seed.dealStage]}.`,
+            actionUrl: `/dashboard/leads/${lead.id}#lead-deal`,
+            metadata: { entityType: "deal", entityId: deal.id },
+            dedupeKey: `screenshot:deal-stage:${deal.id}:${seed.dealStage}`,
+            readAt: seedIndex === 0 ? addHours(updatedAt, 3) : null,
+            createdAt: addHours(updatedAt, 2),
+          });
+          createdNotifications += 1;
+        }
 
         await tx.insert(activityEvents).values({
           workspaceId: workspace.id,
@@ -959,6 +987,7 @@ async function main() {
         createdNotes,
         createdTasks,
         createdEvents,
+        createdNotifications,
       };
     });
 
@@ -969,6 +998,7 @@ async function main() {
     console.log(`Created notes: ${result.createdNotes}`);
     console.log(`Created tasks: ${result.createdTasks}`);
     console.log(`Created activity events: ${result.createdEvents}`);
+    console.log(`Created notifications: ${result.createdNotifications}`);
   } finally {
     await pool.end();
   }

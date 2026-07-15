@@ -9,6 +9,7 @@ import {
   deals,
   leadNotes,
   leads,
+  notifications,
 } from "@/db/schema";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
 
   const userId = process.env.E2E_USER_ID || "e2e-user";
 
+  await db.delete(notifications).where(eq(notifications.userId, userId));
   await db.delete(leadNotes).where(eq(leadNotes.userId, userId));
   await db.delete(activityEvents).where(eq(activityEvents.userId, userId));
   await db.delete(crmTasks).where(eq(crmTasks.userId, userId));

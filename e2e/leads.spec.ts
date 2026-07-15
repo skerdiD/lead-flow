@@ -38,6 +38,16 @@ async function createLead(
   await expect(page).toHaveURL(/\/dashboard\/leads$/);
 }
 
+async function seedNotification(request: APIRequestContext) {
+  const response = await request.post("/api/testing/e2e/notifications", {
+    headers: {
+      "x-e2e-test-secret":
+        process.env.E2E_TEST_SECRET || "leadflow-local-e2e-secret",
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+}
+
 test.describe("Leads e2e flows", () => {
   test.beforeEach(async ({ request }) => {
     await resetWorkspace(request);
@@ -51,6 +61,26 @@ test.describe("Leads e2e flows", () => {
     await expect(page).toHaveURL(/\/dashboard\/leads$/);
     await expect(page.getByRole("heading", { name: "Leads" })).toBeVisible();
     await expect(page.getByText("No leads found")).toBeVisible();
+  });
+
+  test("notification bell opens the empty state", async ({ page }) => {
+    await page.goto("/dashboard");
+
+    await page.getByRole("button", { name: "Notifications" }).click();
+    await expect(page.getByText("all caught up")).toBeVisible();
+    await expect(page.getByText("New notifications will appear here.")).toBeVisible();
+  });
+
+  test("opening a notification marks it as read and follows its action", async ({ page, request }) => {
+    await page.goto("/dashboard");
+    await seedNotification(request);
+    await page.reload();
+
+    await page.getByRole("button", { name: "1 unread notification" }).click();
+    await page.getByRole("menuitem", { name: /Task due today/ }).click();
+
+    await expect(page).toHaveURL(/\/dashboard\/tasks$/);
+    await expect(page.getByRole("button", { name: "Notifications" })).toBeVisible();
   });
 
   test("create, edit, change status, archive lead and verify dashboard refresh", async ({ page }) => {

@@ -10,6 +10,7 @@ import {
   deals,
   leadNotes,
   leads,
+  notifications,
   workspaceMembers,
   workspaces,
   type activityEventTypes,
@@ -25,6 +26,7 @@ import {
   DEMO_USER_EXTERNAL_ID,
   DEMO_WORKSPACE_NAME,
 } from "@/lib/demo";
+import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 
 type LeadStatus = (typeof leadStatuses)[number];
 type DealStage = (typeof dealStages)[number];
@@ -86,6 +88,7 @@ const demoDb = drizzle(
       deals,
       leadNotes,
       leads,
+      notifications,
       workspaceMembers,
       workspaces,
     },
@@ -673,7 +676,8 @@ async function ensureDemoCollaborator(params: {
 }
 
 async function getWorkspaceSeedHealth(workspaceId: string) {
-  const [[leadStats], [taskStats], [activityStats]] = await Promise.all([
+  const [[leadStats], [taskStats], [activityStats], [notificationStats]] =
+    await Promise.all([
     demoDb
       .select({
         count: sql<number>`count(*)`,
@@ -692,17 +696,25 @@ async function getWorkspaceSeedHealth(workspaceId: string) {
       })
       .from(activityEvents)
       .where(eq(activityEvents.workspaceId, workspaceId)),
+    demoDb
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(notifications)
+      .where(eq(notifications.workspaceId, workspaceId)),
   ]);
 
   return {
     leadCount: Number(leadStats?.count ?? 0),
     taskCount: Number(taskStats?.count ?? 0),
     activityCount: Number(activityStats?.count ?? 0),
+    notificationCount: Number(notificationStats?.count ?? 0),
   };
 }
 
 async function clearWorkspaceData(workspaceId: string) {
   await demoDb.transaction(async (tx) => {
+    await tx.delete(notifications).where(eq(notifications.workspaceId, workspaceId));
     await tx.delete(leadNotes).where(eq(leadNotes.workspaceId, workspaceId));
     await tx.delete(activityEvents).where(eq(activityEvents.workspaceId, workspaceId));
     await tx.delete(crmTasks).where(eq(crmTasks.workspaceId, workspaceId));
@@ -715,6 +727,8 @@ async function clearWorkspaceData(workspaceId: string) {
 
 async function seedWorkspaceData(workspaceId: string, userId: string) {
   await demoDb.transaction(async (tx) => {
+    let createdNotifications = 0;
+
     for (const seed of seedLeads) {
       const createdAt = dayOffset(seed.createdOffsetDays);
       const closedAt =
@@ -854,6 +868,22 @@ async function seedWorkspaceData(workspaceId: string, userId: string) {
         });
       }
 
+      if (seed.dealStage === "proposal" && createdNotifications < 3) {
+        await tx.insert(notifications).values({
+          workspaceId,
+          userId,
+          type: "deal_stage_changed",
+          title: "Deal stage updated",
+          message: `${seed.dealName} moved to ${DEAL_STAGE_LABELS[seed.dealStage]}.`,
+          actionUrl: `/dashboard/leads/${lead.id}#lead-deal`,
+          metadata: { entityType: "deal", entityId: deal.id },
+          dedupeKey: `seed:deal-stage:${deal.id}:proposal`,
+          readAt: addHours(updatedAt, 3),
+          createdAt: addHours(updatedAt, 2),
+        });
+        createdNotifications += 1;
+      }
+
       for (const [index, content] of seed.noteEntries.entries()) {
         const noteCreatedAt = addHours(createdAt, 20 + index * 8);
 
@@ -882,22 +912,25 @@ async function seedWorkspaceData(workspaceId: string, userId: string) {
         const completedAt =
           task.status === "completed" ? addHours(dayOffset(task.dueOffsetDays), 8) : null;
 
-        await tx.insert(crmTasks).values({
-          workspaceId,
-          userId,
-          ownerUserId: userId,
-          leadId: lead.id,
-          dealId: deal.id,
-          contactId: contact.id,
-          title: task.title,
-          description: task.description,
-          dueAt: dayOffset(task.dueOffsetDays),
-          status: task.status,
-          priority: task.priority,
-          completedAt,
-          createdAt: taskCreatedAt,
-          updatedAt: completedAt ?? taskCreatedAt,
-        });
+        const [createdTask] = await tx
+          .insert(crmTasks)
+          .values({
+            workspaceId,
+            userId,
+            ownerUserId: userId,
+            leadId: lead.id,
+            dealId: deal.id,
+            contactId: contact.id,
+            title: task.title,
+            description: task.description,
+            dueAt: dayOffset(task.dueOffsetDays),
+            status: task.status,
+            priority: task.priority,
+            completedAt,
+            createdAt: taskCreatedAt,
+            updatedAt: completedAt ?? taskCreatedAt,
+          })
+          .returning({ id: crmTasks.id });
 
         await tx.insert(activityEvents).values({
           workspaceId,
@@ -911,6 +944,37 @@ async function seedWorkspaceData(workspaceId: string, userId: string) {
           leadName: seed.contactName,
           createdAt: completedAt ?? addHours(taskCreatedAt, 1),
         });
+
+        const notificationType =
+          task.status === "pending" && task.dueOffsetDays < 0
+            ? "task_overdue"
+            : task.status === "pending" && task.dueOffsetDays === 0
+              ? "task_due"
+              : null;
+
+        if (createdTask && notificationType && createdNotifications < 3) {
+          await tx.insert(notifications).values({
+            workspaceId,
+            userId,
+            type: notificationType,
+            title:
+              notificationType === "task_overdue"
+                ? "Task overdue"
+                : "Task due today",
+            message:
+              notificationType === "task_overdue"
+                ? `${task.title} is past its due date.`
+                : `${task.title} is due today.`,
+            actionUrl: `/dashboard/leads/${lead.id}#lead-tasks`,
+            metadata: { entityType: "task", entityId: createdTask.id },
+            dedupeKey: `seed:${notificationType}:${createdTask.id}`,
+            createdAt:
+              notificationType === "task_overdue"
+                ? addHours(dayOffset(-1), 9)
+                : addHours(dayOffset(0), 8),
+          });
+          createdNotifications += 1;
+        }
       }
     }
   });
@@ -1005,7 +1069,8 @@ export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean
     forceReset ||
     health.leadCount < seedLeads.length ||
     health.taskCount === 0 ||
-    health.activityCount === 0;
+    health.activityCount === 0 ||
+    health.notificationCount < 3;
 
   if (needsSeed) {
     await clearWorkspaceData(workspace.id);

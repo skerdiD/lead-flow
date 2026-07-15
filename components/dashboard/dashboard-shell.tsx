@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
+import type { NotificationListItem } from "@/lib/notifications-types";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "leadflow:dashboard-sidebar-collapsed";
 const SIDEBAR_COLLAPSED_CHANGE_EVENT = "leadflow:sidebar-collapsed-change";
@@ -72,6 +73,9 @@ type DashboardShellProps = {
   currentWorkspaceName: string;
   isDemoWorkspace?: boolean;
   searchSlot?: React.ReactNode;
+  initialNotifications: NotificationListItem[];
+  initialUnreadNotificationCount: number;
+  notificationReferenceTime: number;
 };
 
 export function DashboardShell({
@@ -79,6 +83,9 @@ export function DashboardShell({
   currentWorkspaceName,
   isDemoWorkspace = false,
   searchSlot,
+  initialNotifications,
+  initialUnreadNotificationCount,
+  notificationReferenceTime,
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const sidebarCollapsed = useSyncExternalStore(
@@ -107,6 +114,9 @@ export function DashboardShell({
             currentWorkspaceName={currentWorkspaceName}
             isDemoWorkspace={isDemoWorkspace}
             searchSlot={searchSlot}
+            initialNotifications={initialNotifications}
+            initialUnreadNotificationCount={initialUnreadNotificationCount}
+            notificationReferenceTime={notificationReferenceTime}
           />
 
           <main className="min-h-0 flex-1 overflow-y-auto px-4 py-7 sm:px-6 sm:py-8 lg:px-8 [scrollbar-gutter:stable]">

@@ -21,11 +21,14 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import {
+  DEAL_STAGE_LABELS,
   DEAL_STAGES,
   type DealStage,
 } from "@/lib/constants/crm";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
 import { moneyToCents } from "@/lib/revenue";
+import { createNotification } from "@/lib/notifications";
+import { getLocalDateKey, getTaskTimelineBucket } from "@/lib/tasks";
 import {
   crmTaskFormSchema,
   type CrmTaskFormValues,
@@ -751,6 +754,26 @@ export async function updateLeadAction(
         lostReason: parsed.data.lostReason,
       });
 
+      const notificationUserId = existingLead.assignedOwnerUserId ?? userId;
+      if (
+        deal?.id &&
+        deal.previousStage &&
+        deal.previousStage !== deal.stage &&
+        notificationUserId !== userId
+      ) {
+        await createNotification({
+          client: tx,
+          workspaceId: workspace.id,
+          userId: notificationUserId,
+          type: "deal_stage_changed",
+          title: "Deal stage updated",
+          message: `${parsed.data.dealName} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
+          actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
+          metadata: { entityType: "deal", entityId: deal.id },
+          dedupeKey: `deal-stage:${deal.id}:${deal.stage}`,
+        });
+      }
+
       return { updatedLead: lead, savedDeal: deal };
     });
 
@@ -860,6 +883,7 @@ export async function updateLeadStatusQuickAction(
         id: leads.id,
         fullName: leads.fullName,
         status: leads.status,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
       .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
@@ -905,6 +929,7 @@ export async function updateLeadStatusQuickAction(
           name: deals.name,
           stage: deals.stage,
           lostReason: deals.lostReason,
+          ownerUserId: deals.ownerUserId,
         })
         .from(deals)
         .where(and(eq(deals.leadId, leadId), eq(deals.workspaceId, workspace.id)))
@@ -925,9 +950,26 @@ export async function updateLeadStatusQuickAction(
         })
         .where(and(eq(deals.id, existingDeal.id), eq(deals.workspaceId, workspace.id)))
         .returning({
+          id: deals.id,
           name: deals.name,
           stage: deals.stage,
         });
+
+      const notificationUserId =
+        existingDeal.ownerUserId ?? existingLead.assignedOwnerUserId;
+      if (deal && notificationUserId && notificationUserId !== userId) {
+        await createNotification({
+          client: tx,
+          workspaceId: workspace.id,
+          userId: notificationUserId,
+          type: "deal_stage_changed",
+          title: "Deal stage updated",
+          message: `${deal.name} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
+          actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
+          metadata: { entityType: "deal", entityId: deal.id },
+          dedupeKey: `deal-stage:${deal.id}:${deal.stage}`,
+        });
+      }
 
       return {
         updatedLead: lead,
@@ -1032,6 +1074,8 @@ export async function updateDealStageAction(
         probability: deals.probability,
         leadStatus: leads.status,
         leadName: leads.fullName,
+        ownerUserId: deals.ownerUserId,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(deals)
       .innerJoin(leads, eq(deals.leadId, leads.id))
@@ -1073,6 +1117,22 @@ export async function updateDealStageAction(
         })
         .where(and(eq(deals.id, dealId), eq(deals.workspaceId, workspace.id)))
         .returning({ stage: deals.stage });
+
+      const notificationUserId =
+        existingDeal.ownerUserId ?? existingDeal.assignedOwnerUserId;
+      if (deal && notificationUserId && notificationUserId !== userId) {
+        await createNotification({
+          client: tx,
+          workspaceId: workspace.id,
+          userId: notificationUserId,
+          type: "deal_stage_changed",
+          title: "Deal stage updated",
+          message: `${existingDeal.name} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
+          actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
+          metadata: { entityType: "deal", entityId: dealId },
+          dedupeKey: `deal-stage:${dealId}:${deal.stage}`,
+        });
+      }
 
       if (!deal || !syncedLeadStatus || existingDeal.leadStatus === syncedLeadStatus) {
         return { updatedDeal: deal ?? null, updatedLead: null };
@@ -1307,18 +1367,69 @@ export async function createFollowUpTaskAction(
 
     const dueAt = parseTaskDueAt(parsed.data.dueDate);
 
-    await db.insert(crmTasks).values({
-      workspaceId: workspace.id,
-      userId,
-      ownerUserId: lead.assignedOwnerUserId ?? userId,
-      leadId,
-      dealId: leadDeal?.id ?? null,
-      contactId: lead.primaryContactId,
-      title: parsed.data.title,
-      description: parsed.data.description ?? null,
-      dueAt,
-      status: getInitialTaskStatus(dueAt),
-      priority: parsed.data.priority,
+    await db.transaction(async (tx) => {
+      const [task] = await tx
+        .insert(crmTasks)
+        .values({
+          workspaceId: workspace.id,
+          userId,
+          ownerUserId: lead.assignedOwnerUserId ?? userId,
+          leadId,
+          dealId: leadDeal?.id ?? null,
+          contactId: lead.primaryContactId,
+          title: parsed.data.title,
+          description: parsed.data.description ?? null,
+          dueAt,
+          status: getInitialTaskStatus(dueAt),
+          priority: parsed.data.priority,
+        })
+        .returning({ id: crmTasks.id });
+
+      const notificationUserId = lead.assignedOwnerUserId ?? userId;
+      if (!task || notificationUserId === userId) return;
+
+      const actionUrl = `/dashboard/leads/${leadId}#lead-tasks`;
+      const metadata = { entityType: "task", entityId: task.id };
+
+      await createNotification({
+        client: tx,
+        workspaceId: workspace.id,
+        userId: notificationUserId,
+        type: "task_assigned",
+        title: "Task assigned",
+        message: `${parsed.data.title} was assigned to you for ${lead.fullName}.`,
+        actionUrl,
+        metadata,
+        dedupeKey: `task-assigned:${task.id}`,
+      });
+
+      const taskBucket = getTaskTimelineBucket(
+        { dueAt, status: "pending", completedAt: null },
+        getLocalDateKey(),
+      );
+      const dueNotificationType =
+        taskBucket === "overdue"
+          ? "task_overdue"
+          : taskBucket === "dueToday"
+            ? "task_due"
+            : null;
+
+      if (!dueNotificationType) return;
+
+      await createNotification({
+        client: tx,
+        workspaceId: workspace.id,
+        userId: notificationUserId,
+        type: dueNotificationType,
+        title: dueNotificationType === "task_overdue" ? "Task overdue" : "Task due today",
+        message:
+          dueNotificationType === "task_overdue"
+            ? `${parsed.data.title} is already past its due date.`
+            : `${parsed.data.title} is due today.`,
+        actionUrl,
+        metadata,
+        dedupeKey: `${dueNotificationType}:${task.id}`,
+      });
     });
 
     await createLeadActivity({

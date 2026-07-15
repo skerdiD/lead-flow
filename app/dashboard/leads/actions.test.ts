@@ -14,10 +14,12 @@ const {
   insertDealValuesMock,
   insertDealReturningMock,
   insertTaskValuesMock,
+  insertTaskReturningMock,
   insertActivityValuesMock,
   updateReturningMock,
   deleteReturningMock,
   protectLeadMutationMock,
+  createNotificationMock,
   leadsTable,
   accountsTable,
   activityEventsTable,
@@ -40,10 +42,12 @@ const {
     insertDealValuesMock: vi.fn(),
     insertDealReturningMock: vi.fn(),
     insertTaskValuesMock: vi.fn(),
+    insertTaskReturningMock: vi.fn(),
     insertActivityValuesMock: vi.fn(),
     updateReturningMock: vi.fn(),
     deleteReturningMock: vi.fn(),
     protectLeadMutationMock: vi.fn(),
+    createNotificationMock: vi.fn(),
     leadsTable: {
       id: "id",
       workspaceId: "workspace_id",
@@ -248,6 +252,10 @@ vi.mock("@/lib/arcjet", () => ({
   protectLeadMutation: protectLeadMutationMock,
 }));
 
+vi.mock("@/lib/notifications", () => ({
+  createNotification: createNotificationMock,
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
 }));
@@ -307,11 +315,15 @@ describe("lead actions", () => {
     insertDealValuesMock.mockImplementation(() => ({
       returning: insertDealReturningMock,
     }));
-    insertTaskValuesMock.mockResolvedValue(undefined);
+    insertTaskValuesMock.mockImplementation(() => ({
+      returning: insertTaskReturningMock,
+    }));
     insertAccountReturningMock.mockResolvedValue([{ id: "account_123" }]);
     insertContactReturningMock.mockResolvedValue([{ id: "contact_123" }]);
     insertDealReturningMock.mockResolvedValue([{ id: "deal_123", stage: "new" }]);
+    insertTaskReturningMock.mockResolvedValue([{ id: "task_123" }]);
     insertActivityValuesMock.mockResolvedValue(undefined);
+    createNotificationMock.mockResolvedValue({ created: true, id: "notification_123" });
   });
 
   it("createLeadAction saves deal revenue fields when an opportunity is provided", async () => {
@@ -486,6 +498,70 @@ describe("lead actions", () => {
         workspaceId: "workspace_123",
         eventType: "task_created",
         leadId,
+      }),
+    );
+  });
+
+  it("notifies an assigned teammate about a newly overdue task", async () => {
+    selectResults.push(
+      [
+        {
+          id: leadId,
+          fullName: "Jane Doe",
+          primaryContactId: "contact_123",
+          assignedOwnerUserId: "user_teammate",
+        },
+      ],
+      [{ id: "deal_123" }],
+    );
+
+    const result = await createFollowUpTaskAction(leadId, {
+      title: "Follow up with Acme",
+      description: "Confirm a decision date",
+      dueDate: "2026-06-01",
+      priority: "high",
+    });
+
+    expect(result.success).toBe(true);
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user_teammate",
+        type: "task_assigned",
+        dedupeKey: "task-assigned:task_123",
+      }),
+    );
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user_teammate",
+        type: "task_overdue",
+        dedupeKey: "task_overdue:task_123",
+      }),
+    );
+  });
+
+  it("notifies a separate deal owner when a deal stage changes", async () => {
+    selectResults.push([
+      {
+        id: "deal_123",
+        name: "Website redesign",
+        stage: "new",
+        probability: 20,
+        leadStatus: "New",
+        leadName: "Jane Doe",
+        ownerUserId: "user_teammate",
+        assignedOwnerUserId: "user_teammate",
+      },
+    ]);
+    updateReturningMock.mockResolvedValue([{ stage: "proposal" }]);
+
+    const result = await updateDealStageAction(leadId, "22222222-2222-4222-8222-222222222222", "proposal");
+
+    expect(result.success).toBe(true);
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user_teammate",
+        type: "deal_stage_changed",
+        dedupeKey: "deal-stage:22222222-2222-4222-8222-222222222222:proposal",
       }),
     );
   });

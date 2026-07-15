@@ -5,13 +5,18 @@ import { usePathname } from "next/navigation";
 import { Building2, Menu, Plus } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { getDashboardRouteMeta } from "@/components/dashboard/dashboard-nav";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Badge } from "@/components/ui/badge";
+import type { NotificationListItem } from "@/lib/notifications-types";
 
 type DashboardTopbarProps = {
   onOpenSidebar: () => void;
   currentWorkspaceName: string;
   isDemoWorkspace?: boolean;
   searchSlot?: React.ReactNode;
+  initialNotifications: NotificationListItem[];
+  initialUnreadNotificationCount: number;
+  notificationReferenceTime: number;
 };
 
 export function DashboardTopbar({
@@ -19,6 +24,9 @@ export function DashboardTopbar({
   currentWorkspaceName,
   isDemoWorkspace = false,
   searchSlot,
+  initialNotifications,
+  initialUnreadNotificationCount,
+  notificationReferenceTime,
 }: DashboardTopbarProps) {
   const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
   const pathname = usePathname();
@@ -74,6 +82,12 @@ export function DashboardTopbar({
               New lead
             </Link>
           ) : null}
+
+          <NotificationBell
+            initialNotifications={initialNotifications}
+            initialUnreadCount={initialUnreadNotificationCount}
+            referenceTime={notificationReferenceTime}
+          />
 
           {isE2ETestMode ? (
             <div
