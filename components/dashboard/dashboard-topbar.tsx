@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, Menu, Plus } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
+import { getDashboardRouteMeta } from "@/components/dashboard/dashboard-nav";
 import { Badge } from "@/components/ui/badge";
 
 type DashboardTopbarProps = {
@@ -13,60 +14,6 @@ type DashboardTopbarProps = {
   searchSlot?: React.ReactNode;
 };
 
-const pageMetaMap: Array<{
-  match: (pathname: string) => boolean;
-  title: string;
-  description: string;
-}> = [
-  {
-    match: (pathname) => pathname === "/dashboard",
-    title: "Dashboard",
-    description: "Overview of your pipeline performance",
-  },
-  {
-    match: (pathname) => pathname === "/dashboard/leads",
-    title: "Leads",
-    description: "Track, filter, and manage your opportunities",
-  },
-  {
-    match: (pathname) => pathname === "/dashboard/leads/new",
-    title: "Create Lead",
-    description: "Capture a new opportunity in your workspace",
-  },
-  {
-    match: (pathname) => pathname === "/dashboard/activity",
-    title: "Activity",
-    description: "Recent lead actions across your workspace",
-  },
-  {
-    match: (pathname) =>
-      /^\/dashboard\/leads\/[^/]+\/edit$/.test(pathname),
-    title: "Edit Lead",
-    description: "Update lead details and status",
-  },
-  {
-    match: (pathname) =>
-      /^\/dashboard\/leads\/[^/]+$/.test(pathname),
-    title: "Lead Details",
-    description: "Review the full lead profile",
-  },
-  {
-    match: (pathname) => pathname === "/dashboard/settings",
-    title: "Settings",
-    description: "Account, workspace, and security preferences",
-  },
-];
-
-function getPageMeta(pathname: string) {
-  const entry = pageMetaMap.find((item) => item.match(pathname));
-  return (
-    entry ?? {
-      title: "Dashboard",
-      description: "Lead management workspace",
-    }
-  );
-}
-
 export function DashboardTopbar({
   onOpenSidebar,
   currentWorkspaceName,
@@ -75,7 +22,7 @@ export function DashboardTopbar({
 }: DashboardTopbarProps) {
   const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
   const pathname = usePathname();
-  const page = getPageMeta(pathname);
+  const page = getDashboardRouteMeta(pathname);
   const onCreatePage = pathname === "/dashboard/leads/new";
 
   return (
