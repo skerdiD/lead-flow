@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3100";
+// The E2E app bypasses Clerk entirely, but Clerk still validates this public
+// configuration while Next starts. Keep this inert test key well-formed.
+const e2eClerkPublishableKey =
+  "pk_test_bGVhZC1mbG93LWUyZS0xLmNsZXJrLmFjY291bnRzLmRldiQ=";
 const webServerCommand =
   process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ||
   (process.platform === "win32"
@@ -32,6 +36,7 @@ export default defineConfig({
       NEXT_PUBLIC_E2E_TEST_MODE: "1",
       E2E_USER_ID: process.env.E2E_USER_ID || "e2e-user",
       E2E_TEST_SECRET: process.env.E2E_TEST_SECRET || "leadflow-local-e2e-secret",
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: e2eClerkPublishableKey,
     },
   },
   projects: [

@@ -32,7 +32,9 @@ jobs:
       NEXT_PUBLIC_E2E_TEST_MODE: "1"
       E2E_USER_ID: e2e-user
       E2E_TEST_SECRET: leadflow-ci-e2e-secret
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_dummy
+      # Valid but inert: E2E test mode bypasses Clerk, while Next still checks
+      # the publishable-key format during startup.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_bGVhZC1mbG93LWUyZS0xLmNsZXJrLmFjY291bnRzLmRldiQ=
       CLERK_SECRET_KEY: sk_test_ci_dummy
       ARCJET_KEY: ajkey_ci_e2e_placeholder
 
