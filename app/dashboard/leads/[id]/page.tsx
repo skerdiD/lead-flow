@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getLeadDetails } from "@/app/dashboard/leads/[id]/queries";
 import { LeadDetailsCard } from "@/components/leads/lead-details-card";
+import { isDemoWorkspace } from "@/lib/demo";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 type LeadPageProps = {
   params: Promise<{
@@ -10,11 +12,14 @@ type LeadPageProps = {
 
 export default async function LeadPage({ params }: LeadPageProps) {
   const { id } = await params;
-  const lead = await getLeadDetails(id);
+  const [lead, workspace] = await Promise.all([
+    getLeadDetails(id),
+    getCurrentWorkspace(),
+  ]);
 
   if (!lead) {
     notFound();
   }
 
-  return <LeadDetailsCard lead={lead} />;
+  return <LeadDetailsCard lead={lead} readOnly={isDemoWorkspace(workspace)} />;
 }

@@ -1,8 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getLeadDetails } from "@/app/dashboard/leads/[id]/queries";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { LeadForm } from "@/components/leads/lead-form";
 import { DEAL_CURRENCIES, type DealCurrency } from "@/lib/constants/crm";
+import { isDemoWorkspace } from "@/lib/demo";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 type EditLeadPageProps = {
   params: Promise<{
@@ -20,10 +22,17 @@ export default async function EditLeadPage({
   params,
 }: EditLeadPageProps) {
   const { id } = await params;
-  const lead = await getLeadDetails(id);
+  const [lead, workspace] = await Promise.all([
+    getLeadDetails(id),
+    getCurrentWorkspace(),
+  ]);
 
   if (!lead) {
     notFound();
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    redirect(`/dashboard/leads/${id}`);
   }
 
   return (

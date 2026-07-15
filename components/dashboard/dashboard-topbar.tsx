@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, Menu, Plus } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
+import { Badge } from "@/components/ui/badge";
 
 type DashboardTopbarProps = {
   onOpenSidebar: () => void;
   currentWorkspaceName: string;
+  isDemoWorkspace?: boolean;
   searchSlot?: React.ReactNode;
 };
 
@@ -68,6 +70,7 @@ function getPageMeta(pathname: string) {
 export function DashboardTopbar({
   onOpenSidebar,
   currentWorkspaceName,
+  isDemoWorkspace = false,
   searchSlot,
 }: DashboardTopbarProps) {
   const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
@@ -103,14 +106,19 @@ export function DashboardTopbar({
         ) : null}
 
         <div className="flex items-center gap-3">
-          <div className="hidden max-w-[180px] items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm sm:flex">
+          <div className="hidden max-w-[240px] items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm sm:flex">
             <Building2 className="h-4 w-4 shrink-0" />
             <span className="truncate font-medium text-foreground">
               {currentWorkspaceName}
             </span>
+            {isDemoWorkspace ? (
+              <Badge variant="outline" className="shrink-0 bg-muted/40">
+                Demo
+              </Badge>
+            ) : null}
           </div>
 
-          {!onCreatePage ? (
+          {!onCreatePage && !isDemoWorkspace ? (
             <Link
               href="/dashboard/leads/new"
               className="hidden items-center rounded-xl border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted md:inline-flex"

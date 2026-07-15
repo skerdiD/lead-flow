@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
 import { requireUserId } from "@/lib/auth";
+import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import {
   DEAL_STAGES,
   type DealStage,
@@ -477,6 +478,13 @@ export async function createLeadAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (!parsed.success) {
     return {
       success: false,
@@ -610,6 +618,13 @@ export async function updateLeadAction(
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 
@@ -802,6 +817,13 @@ export async function updateLeadStatusQuickAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (!isLeadStatus(status)) {
     return {
       success: false,
@@ -961,6 +983,13 @@ export async function updateDealStageAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (!isDealStage(stage)) {
     return {
       success: false,
@@ -1100,6 +1129,13 @@ export async function updateLeadFollowUpAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (!parsed.success) {
     return {
       success: false,
@@ -1197,6 +1233,13 @@ export async function createFollowUpTaskAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (!parsed.success) {
     return {
       success: false,
@@ -1288,6 +1331,13 @@ export async function completeFollowUpTaskAction(
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 
@@ -1408,6 +1458,13 @@ export async function deleteLeadAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   try {
     const [archivedLead] = await db
       .update(leads)
@@ -1479,6 +1536,13 @@ export async function restoreLeadAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   try {
     const [restoredLead] = await db
       .update(leads)
@@ -1542,6 +1606,13 @@ export async function bulkUpdateLeadStatusAction(
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 
@@ -1646,6 +1717,13 @@ export async function bulkDeleteLeadsAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (normalizedIds.length === 0) {
     return {
       success: false,
@@ -1728,6 +1806,13 @@ export async function createLeadNoteAction(
     };
   }
 
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
   if (!parsed.success) {
     return {
       success: false,
@@ -1804,6 +1889,13 @@ export async function updateLeadNoteAction(
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 
@@ -1896,6 +1988,13 @@ export async function deleteLeadNoteAction(
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 

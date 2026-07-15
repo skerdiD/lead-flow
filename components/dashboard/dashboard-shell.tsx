@@ -70,12 +70,14 @@ function setSidebarCollapsedPreference(collapsed: boolean) {
 type DashboardShellProps = {
   children: React.ReactNode;
   currentWorkspaceName: string;
+  isDemoWorkspace?: boolean;
   searchSlot?: React.ReactNode;
 };
 
 export function DashboardShell({
   children,
   currentWorkspaceName,
+  isDemoWorkspace = false,
   searchSlot,
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -103,6 +105,7 @@ export function DashboardShell({
           <DashboardTopbar
             onOpenSidebar={() => setMobileSidebarOpen(true)}
             currentWorkspaceName={currentWorkspaceName}
+            isDemoWorkspace={isDemoWorkspace}
             searchSlot={searchSlot}
           />
 

@@ -1,11 +1,18 @@
 import { CheckCircle2, Clock3, ListTodo, TimerReset } from "lucide-react";
 import { getTasksPageData } from "@/app/dashboard/tasks/queries";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TaskSections } from "@/components/tasks/task-sections";
+import { isDemoWorkspace } from "@/lib/demo";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export default async function TasksPage() {
-  const taskData = await getTasksPageData();
+  const [taskData, workspace] = await Promise.all([
+    getTasksPageData(),
+    getCurrentWorkspace(),
+  ]);
+  const readOnly = isDemoWorkspace(workspace);
 
   return (
     <div className="space-y-6">
@@ -14,6 +21,8 @@ export default async function TasksPage() {
         title="Tasks"
         description="A clean view of the follow-ups and CRM tasks that need action today, later, or next."
       />
+
+      {readOnly ? <DemoReadOnlyHint /> : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -83,6 +92,7 @@ export default async function TasksPage() {
         ]}
         globalEmptyTitle="You are caught up"
         globalEmptyDescription="Nothing is due, overdue, or waiting in your task list right now."
+        readOnly={readOnly}
       />
     </div>
   );

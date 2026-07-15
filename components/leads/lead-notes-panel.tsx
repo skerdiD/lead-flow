@@ -9,6 +9,7 @@ import {
   deleteLeadNoteAction,
   updateLeadNoteAction,
 } from "@/app/dashboard/leads/actions";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +26,7 @@ type LeadNotesPanelProps = {
   leadId: string;
   notes: LeadNoteItem[];
   currentUserId: string;
+  readOnly?: boolean;
 };
 
 const MAX_NOTE_LENGTH = 2000;
@@ -56,6 +58,7 @@ export function LeadNotesPanel({
   leadId,
   notes,
   currentUserId,
+  readOnly = false,
 }: LeadNotesPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -132,36 +135,42 @@ export function LeadNotesPanel({
         </p>
       </div>
 
-      <div id="lead-note-editor" className="mt-5 rounded-2xl border bg-muted/20 p-4">
-        <Textarea
-          id="lead-notes-input"
-          placeholder="Capture what changed, what was said, or what should happen next..."
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          className="min-h-24 resize-y"
-          maxLength={MAX_NOTE_LENGTH}
-          disabled={isPending}
-        />
+      <div id="lead-note-editor" className="mt-5">
+        {readOnly ? (
+          <DemoReadOnlyHint message="Demo workspace notes are read-only so every visitor sees the same clean activity trail." />
+        ) : (
+          <div className="rounded-2xl border bg-muted/20 p-4">
+            <Textarea
+              id="lead-notes-input"
+              placeholder="Capture what changed, what was said, or what should happen next..."
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              className="min-h-24 resize-y"
+              maxLength={MAX_NOTE_LENGTH}
+              disabled={isPending}
+            />
 
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            {draft.trim().length}/{MAX_NOTE_LENGTH}
-          </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {draft.trim().length}/{MAX_NOTE_LENGTH}
+              </p>
 
-          <Button type="button" onClick={handleCreateNote} disabled={isPending || draft.trim().length === 0}>
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                Add note
-              </>
-            )}
-          </Button>
-        </div>
+              <Button type="button" onClick={handleCreateNote} disabled={isPending || draft.trim().length === 0}>
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add note
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-5 space-y-3">
@@ -222,7 +231,7 @@ export function LeadNotesPanel({
                         )}
                       </Button>
                     </div>
-                  ) : (
+                  ) : !readOnly ? (
                     <div className="flex items-center gap-1">
                       <Button
                         type="button"
@@ -249,7 +258,7 @@ export function LeadNotesPanel({
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {isEditing ? (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarClock, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { createFollowUpTaskAction } from "@/app/dashboard/leads/actions";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
@@ -42,9 +43,14 @@ type LeadTask = {
 type LeadTasksPanelProps = {
   leadId: string;
   tasks: LeadTask[];
+  readOnly?: boolean;
 };
 
-export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
+export function LeadTasksPanel({
+  leadId,
+  tasks,
+  readOnly = false,
+}: LeadTasksPanelProps) {
   const router = useRouter();
   const [isCreating, startCreateTransition] = useTransition();
   const [title, setTitle] = useState("");
@@ -98,77 +104,83 @@ export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
         <CalendarClock className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <div className="mt-5 grid gap-4 rounded-2xl border bg-muted/20 p-4 lg:grid-cols-[1fr_180px_150px_auto]">
-        <div className="space-y-2 lg:col-span-4">
-          <Label htmlFor="task-title">Title</Label>
-          <Input
-            id="task-title"
-            placeholder="Follow up after proposal review"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            disabled={isCreating}
-          />
+      {readOnly ? (
+        <div className="mt-5">
+          <DemoReadOnlyHint message="Demo tasks are read-only so due-today and overdue examples stay useful for every visitor." />
         </div>
+      ) : (
+        <div className="mt-5 grid gap-4 rounded-2xl border bg-muted/20 p-4 lg:grid-cols-[1fr_180px_150px_auto]">
+          <div className="space-y-2 lg:col-span-4">
+            <Label htmlFor="task-title">Title</Label>
+            <Input
+              id="task-title"
+              placeholder="Follow up after proposal review"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              disabled={isCreating}
+            />
+          </div>
 
-        <div className="space-y-2 lg:col-span-2">
-          <Label htmlFor="task-description">Description</Label>
-          <Textarea
-            id="task-description"
-            className="min-h-20 resize-y"
-            placeholder="Add any context needed for the follow-up."
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            disabled={isCreating}
-          />
-        </div>
+          <div className="space-y-2 lg:col-span-2">
+            <Label htmlFor="task-description">Description</Label>
+            <Textarea
+              id="task-description"
+              className="min-h-20 resize-y"
+              placeholder="Add any context needed for the follow-up."
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              disabled={isCreating}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="task-due-date">Due date</Label>
-          <Input
-            id="task-due-date"
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            disabled={isCreating}
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="task-due-date">Due date</Label>
+            <Input
+              id="task-due-date"
+              type="date"
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
+              disabled={isCreating}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label>Priority</Label>
-          <Select
-            value={priority}
-            onValueChange={(value) => setPriority(value as TaskPriority)}
-            disabled={isCreating}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TASK_PRIORITIES.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {TASK_PRIORITY_LABELS[item]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label>Priority</Label>
+            <Select
+              value={priority}
+              onValueChange={(value) => setPriority(value as TaskPriority)}
+              disabled={isCreating}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_PRIORITIES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {TASK_PRIORITY_LABELS[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex items-end">
-          <Button
-            type="button"
-            className="w-full"
-            onClick={handleCreateTask}
-            disabled={isCreating || title.trim().length < 2}
-          >
-            {isCreating ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-4 w-4" />
-            )}
-            Add task
-          </Button>
+          <div className="flex items-end">
+            <Button
+              type="button"
+              className="w-full"
+              onClick={handleCreateTask}
+              disabled={isCreating || title.trim().length < 2}
+            >
+              {isCreating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              Add task
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-5 space-y-3">
         <TaskSections
@@ -206,6 +218,7 @@ export function LeadTasksPanel({ leadId, tasks }: LeadTasksPanelProps) {
           showEmptySections={tasks.length > 0}
           globalEmptyTitle="No follow-up tasks yet"
           globalEmptyDescription="Add the next action for this lead so nothing slips through the cracks."
+          readOnly={readOnly}
         />
       </div>
     </section>

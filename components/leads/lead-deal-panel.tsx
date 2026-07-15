@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Target } from "lucide-react";
 import { toast } from "sonner";
 import { updateDealStageAction } from "@/app/dashboard/leads/actions";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import {
   DEAL_STAGE_LABELS,
   DEAL_STAGES,
@@ -34,6 +35,7 @@ type LeadDealPanelProps = {
     lostReason: string | null;
     updatedAt: Date;
   } | null;
+  readOnly?: boolean;
 };
 
 function formatDateTime(date: Date) {
@@ -56,7 +58,11 @@ function formatDate(date: Date | null) {
   }).format(date);
 }
 
-export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
+export function LeadDealPanel({
+  leadId,
+  deal,
+  readOnly = false,
+}: LeadDealPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [stage, setStage] = useState<DealStage>(deal?.stage ?? "new");
@@ -146,7 +152,7 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
             <Select
               value={stage}
               onValueChange={(value) => setStage(value as DealStage)}
-              disabled={isPending}
+              disabled={isPending || readOnly}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -161,7 +167,7 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
             </Select>
           </div>
 
-          <Button onClick={handleUpdateStage} disabled={isPending || !hasChanges}>
+          <Button onClick={handleUpdateStage} disabled={isPending || readOnly || !hasChanges}>
             {isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -170,6 +176,13 @@ export function LeadDealPanel({ leadId, deal }: LeadDealPanelProps) {
             Apply stage
           </Button>
         </div>
+
+        {readOnly ? (
+          <DemoReadOnlyHint
+            className="mt-4"
+            message="Demo opportunity stages are locked so the revenue charts and won-lost metrics stay stable."
+          />
+        ) : null}
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">

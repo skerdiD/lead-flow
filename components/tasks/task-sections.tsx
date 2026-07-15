@@ -28,6 +28,7 @@ type TaskSectionsProps = {
   showEmptySections?: boolean;
   globalEmptyTitle?: string;
   globalEmptyDescription?: string;
+  readOnly?: boolean;
 };
 
 function getPriorityBadgeClass(priority: TaskListItem["priority"]) {
@@ -80,10 +81,12 @@ function TaskRow({
   task,
   compact = false,
   showLeadContext = true,
+  readOnly = false,
 }: {
   task: TaskListItem;
   compact?: boolean;
   showLeadContext?: boolean;
+  readOnly?: boolean;
 }) {
   const timelineBucket = getTaskTimelineBucket(task);
   const isCompleted = timelineBucket === "completed";
@@ -141,11 +144,13 @@ function TaskRow({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-          <TaskStatusToggle
-            taskId={task.id}
-            completed={isCompleted}
-            compact={compact}
-          />
+          {!readOnly ? (
+            <TaskStatusToggle
+              taskId={task.id}
+              completed={isCompleted}
+              compact={compact}
+            />
+          ) : null}
 
           {task.leadId ? (
             <Button asChild variant="ghost" size={compact ? "xs" : "sm"}>
@@ -165,6 +170,7 @@ export function TaskSections({
   showEmptySections = true,
   globalEmptyTitle = "You are caught up",
   globalEmptyDescription = "No tasks need attention right now.",
+  readOnly = false,
 }: TaskSectionsProps) {
   const hasTasks = sections.some((section) => section.tasks.length > 0);
   const visibleSections = showEmptySections
@@ -215,6 +221,7 @@ export function TaskSections({
                   task={task}
                   compact={compact}
                   showLeadContext={showLeadContext}
+                  readOnly={readOnly}
                 />
               ))}
             </div>

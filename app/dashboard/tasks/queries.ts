@@ -173,7 +173,9 @@ export async function getDashboardAttentionData(
         const latestActivityByLead = db
           .select({
             leadId: activityEvents.leadId,
-            lastActivityAt: sql<Date>`max(${activityEvents.createdAt})`,
+            lastActivityAt: sql<Date>`max(${activityEvents.createdAt})`.as(
+              "last_activity_at",
+            ),
           })
           .from(activityEvents)
           .where(

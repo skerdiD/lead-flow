@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Target } from "lucide-react";
 import { toast } from "sonner";
 import { updateLeadStatusQuickAction } from "@/app/dashboard/leads/actions";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -20,6 +21,7 @@ type LeadWorkflowPanelProps = {
   fullName: string;
   currentStatus: LeadStatus;
   nextStep: string;
+  readOnly?: boolean;
 };
 
 export function LeadWorkflowPanel({
@@ -27,6 +29,7 @@ export function LeadWorkflowPanel({
   fullName,
   currentStatus,
   nextStep,
+  readOnly = false,
 }: LeadWorkflowPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -74,7 +77,7 @@ export function LeadWorkflowPanel({
             <Select
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value as LeadStatus)}
-              disabled={isPending}
+              disabled={isPending || readOnly}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -89,7 +92,7 @@ export function LeadWorkflowPanel({
             </Select>
           </div>
 
-          <Button onClick={handleApplyStatus} disabled={isPending || !hasChanges}>
+          <Button onClick={handleApplyStatus} disabled={isPending || !hasChanges || readOnly}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -103,6 +106,13 @@ export function LeadWorkflowPanel({
             )}
           </Button>
         </div>
+
+        {readOnly ? (
+          <DemoReadOnlyHint
+            className="mt-4"
+            message="Demo pipeline stages are locked so the sample dashboard and activity history stay consistent for every walkthrough."
+          />
+        ) : null}
       </div>
 
       <div className="mt-4 rounded-2xl border bg-background p-4">

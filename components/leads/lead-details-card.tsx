@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { LeadDetailsResult } from "@/app/dashboard/leads/[id]/queries";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { LeadDealPanel } from "@/components/leads/lead-deal-panel";
 import { LeadFollowUpBadge } from "@/components/leads/lead-follow-up-badge";
 import { LeadFollowUpPanel } from "@/components/leads/lead-follow-up-panel";
@@ -27,6 +28,7 @@ import { groupTasksByTimeline } from "@/lib/tasks";
 
 type LeadDetailsCardProps = {
   lead: LeadDetailsResult;
+  readOnly?: boolean;
 };
 
 function formatDateTime(date: Date) {
@@ -215,7 +217,10 @@ function SummaryCard({
   );
 }
 
-export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
+export function LeadDetailsCard({
+  lead,
+  readOnly = false,
+}: LeadDetailsCardProps) {
   const nextStep = getNextStep(lead.status);
   const groupedTasks = groupTasksByTimeline(
     lead.taskEntries.map((task) => ({
@@ -295,6 +300,7 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
               dealId={lead.dealEntry?.id ?? null}
               isArchived={lead.isArchived}
               currentStatus={lead.status}
+              readOnly={readOnly}
             />
           </div>
 
@@ -345,6 +351,8 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
           </p>
         </section>
       ) : null}
+
+      {readOnly ? <DemoReadOnlyHint /> : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)]">
         <div className="space-y-4">
@@ -429,6 +437,7 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
             fullName={lead.fullName}
             currentStatus={lead.status}
             nextStep={nextStep}
+            readOnly={readOnly}
           />
           <LeadFollowUpPanel
             key={`${lead.nextFollowUpDate?.toISOString() ?? "none"}:${lead.followUpPriority}:${lead.followUpStatus}:${lead.followUpNote ?? ""}`}
@@ -439,18 +448,20 @@ export function LeadDetailsCard({ lead }: LeadDetailsCardProps) {
               priority: lead.followUpPriority,
               status: lead.followUpStatus,
             }}
+            readOnly={readOnly}
           />
-          <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} />
+          <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} readOnly={readOnly} />
         </div>
       </section>
 
-      <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} />
+      <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} readOnly={readOnly} />
 
       <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <LeadNotesPanel
           leadId={lead.id}
           notes={lead.noteEntries}
           currentUserId={lead.viewerUserId}
+          readOnly={readOnly}
         />
 
         <section

@@ -17,7 +17,8 @@
     "e2e:install": "playwright install --with-deps chromium",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed:screenshots": "tsx scripts/seed-screenshot-data.ts"
+    "db:seed:screenshots": "tsx scripts/seed-screenshot-data.ts",
+    "db:seed:demo": "tsx scripts/seed-demo-workspace.ts"
   },
   "dependencies": {
     "@arcjet/next": "^1.3.0",

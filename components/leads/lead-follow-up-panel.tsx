@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarClock, Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { updateLeadFollowUpAction } from "@/app/dashboard/leads/actions";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { LeadFollowUpBadge } from "@/components/leads/lead-follow-up-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ type LeadFollowUpPanelProps = {
     priority: FollowUpPriority;
     status: FollowUpStatus;
   };
+  readOnly?: boolean;
 };
 
 function toDateInputValue(date: Date | null) {
@@ -60,6 +62,7 @@ function addDaysToInputValue(days: number) {
 export function LeadFollowUpPanel({
   leadId,
   followUp,
+  readOnly = false,
 }: LeadFollowUpPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -162,7 +165,7 @@ export function LeadFollowUpPanel({
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            disabled={isPending}
+            disabled={isPending || readOnly}
           />
         </div>
 
@@ -171,7 +174,7 @@ export function LeadFollowUpPanel({
           <Select
             value={priority}
             onValueChange={(value) => setPriority(value as FollowUpPriority)}
-            disabled={isPending}
+            disabled={isPending || readOnly}
           >
             <SelectTrigger>
               <SelectValue />
@@ -191,7 +194,7 @@ export function LeadFollowUpPanel({
           <Select
             value={status}
             onValueChange={(value) => setStatus(value as FollowUpStatus)}
-            disabled={isPending}
+            disabled={isPending || readOnly}
           >
             <SelectTrigger>
               <SelectValue />
@@ -213,7 +216,7 @@ export function LeadFollowUpPanel({
           size="xs"
           variant="outline"
           onClick={() => setDate(addDaysToInputValue(0))}
-          disabled={isPending}
+          disabled={isPending || readOnly}
         >
           Today
         </Button>
@@ -222,7 +225,7 @@ export function LeadFollowUpPanel({
           size="xs"
           variant="outline"
           onClick={() => setDate(addDaysToInputValue(1))}
-          disabled={isPending}
+          disabled={isPending || readOnly}
         >
           Tomorrow
         </Button>
@@ -231,7 +234,7 @@ export function LeadFollowUpPanel({
           size="xs"
           variant="outline"
           onClick={() => setDate(addDaysToInputValue(7))}
-          disabled={isPending}
+          disabled={isPending || readOnly}
         >
           Next week
         </Button>
@@ -249,10 +252,17 @@ export function LeadFollowUpPanel({
           placeholder="What should happen next, who needs a reply, and what context matters?"
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          disabled={isPending}
+          disabled={isPending || readOnly}
           maxLength={1000}
         />
       </div>
+
+      {readOnly ? (
+        <DemoReadOnlyHint
+          className="mt-4"
+          message="Demo follow-up dates and overdue reminders are fixed so visitors can review realistic next-step states."
+        />
+      ) : null}
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
@@ -264,11 +274,11 @@ export function LeadFollowUpPanel({
             type="button"
             variant="outline"
             onClick={handleClear}
-            disabled={isPending || (!hasFollowUp && priority === "medium" && status === "pending")}
+            disabled={isPending || readOnly || (!hasFollowUp && priority === "medium" && status === "pending")}
           >
             Clear
           </Button>
-          <Button type="button" onClick={handleSave} disabled={isPending || !hasChanges}>
+          <Button type="button" onClick={handleSave} disabled={isPending || readOnly || !hasChanges}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

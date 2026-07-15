@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { activityEvents, crmTasks, leads } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
 import { requireUserId } from "@/lib/auth";
+import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type TaskMutationState =
@@ -69,6 +70,13 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 
@@ -169,6 +177,13 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
     };
   }
 

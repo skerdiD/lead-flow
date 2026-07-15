@@ -24,7 +24,9 @@ import { NeedsAttentionPanel } from "@/components/dashboard/needs-attention-pane
 import { RecentLeadsList } from "@/components/dashboard/recent-leads-list";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Button } from "@/components/ui/button";
+import { isDemoWorkspace } from "@/lib/demo";
 import { formatCurrencyFromCents } from "@/lib/revenue";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 function toPercent(value: number) {
   return `${Math.round(value)}%`;
@@ -38,6 +40,7 @@ export default async function DashboardPage() {
     sourcePerformanceData,
     revenueData,
     attentionData,
+    workspace,
   ] =
     await Promise.all([
       getDashboardStats(),
@@ -46,6 +49,7 @@ export default async function DashboardPage() {
       getSourcePerformanceData(),
       getRevenueDashboardData(),
       getDashboardAttentionData(),
+      getCurrentWorkspace(),
     ]);
 
   const isEmpty = stats.totalLeads === 0;
@@ -54,6 +58,7 @@ export default async function DashboardPage() {
   const winRate =
     stats.totalLeads > 0 ? (stats.closedLeads / stats.totalLeads) * 100 : 0;
   const revenueCurrency = revenueData.currency;
+  const readOnly = isDemoWorkspace(workspace);
 
   return (
     <div className="space-y-7 lg:space-y-8">
@@ -89,15 +94,17 @@ export default async function DashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <Button asChild>
-              <Link href="/dashboard/leads/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Lead
-              </Link>
-            </Button>
+            {!readOnly ? (
+              <Button asChild>
+                <Link href="/dashboard/leads/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Lead
+                </Link>
+              </Button>
+            ) : null}
             <Button asChild variant="outline">
               <Link href="/dashboard/leads">
-                View leads
+                {readOnly ? "Explore leads" : "View leads"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

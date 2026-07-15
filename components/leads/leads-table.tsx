@@ -89,6 +89,7 @@ type LeadsTableProps = {
   sortBy: LeadsTableSortField;
   sortDir: LeadsTableSortDirection;
   archiveView?: boolean;
+  readOnly?: boolean;
 };
 
 type SortableColumn = {
@@ -172,6 +173,7 @@ export function LeadsTable({
   sortBy,
   sortDir,
   archiveView = false,
+  readOnly = false,
 }: LeadsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -312,7 +314,7 @@ export function LeadsTable({
   return (
     <>
       <div className="space-y-3" data-testid="leads-table-section">
-        {selectedCount > 0 ? (
+        {selectedCount > 0 && !readOnly ? (
           <div className="shrink-0 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">
               {selectedCount} lead{selectedCount === 1 ? "" : "s"} selected
@@ -382,18 +384,20 @@ export function LeadsTable({
             className="min-w-[1240px]"
           >
             <TableHeader className="bg-muted">
-              <TableRow className="border-b bg-muted hover:bg-muted">
-                <TableHead className="w-10 bg-muted px-3">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={(event) => toggleSelectAll(event.target.checked)}
-                    className="h-4 w-4 rounded border border-input accent-primary"
-                    aria-label="Select all leads on page"
-                    data-testid="select-all-leads"
-                  />
-                </TableHead>
+                <TableRow className="border-b bg-muted hover:bg-muted">
+                {!readOnly ? (
+                  <TableHead className="w-10 bg-muted px-3">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={(event) => toggleSelectAll(event.target.checked)}
+                      className="h-4 w-4 rounded border border-input accent-primary"
+                      aria-label="Select all leads on page"
+                      data-testid="select-all-leads"
+                    />
+                  </TableHead>
+                ) : null}
 
                 {sortableColumns.map((column) => (
                   <TableHead
@@ -430,16 +434,18 @@ export function LeadsTable({
                   className="group border-b border-border/60 hover:bg-muted/10"
                   data-testid={`lead-row-${lead.id}`}
                 >
-                    <TableCell className="px-3 py-4 align-middle">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(lead.id)}
-                        onChange={(event) => toggleRow(lead.id, event.target.checked)}
-                        className="h-4 w-4 rounded border border-input accent-primary"
-                        aria-label={`Select ${lead.fullName}`}
-                        data-testid={`select-lead-${lead.id}`}
-                      />
-                    </TableCell>
+                    {!readOnly ? (
+                      <TableCell className="px-3 py-4 align-middle">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(lead.id)}
+                          onChange={(event) => toggleRow(lead.id, event.target.checked)}
+                          className="h-4 w-4 rounded border border-input accent-primary"
+                          aria-label={`Select ${lead.fullName}`}
+                          data-testid={`select-lead-${lead.id}`}
+                        />
+                      </TableCell>
+                    ) : null}
 
                     <TableCell className="px-6 py-4 align-middle">
                       <div className="flex min-w-[220px] items-center gap-3">
@@ -449,7 +455,7 @@ export function LeadsTable({
 
                         <div className="min-w-0">
                           <Link
-                            href={`/dashboard/leads/${lead.id}/edit`}
+                            href={`/dashboard/leads/${lead.id}`}
                             className="truncate text-sm font-semibold text-foreground transition-colors hover:text-primary"
                             data-testid={`lead-name-link-${lead.id}`}
                           >
@@ -515,17 +521,21 @@ export function LeadsTable({
                           </Link>
                         </Button>
 
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                          <Link href={`/dashboard/leads/${lead.id}/edit`} aria-label="Edit lead" data-testid={`edit-lead-${lead.id}`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        {!readOnly ? (
+                          <>
+                            <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                              <Link href={`/dashboard/leads/${lead.id}/edit`} aria-label="Edit lead" data-testid={`edit-lead-${lead.id}`}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
 
-                        {archiveView || lead.isArchived ? (
-                          <RestoreLeadButton leadId={lead.id} />
-                        ) : (
-                          <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} />
-                        )}
+                            {archiveView || lead.isArchived ? (
+                              <RestoreLeadButton leadId={lead.id} />
+                            ) : (
+                              <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} />
+                            )}
+                          </>
+                        ) : null}
                       </div>
                     </TableCell>
                 </TableRow>

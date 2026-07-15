@@ -2,11 +2,14 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getLeadsList } from "@/app/dashboard/leads/queries";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { EmptyLeadsState } from "@/components/leads/empty-leads-state";
 import { ExportLeadsMenu } from "@/components/leads/export-leads-menu";
 import { LeadFilters } from "@/components/leads/lead-filters";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { Button } from "@/components/ui/button";
+import { isDemoWorkspace } from "@/lib/demo";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 
 type LeadsPageProps = {
   searchParams?: Promise<{
@@ -23,6 +26,8 @@ type LeadsPageProps = {
 
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const params = (await searchParams) ?? {};
+  const workspace = await getCurrentWorkspace();
+  const readOnly = isDemoWorkspace(workspace);
 
   const tableData = await getLeadsList({
     search: params.search,
@@ -59,15 +64,19 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" />
-            <Button asChild data-testid="add-lead-btn">
-              <Link href="/dashboard/leads/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Lead
-              </Link>
-            </Button>
+            {!readOnly ? (
+              <Button asChild data-testid="add-lead-btn">
+                <Link href="/dashboard/leads/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Lead
+                </Link>
+              </Button>
+            ) : null}
           </div>
         }
       />
+
+      {readOnly ? <DemoReadOnlyHint /> : null}
 
       <div className="shrink-0 rounded-3xl border bg-background p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -99,6 +108,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           sortBy={tableData.sortBy}
           sortDir={tableData.sortDir}
           archiveView={isArchiveView}
+          readOnly={readOnly}
         />
       )}
     </div>
