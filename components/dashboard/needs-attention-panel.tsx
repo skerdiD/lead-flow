@@ -78,14 +78,14 @@ export function NeedsAttentionPanel({ data }: NeedsAttentionPanelProps) {
     {
       key: "dueToday" as const,
       title: "Tasks due today",
-      description: "The work that should be closed out before the day slips.",
+      description: "Tasks due by the end of today.",
       emptyMessage: "No tasks due today",
       tasks: data.groupedTasks.dueToday,
     },
     {
       key: "overdue" as const,
       title: "Overdue tasks",
-      description: "Items already behind schedule that need a decision or follow-up.",
+      description: "Past-due tasks that need attention.",
       emptyMessage: "No overdue tasks",
       tasks: data.groupedTasks.overdue,
     },
@@ -106,7 +106,7 @@ export function NeedsAttentionPanel({ data }: NeedsAttentionPanelProps) {
             Needs your attention
           </p>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            A focused view of the work, follow-ups, and opportunities that deserve attention today.
+            Tasks and leads that need a follow-up today.
           </p>
         </div>
 
@@ -129,7 +129,7 @@ export function NeedsAttentionPanel({ data }: NeedsAttentionPanelProps) {
         <div className="space-y-4">
           <AttentionList
             title="Follow-ups due today"
-            description="Leads that already have a planned touchpoint scheduled for today."
+            description="Leads to contact today."
             count={data.counts.followUpsDueToday}
             icon={CalendarClock}
             emptyMessage="No follow-ups due today"
@@ -137,14 +137,14 @@ export function NeedsAttentionPanel({ data }: NeedsAttentionPanelProps) {
               id: lead.id,
               href: `/dashboard/leads/${lead.id}`,
               title: lead.fullName,
-              subtitle: lead.company || lead.note || "Open lead and log the next touchpoint.",
+              subtitle: lead.company || lead.note || "Open the lead to add a follow-up.",
               meta: lead.dueAt ? formatTaskDueDate(lead.dueAt) : undefined,
             }))}
           />
 
           <AttentionList
             title="Leads with no recent activity"
-            description="Open leads that have gone quiet and may need a nudge."
+            description="Open leads with no recent activity."
             count={data.counts.staleLeads}
             icon={PauseCircle}
             emptyMessage="No inactive leads need attention"
@@ -159,7 +159,7 @@ export function NeedsAttentionPanel({ data }: NeedsAttentionPanelProps) {
 
           <AttentionList
             title="Proposals waiting response"
-            description="Deals sitting in proposal stage that may need a check-in."
+            description="Deals in proposal stage that may need a check-in."
             count={data.counts.proposalsWaitingResponse}
             icon={FileClock}
             emptyMessage="No proposals are waiting for a response"
@@ -180,7 +180,7 @@ export function NeedsAttentionPanel({ data }: NeedsAttentionPanelProps) {
         <div className="mt-4 rounded-2xl border border-dashed bg-muted/20 px-4 py-5 text-sm text-muted-foreground">
           <div className="flex items-start gap-3">
             <BadgeAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>You are caught up. Keep momentum by reviewing upcoming tasks or adding the next follow-up on active leads.</p>
+            <p>You are caught up. Review upcoming tasks or add follow-ups to active leads.</p>
           </div>
         </div>
       ) : null}

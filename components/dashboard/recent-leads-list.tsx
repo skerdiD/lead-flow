@@ -46,7 +46,7 @@ export function RecentLeadsList({ leads }: RecentLeadsListProps) {
         <div className="space-y-1">
           <h3 className="text-lg font-semibold tracking-tight text-foreground">Recent leads</h3>
           <p className="text-sm leading-6 text-muted-foreground">
-            A quick view of the latest contacts added to your pipeline.
+            Leads added most recently.
           </p>
         </div>
 

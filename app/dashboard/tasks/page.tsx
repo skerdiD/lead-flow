@@ -19,43 +19,35 @@ export default async function TasksPage() {
       <PageHeader
         eyebrow="Daily execution"
         title="Tasks"
-        description="A clean view of the follow-ups and CRM tasks that need action today, later, or next."
+        description="Manage your follow-ups and upcoming tasks."
       />
 
       {readOnly ? <DemoReadOnlyHint /> : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Due Today"
+          title="Due today"
           value={taskData.counts.dueToday}
-          description="Tasks that should be handled before the day ends."
           icon={Clock3}
           tone="warning"
-          helper="today"
         />
         <StatCard
           title="Overdue"
           value={taskData.counts.overdue}
-          description="Tasks that are already past their due date."
           icon={TimerReset}
           tone="warning"
-          helper="needs attention"
         />
         <StatCard
           title="Upcoming"
           value={taskData.counts.upcoming}
-          description="Scheduled work that is coming up next."
           icon={ListTodo}
           tone="info"
-          helper="planned next"
         />
         <StatCard
           title="Completed"
           value={taskData.counts.completed}
-          description="Tasks you have already closed out."
           icon={CheckCircle2}
           tone="positive"
-          helper="done recently"
         />
       </section>
 
@@ -64,34 +56,34 @@ export default async function TasksPage() {
           {
             key: "dueToday",
             title: "Due today",
-            description: "Tasks that should be wrapped up before the end of today.",
+            description: "Tasks due by the end of today.",
             emptyMessage: "No tasks due today",
             tasks: taskData.groupedTasks.dueToday,
           },
           {
             key: "overdue",
             title: "Overdue",
-            description: "Work that needs immediate follow-through or a new plan.",
+            description: "Past-due tasks that need attention.",
             emptyMessage: "No overdue tasks",
             tasks: taskData.groupedTasks.overdue,
           },
           {
             key: "upcoming",
             title: "Upcoming",
-            description: "The next scheduled tasks across your active leads.",
+            description: "Tasks scheduled for the next few days.",
             emptyMessage: "No upcoming tasks",
             tasks: taskData.groupedTasks.upcoming,
           },
           {
             key: "completed",
             title: "Completed",
-            description: "Recently completed tasks that you can reopen if needed.",
+            description: "Recently completed tasks.",
             emptyMessage: "No completed tasks yet",
             tasks: taskData.groupedTasks.completed,
           },
         ]}
         globalEmptyTitle="You are caught up"
-        globalEmptyDescription="Nothing is due, overdue, or waiting in your task list right now."
+        globalEmptyDescription="No tasks need your attention right now."
         readOnly={readOnly}
       />
     </div>

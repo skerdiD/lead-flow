@@ -34,26 +34,26 @@ type TaskSectionsProps = {
 function getPriorityBadgeClass(priority: TaskListItem["priority"]) {
   switch (priority) {
     case "high":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/50 dark:text-rose-300";
     case "medium":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300";
     case "low":
     default:
-      return "border-sky-200 bg-sky-50 text-sky-700";
+      return "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-300";
   }
 }
 
 function getTimelineBadgeClass(bucket: TaskTimelineBucket) {
   switch (bucket) {
     case "overdue":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/50 dark:text-rose-300";
     case "dueToday":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300";
     case "completed":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300";
     case "upcoming":
     default:
-      return "border-sky-200 bg-sky-50 text-sky-700";
+      return "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-300";
   }
 }
 
@@ -101,14 +101,14 @@ function TaskRow({
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium text-foreground">{task.title}</p>
+            <p className="font-semibold text-foreground">{task.title}</p>
             <Badge
               variant="outline"
               className={cn("capitalize", getPriorityBadgeClass(task.priority))}
             >
               {getTaskPriorityLabel(task.priority)}
             </Badge>
-            <Badge variant="outline">{getTaskStatusLabel(task.status)}</Badge>
+            <Badge variant="outline" className="text-muted-foreground">{getTaskStatusLabel(task.status)}</Badge>
             <Badge
               variant="outline"
               className={getTimelineBadgeClass(timelineBucket)}
@@ -118,7 +118,7 @@ function TaskRow({
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 font-medium">
               <CalendarClock className="h-3.5 w-3.5" />
               {formatTaskDueDate(task.dueAt)}
             </span>

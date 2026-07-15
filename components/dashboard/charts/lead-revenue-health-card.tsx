@@ -46,11 +46,11 @@ function safePercent(value: number, total: number) {
 function toneClass(tone: HealthMetric["tone"]) {
   switch (tone) {
     case "positive":
-      return "border-emerald-200/80 bg-emerald-50 text-emerald-700";
+      return "border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300";
     case "info":
-      return "border-sky-200/80 bg-sky-50 text-sky-700";
+      return "border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-300";
     case "warning":
-      return "border-amber-200/80 bg-amber-50 text-amber-700";
+      return "border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300";
     default:
       return "border-border/70 bg-muted/30 text-muted-foreground";
   }

@@ -6,7 +6,7 @@ type StatCardTone = "neutral" | "positive" | "info" | "warning";
 type StatCardProps = {
   title: string;
   value: number | string;
-  description: string;
+  description?: string;
   icon: LucideIcon;
   className?: string;
   tone?: StatCardTone;
@@ -30,21 +30,21 @@ const toneStyles: Record<
     glow: "from-foreground/[0.03] via-transparent to-transparent",
   },
   positive: {
-    iconWrap: "border-emerald-200/80 bg-emerald-50",
-    icon: "text-emerald-700",
-    badge: "border-emerald-200/80 bg-emerald-50 text-emerald-700",
+    iconWrap: "border-emerald-200/80 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/50",
+    icon: "text-emerald-700 dark:text-emerald-300",
+    badge: "border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300",
     glow: "from-emerald-300/20 via-transparent to-transparent",
   },
   info: {
-    iconWrap: "border-sky-200/80 bg-sky-50",
-    icon: "text-sky-700",
-    badge: "border-sky-200/80 bg-sky-50 text-sky-700",
+    iconWrap: "border-sky-200/80 bg-sky-50 dark:border-sky-900/70 dark:bg-sky-950/50",
+    icon: "text-sky-700 dark:text-sky-300",
+    badge: "border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-300",
     glow: "from-sky-300/20 via-transparent to-transparent",
   },
   warning: {
-    iconWrap: "border-amber-200/80 bg-amber-50",
-    icon: "text-amber-700",
-    badge: "border-amber-200/80 bg-amber-50 text-amber-700",
+    iconWrap: "border-amber-200/80 bg-amber-50 dark:border-amber-900/70 dark:bg-amber-950/50",
+    icon: "text-amber-700 dark:text-amber-300",
+    badge: "border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300",
     glow: "from-amber-300/20 via-transparent to-transparent",
   },
 };
@@ -80,7 +80,7 @@ export function StatCard({
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {title}
           </p>
-          <p className="text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+          <p className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
           {helper ? (
             <p className="text-xs font-medium text-muted-foreground">{helper}</p>
           ) : null}
@@ -91,8 +91,11 @@ export function StatCard({
         </div>
       </div>
 
-      <div className="relative mt-5 flex items-center justify-between gap-3">
-        <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+      {description || badge ? (
+        <div className="relative mt-5 flex items-center justify-between gap-3">
+          {description ? (
+            <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+          ) : null}
         {badge ? (
           <span
             className={cn(
@@ -103,7 +106,8 @@ export function StatCard({
             {badge}
           </span>
         ) : null}
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }

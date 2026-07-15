@@ -257,7 +257,7 @@ export function LeadDetailsCard({
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                <h1 className="min-w-0 font-display text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
                   {lead.fullName}
                 </h1>
                 <LeadStatusBadge status={lead.status} />

@@ -46,7 +46,7 @@ export function DealRevenuePipelineChart({
             Pipeline by Stage
           </p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Deal value and weighted forecast across your sales stages.
+            Deal value and forecast by sales stage.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export function DealRevenuePipelineChart({
       <div className="relative mt-2 h-[280px]">
         {totalValue === 0 ? (
           <div className="flex h-full items-center justify-center rounded-2xl border border-dashed bg-background/70 px-6 text-center text-sm text-muted-foreground">
-            Revenue chart will populate once deals have value.
+            Add deal value to see your revenue forecast.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

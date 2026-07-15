@@ -57,7 +57,7 @@ export function LeadPipelineChart({ data }: LeadPipelineChartProps) {
         <div>
           <p className="text-sm font-semibold text-foreground">Pipeline Distribution</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Stage-by-stage view of where your leads currently sit.
+            Leads by current pipeline stage.
           </p>
         </div>
 
@@ -84,7 +84,7 @@ export function LeadPipelineChart({ data }: LeadPipelineChartProps) {
       <div className="relative mt-4 h-[280px]">
         {totalLeads === 0 ? (
           <div className="flex h-full items-center justify-center rounded-2xl border border-dashed bg-background/70 px-6 text-center text-sm text-muted-foreground">
-            Pipeline chart will populate once leads are added.
+            Add leads to see your pipeline by stage.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

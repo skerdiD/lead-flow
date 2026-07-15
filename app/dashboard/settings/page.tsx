@@ -95,7 +95,7 @@ export default async function SettingsPage() {
       <PageHeader
         eyebrow="Workspace settings"
         title="Settings"
-        description="Manage your account, workspace preferences, and the core settings that shape how LeadFlow feels day to day."
+        description="Manage your account and workspace settings."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
@@ -103,7 +103,7 @@ export default async function SettingsPage() {
           <SettingsSection
             icon={UserCircle2}
             title="Account"
-            description="Your signed-in identity and primary profile details."
+            description="Your profile and sign-in details."
           >
             <div className="space-y-4">
               <SettingRow
@@ -131,13 +131,13 @@ export default async function SettingsPage() {
           <SettingsSection
             icon={Bell}
             title="Notifications"
-            description="A simple notification structure for a clean version 1 experience."
+            description="Notification controls are coming soon."
           >
             <div className="space-y-4">
               <SettingRow
                 label="Product notifications"
-                value="Notifications are not configurable yet in version 1."
-                hint="This space is intentionally prepared for future reminder and activity features."
+                value="Notification settings are not available yet."
+                hint="This area will include reminders and activity updates."
                 action={
                   <Button variant="outline" disabled>
                     Coming soon
@@ -147,7 +147,7 @@ export default async function SettingsPage() {
               <SettingRow
                 label="Lead activity reminders"
                 value="No reminder system is active yet."
-                hint="Future versions can add follow-up reminders and inactivity alerts."
+                hint="Follow-up reminders and inactivity alerts are planned."
               />
             </div>
           </SettingsSection>
@@ -157,7 +157,7 @@ export default async function SettingsPage() {
           <SettingsSection
             icon={ShieldCheck}
             title="Workspace and data"
-            description="Core workspace information and how your leads are isolated."
+            description="Your workspace and data access."
           >
             <div className="space-y-4">
               <SettingRow
@@ -176,7 +176,7 @@ export default async function SettingsPage() {
           <SettingsSection
             icon={LockKeyhole}
             title="Security"
-            description="A lightweight but intentional security section for version 1."
+            description="How your account and workspace are protected."
           >
             <div className="space-y-4">
               <SettingRow

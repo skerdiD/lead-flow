@@ -11,7 +11,7 @@ export default async function ActivityPage() {
       <PageHeader
         eyebrow="Workspace feed"
         title="Activity"
-        description="A timeline of the latest lead actions in your workspace."
+        description="See the latest changes across your leads."
       />
 
       {activities.length === 0 ? (

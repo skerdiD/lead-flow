@@ -58,7 +58,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         description={
           isArchiveView
             ? "Review archived leads and restore records when they need to return to active work."
-            : "Search, filter, and manage every lead from one clean workspace."
+            : "Search, filter, and manage your leads."
         }
         className="shrink-0"
         action={

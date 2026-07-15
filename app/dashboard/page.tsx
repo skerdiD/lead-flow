@@ -70,11 +70,11 @@ export default async function DashboardPage() {
             <p className="inline-flex items-center rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Overview
             </p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              A clear view of your lead pipeline.
+            <h1 className="mt-3 font-display text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
+              Your pipeline at a glance.
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              Track momentum, surface bottlenecks, and manage opportunities from one focused dashboard.
+              Track deals, follow up on leads, and keep work moving.
             </p>
 
             <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

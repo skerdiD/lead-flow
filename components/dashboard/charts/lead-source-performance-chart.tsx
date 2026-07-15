@@ -101,7 +101,7 @@ export function LeadSourcePerformanceChart({
       <div className="relative mt-2 h-[262px]">
         {totalLeads === 0 ? (
           <div className="flex h-full items-center justify-center rounded-2xl border border-dashed bg-background/70 px-6 text-center text-sm text-muted-foreground">
-            Source chart will populate once leads are added.
+            Add leads to compare source performance.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

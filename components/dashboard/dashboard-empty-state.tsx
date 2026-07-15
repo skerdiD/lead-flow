@@ -18,8 +18,7 @@ export function DashboardEmptyState() {
         </h2>
 
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          LeadFlow works best when every opportunity is tracked in one place. Add your first lead to unlock
-          search, filtering, statuses, and a cleaner sales workflow.
+          Add your first lead to start tracking conversations, follow-ups, and deal progress.
         </p>
 
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
