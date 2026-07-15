@@ -9,6 +9,7 @@ import {
   type LeadsListFilters,
 } from "@/app/dashboard/leads/queries";
 import { protectLeadExport } from "@/lib/arcjet";
+import { hasWorkspacePermission, permissionDeniedMessage } from "@/lib/authorization";
 import { buildLeadsCsv, buildLeadsPdf } from "@/lib/leads-export";
 import { normalizeUuidList } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
@@ -34,6 +35,14 @@ export async function GET(request: Request) {
   }
 
   const workspace = await getCurrentWorkspace();
+
+  if (!hasWorkspacePermission(workspace.role, "exports:create")) {
+    return NextResponse.json(
+      { error: permissionDeniedMessage("exports:create") },
+      { status: 403 },
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const format = (searchParams.get("format") || "csv").toLowerCase();
 

@@ -628,7 +628,7 @@ async function main() {
           ownerUserId: userId,
           name: DEMO_WORKSPACE_NAME,
         })
-        .onConflictDoNothing({ target: workspaces.ownerUserId });
+        .onConflictDoNothing({ target: [workspaces.ownerUserId, workspaces.name] });
 
       const [workspace] = await tx
         .select({
@@ -636,7 +636,12 @@ async function main() {
           name: workspaces.name,
         })
         .from(workspaces)
-        .where(eq(workspaces.ownerUserId, userId))
+        .where(
+          and(
+            eq(workspaces.ownerUserId, userId),
+            eq(workspaces.name, DEMO_WORKSPACE_NAME),
+          ),
+        )
         .limit(1);
 
       if (!workspace) {

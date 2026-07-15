@@ -1,6 +1,7 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "@/db";
 import { workspaceMembers, workspaces, type workspaceRoles } from "@/db/schema";
@@ -16,8 +17,15 @@ export type CurrentWorkspace = {
 };
 
 const PERSONAL_WORKSPACE_NAME = "Personal Workspace";
+const ACTIVE_WORKSPACE_COOKIE = "leadflow_active_workspace";
 
-async function getWorkspaceForUser(userId: string) {
+async function getWorkspaceForUser(userId: string, workspaceId?: string) {
+  const conditions = [eq(workspaceMembers.userId, userId)];
+
+  if (workspaceId) {
+    conditions.push(eq(workspaceMembers.workspaceId, workspaceId));
+  }
+
   const [membership] = await db
     .select({
       id: workspaces.id,
@@ -27,60 +35,81 @@ async function getWorkspaceForUser(userId: string) {
     })
     .from(workspaceMembers)
     .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-    .where(eq(workspaceMembers.userId, userId))
+    .where(and(...conditions))
+    .orderBy(desc(workspaceMembers.createdAt))
     .limit(1);
 
   return membership ?? null;
 }
 
 async function createPersonalWorkspace(userId: string) {
-  const [createdWorkspace] = await db
-    .insert(workspaces)
-    .values({
-      ownerUserId: userId,
-      name: PERSONAL_WORKSPACE_NAME,
-    })
-    .onConflictDoNothing({ target: workspaces.ownerUserId })
-    .returning({
-      id: workspaces.id,
-      name: workspaces.name,
-      ownerUserId: workspaces.ownerUserId,
-    });
+  return db.transaction(async (tx) => {
+    const [createdWorkspace] = await tx
+      .insert(workspaces)
+      .values({
+        ownerUserId: userId,
+        name: PERSONAL_WORKSPACE_NAME,
+      })
+      .onConflictDoNothing({ target: [workspaces.ownerUserId, workspaces.name] })
+      .returning({
+        id: workspaces.id,
+        name: workspaces.name,
+        ownerUserId: workspaces.ownerUserId,
+      });
 
-  const workspace =
-    createdWorkspace ??
-    (
-      await db
-        .select({
-          id: workspaces.id,
-          name: workspaces.name,
-          ownerUserId: workspaces.ownerUserId,
-        })
-        .from(workspaces)
-        .where(eq(workspaces.ownerUserId, userId))
-        .limit(1)
-    )[0];
+    const workspace =
+      createdWorkspace ??
+      (
+        await tx
+          .select({
+            id: workspaces.id,
+            name: workspaces.name,
+            ownerUserId: workspaces.ownerUserId,
+          })
+          .from(workspaces)
+          .where(
+            and(
+              eq(workspaces.ownerUserId, userId),
+              eq(workspaces.name, PERSONAL_WORKSPACE_NAME),
+            ),
+          )
+          .limit(1)
+      )[0];
 
-  if (!workspace) {
-    throw new Error("Unable to create personal workspace.");
-  }
+    if (!workspace) {
+      throw new Error("Unable to create personal workspace.");
+    }
 
-  await db.insert(workspaceMembers).values({
-    workspaceId: workspace.id,
-    userId,
-    role: "owner",
-  }).onConflictDoNothing({
-    target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+    await tx
+      .insert(workspaceMembers)
+      .values({
+        workspaceId: workspace.id,
+        userId,
+        role: "owner",
+      })
+      .onConflictDoNothing({
+        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+      });
+
+    return {
+      ...workspace,
+      role: "owner" as const,
+    };
   });
-
-  return {
-    ...workspace,
-    role: "owner" as const,
-  };
 }
 
 export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace> => {
   const userId = await requireUserId();
+  const cookieStore = await cookies();
+  const preferredWorkspaceId = cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value;
+  const preferredWorkspace = preferredWorkspaceId
+    ? await getWorkspaceForUser(userId, preferredWorkspaceId)
+    : null;
+
+  if (preferredWorkspace) {
+    return preferredWorkspace;
+  }
+
   const existingWorkspace = await getWorkspaceForUser(userId);
 
   if (existingWorkspace) {
@@ -100,19 +129,25 @@ export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace> => 
   }
 });
 
-export async function canReadWorkspace(workspaceId: string, userId: string) {
-  const [membership] = await db
-    .select({ id: workspaceMembers.id })
-    .from(workspaceMembers)
-    .where(
-      and(
-        eq(workspaceMembers.workspaceId, workspaceId),
-        eq(workspaceMembers.userId, userId),
-      ),
-    )
-    .limit(1);
+export async function setActiveWorkspace(workspaceId: string) {
+  const userId = await requireUserId();
+  const workspace = await getWorkspaceForUser(userId, workspaceId);
 
-  return Boolean(membership);
+  if (!workspace) {
+    throw new Error("You do not have access to this workspace.");
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(ACTIVE_WORKSPACE_COOKIE, workspace.id, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+}
+
+export async function canReadWorkspace(workspaceId: string, userId: string) {
+  return Boolean(await getWorkspaceForUser(userId, workspaceId));
 }
 
 export async function canManageWorkspace(workspaceId: string, userId: string) {

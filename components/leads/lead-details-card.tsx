@@ -29,6 +29,7 @@ import { groupTasksByTimeline } from "@/lib/tasks";
 type LeadDetailsCardProps = {
   lead: LeadDetailsResult;
   readOnly?: boolean;
+  canDelete?: boolean;
 };
 
 function formatDateTime(date: Date) {
@@ -220,6 +221,7 @@ function SummaryCard({
 export function LeadDetailsCard({
   lead,
   readOnly = false,
+  canDelete = false,
 }: LeadDetailsCardProps) {
   const nextStep = getNextStep(lead.status);
   const groupedTasks = groupTasksByTimeline(
@@ -301,6 +303,7 @@ export function LeadDetailsCard({
               isArchived={lead.isArchived}
               currentStatus={lead.status}
               readOnly={readOnly}
+              canDelete={canDelete}
             />
           </div>
 

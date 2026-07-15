@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLeadDetails } from "@/app/dashboard/leads/[id]/queries";
 import { LeadDetailsCard } from "@/components/leads/lead-details-card";
+import { hasWorkspacePermission } from "@/lib/authorization";
 import { isDemoWorkspace } from "@/lib/demo";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
@@ -21,5 +22,5 @@ export default async function LeadPage({ params }: LeadPageProps) {
     notFound();
   }
 
-  return <LeadDetailsCard lead={lead} readOnly={isDemoWorkspace(workspace)} />;
+  return <LeadDetailsCard lead={lead} readOnly={isDemoWorkspace(workspace)} canDelete={hasWorkspacePermission(workspace.role, "crm:delete")} />;
 }

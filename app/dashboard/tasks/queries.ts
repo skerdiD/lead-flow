@@ -1,7 +1,6 @@
 import { and, asc, desc, eq, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { activityEvents, crmTasks, deals, leads } from "@/db/schema";
-import { requireUserId } from "@/lib/auth";
 import {
   getLocalDateKey,
   groupTasksByTimeline,
@@ -53,13 +52,6 @@ export type TasksPageData = {
   };
 };
 
-function buildTaskOwnerScope(userId: string) {
-  return or(
-    eq(crmTasks.ownerUserId, userId),
-    and(isNull(crmTasks.ownerUserId), eq(crmTasks.userId, userId)),
-  );
-}
-
 function mapTaskRow(row: {
   id: string;
   title: string;
@@ -91,10 +83,7 @@ function mapTaskRow(row: {
 }
 
 async function getScopedTasks() {
-  const [userId, workspace] = await Promise.all([
-    requireUserId(),
-    getCurrentWorkspace(),
-  ]);
+  const workspace = await getCurrentWorkspace();
 
   return db
     .select({
@@ -116,7 +105,7 @@ async function getScopedTasks() {
       leads,
       and(eq(crmTasks.leadId, leads.id), eq(leads.workspaceId, workspace.id)),
     )
-    .where(and(eq(crmTasks.workspaceId, workspace.id), buildTaskOwnerScope(userId)))
+    .where(eq(crmTasks.workspaceId, workspace.id))
     .orderBy(asc(crmTasks.dueAt), desc(crmTasks.createdAt));
 }
 

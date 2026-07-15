@@ -1,5 +1,5 @@
 import { createClerkClient } from "@clerk/backend";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -69,6 +69,10 @@ type SeedLead = {
 
 const DEMO_EMAIL_DOMAIN = "leadflow-demo.example";
 const DEMO_SIGN_IN_EXPIRY_SECONDS = 300;
+const DEMO_ADMIN_EXTERNAL_ID = "leadflow-demo-admin";
+const DEMO_MEMBER_EXTERNAL_ID = "leadflow-demo-member";
+const DEMO_ADMIN_EMAIL = "leadflow-demo-admin@example.com";
+const DEMO_MEMBER_EMAIL = "leadflow-demo-member@example.com";
 const demoDb = drizzle(
   new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -632,6 +636,42 @@ async function ensureDemoUser() {
   return createdUser.id;
 }
 
+async function ensureDemoCollaborator(params: {
+  externalId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}) {
+  const client = getClerkClient();
+  const existing = await client.users.getUserList({
+    externalId: [params.externalId],
+    limit: 1,
+  });
+  const existingUser = existing.data[0];
+
+  if (existingUser) {
+    await client.users.updateUser(existingUser.id, {
+      firstName: params.firstName,
+      lastName: params.lastName,
+      skipLegalChecks: true,
+      deleteSelfEnabled: false,
+      createOrganizationEnabled: false,
+    });
+    return existingUser.id;
+  }
+
+  return (
+    await client.users.createUser({
+      externalId: params.externalId,
+      emailAddress: [params.email],
+      firstName: params.firstName,
+      lastName: params.lastName,
+      skipPasswordRequirement: true,
+      skipLegalChecks: true,
+    })
+  ).id;
+}
+
 async function getWorkspaceSeedHealth(workspaceId: string) {
   const [[leadStats], [taskStats], [activityStats]] = await Promise.all([
     demoDb
@@ -879,48 +919,86 @@ async function seedWorkspaceData(workspaceId: string, userId: string) {
 export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean }) {
   const forceReset = options?.forceReset ?? false;
   const userId = await ensureDemoUser();
+  const [adminUserId, memberUserId] = await Promise.all([
+    ensureDemoCollaborator({
+      externalId: DEMO_ADMIN_EXTERNAL_ID,
+      email: DEMO_ADMIN_EMAIL,
+      firstName: "Demo",
+      lastName: "Admin",
+    }),
+    ensureDemoCollaborator({
+      externalId: DEMO_MEMBER_EXTERNAL_ID,
+      email: DEMO_MEMBER_EMAIL,
+      firstName: "Demo",
+      lastName: "Member",
+    }),
+  ]);
 
-  await demoDb
-    .insert(workspaces)
-    .values({
-      ownerUserId: userId,
-      name: DEMO_WORKSPACE_NAME,
-    })
-    .onConflictDoNothing({ target: workspaces.ownerUserId });
-
-  const [workspace] = await demoDb
-    .select({
-      id: workspaces.id,
-      name: workspaces.name,
-    })
-    .from(workspaces)
-    .where(eq(workspaces.ownerUserId, userId))
-    .limit(1);
-
-  if (!workspace) {
-    throw new Error("Unable to resolve the LeadFlow demo workspace.");
-  }
-
-  if (workspace.name !== DEMO_WORKSPACE_NAME) {
-    await demoDb
-      .update(workspaces)
-      .set({
+  const workspace = await demoDb.transaction(async (tx) => {
+    await tx
+      .insert(workspaces)
+      .values({
+        ownerUserId: userId,
         name: DEMO_WORKSPACE_NAME,
-        updatedAt: new Date(),
       })
-      .where(eq(workspaces.id, workspace.id));
-  }
+      .onConflictDoNothing({ target: [workspaces.ownerUserId, workspaces.name] });
 
-  await demoDb
-    .insert(workspaceMembers)
-    .values({
-      workspaceId: workspace.id,
-      userId,
-      role: "owner",
-    })
-    .onConflictDoNothing({
-      target: [workspaceMembers.workspaceId, workspaceMembers.userId],
-    });
+    const [resolvedWorkspace] = await tx
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+      })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.ownerUserId, userId),
+          eq(workspaces.name, DEMO_WORKSPACE_NAME),
+        ),
+      )
+      .limit(1);
+
+    if (!resolvedWorkspace) {
+      throw new Error("Unable to resolve the LeadFlow demo workspace.");
+    }
+
+    await tx
+      .insert(workspaceMembers)
+      .values({
+        workspaceId: resolvedWorkspace.id,
+        userId,
+        role: "owner",
+      })
+      .onConflictDoUpdate({
+        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+        set: { role: "owner" },
+      });
+
+    await tx
+      .insert(workspaceMembers)
+      .values({
+        workspaceId: resolvedWorkspace.id,
+        userId: adminUserId,
+        role: "admin",
+      })
+      .onConflictDoUpdate({
+        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+        set: { role: "admin" },
+      });
+
+    await tx
+      .insert(workspaceMembers)
+      .values({
+        workspaceId: resolvedWorkspace.id,
+        userId: memberUserId,
+        role: "member",
+      })
+      .onConflictDoUpdate({
+        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+        set: { role: "member" },
+      });
+
+    return resolvedWorkspace;
+  });
 
   const health = await getWorkspaceSeedHealth(workspace.id);
   const needsSeed =
@@ -936,6 +1014,8 @@ export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean
 
   return {
     userId,
+    adminUserId,
+    memberUserId,
     workspaceId: workspace.id,
     workspaceName: DEMO_WORKSPACE_NAME,
     seeded: needsSeed,

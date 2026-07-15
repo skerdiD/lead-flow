@@ -90,6 +90,8 @@ type LeadsTableProps = {
   sortDir: LeadsTableSortDirection;
   archiveView?: boolean;
   readOnly?: boolean;
+  canDelete?: boolean;
+  canExport?: boolean;
 };
 
 type SortableColumn = {
@@ -174,6 +176,8 @@ export function LeadsTable({
   sortDir,
   archiveView = false,
   readOnly = false,
+  canDelete = false,
+  canExport = false,
 }: LeadsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -321,11 +325,13 @@ export function LeadsTable({
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              <ExportLeadsMenu
-                selectedIds={selectedLeadIds}
-                buttonLabel="Export selected"
-                testId="export-selected-leads"
-              />
+              {canExport ? (
+                <ExportLeadsMenu
+                  selectedIds={selectedLeadIds}
+                  buttonLabel="Export selected"
+                  testId="export-selected-leads"
+                />
+              ) : null}
 
               {!archiveView ? (
                 <>
@@ -345,6 +351,7 @@ export function LeadsTable({
                     </Select>
                   </div>
 
+                  {canDelete ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -361,6 +368,7 @@ export function LeadsTable({
                       "Apply stage"
                     )}
                   </Button>
+                  ) : null}
 
                   <Button
                     type="button"
@@ -529,11 +537,11 @@ export function LeadsTable({
                               </Link>
                             </Button>
 
-                            {archiveView || lead.isArchived ? (
+                            {canDelete && (archiveView || lead.isArchived) ? (
                               <RestoreLeadButton leadId={lead.id} />
-                            ) : (
+                            ) : canDelete ? (
                               <DeleteLeadDialog leadId={lead.id} leadName={lead.fullName} />
-                            )}
+                            ) : null}
                           </>
                         ) : null}
                       </div>

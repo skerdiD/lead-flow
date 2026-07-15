@@ -1,0 +1,47 @@
+"use client";
+
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, UsersRound } from "lucide-react";
+import { toast } from "sonner";
+import { acceptWorkspaceInvitationAction } from "@/app/dashboard/settings/actions";
+import { Button } from "@/components/ui/button";
+
+export function AcceptInvitationCard({ token }: { token: string }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-6">
+      <section className="w-full max-w-md rounded-3xl border bg-background p-7 shadow-sm">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border bg-muted/50">
+          <UsersRound className="h-5 w-5 text-foreground" />
+        </div>
+        <h1 className="mt-5 text-2xl font-semibold tracking-tight">Join workspace</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Accept this invitation to join the LeadFlow workspace with the role selected by your teammate.
+        </p>
+        <Button
+          className="mt-6 w-full"
+          disabled={isPending}
+          onClick={() => {
+            startTransition(async () => {
+              const result = await acceptWorkspaceInvitationAction(token);
+              if (!result.success) {
+                toast.error(result.message);
+                return;
+              }
+
+              toast.success(result.message);
+              router.replace("/dashboard");
+              router.refresh();
+            });
+          }}
+        >
+          {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Accept invitation
+        </Button>
+      </section>
+    </main>
+  );
+}

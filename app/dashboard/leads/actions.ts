@@ -13,6 +13,11 @@ import {
   leads,
 } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
+import {
+  hasWorkspacePermission,
+  permissionDeniedMessage,
+  type WorkspacePermission,
+} from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import {
@@ -463,6 +468,15 @@ async function ensureLeadMutationAllowed() {
   return protectLeadMutation();
 }
 
+function workspacePermissionError(
+  role: "owner" | "admin" | "member",
+  permission: WorkspacePermission,
+) {
+  return hasWorkspacePermission(role, permission)
+    ? null
+    : permissionDeniedMessage(permission);
+}
+
 export async function createLeadAction(
   input: LeadFormValues,
 ): Promise<LeadMutationState> {
@@ -470,6 +484,9 @@ export async function createLeadAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
+
+  const permissionError = workspacePermissionError(workspace.role, "crm:create");
+  if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
     return {
@@ -613,6 +630,9 @@ export async function updateLeadAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
+
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
     return {
@@ -810,6 +830,9 @@ export async function updateLeadStatusQuickAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -976,6 +999,9 @@ export async function updateDealStageAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1122,6 +1148,9 @@ export async function updateLeadFollowUpAction(
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFollowUpSchema.safeParse(input);
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1226,6 +1255,9 @@ export async function createFollowUpTaskAction(
   const protection = await ensureLeadMutationAllowed();
   const parsed = crmTaskFormSchema.safeParse(input);
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:create");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1326,6 +1358,9 @@ export async function completeFollowUpTaskAction(
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
+
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
     return {
@@ -1451,6 +1486,9 @@ export async function deleteLeadAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:delete");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1529,6 +1567,9 @@ export async function restoreLeadAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:delete");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1601,6 +1642,9 @@ export async function bulkUpdateLeadStatusAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
+
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
     return {
@@ -1710,6 +1754,9 @@ export async function bulkDeleteLeadsAction(
   const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:delete");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1799,6 +1846,9 @@ export async function createLeadNoteAction(
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
 
+  const permissionError = workspacePermissionError(workspace.role, "crm:create");
+  if (permissionError) return { success: false, message: permissionError };
+
   if (!protection.ok) {
     return {
       success: false,
@@ -1884,6 +1934,9 @@ export async function updateLeadNoteAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
+
+  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
     return {
@@ -1983,6 +2036,9 @@ export async function deleteLeadNoteAction(
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
+
+  const permissionError = workspacePermissionError(workspace.role, "crm:delete");
+  if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
     return {

@@ -1,10 +1,14 @@
 "use server";
 
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { activityEvents, crmTasks, leads } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
+import {
+  hasWorkspacePermission,
+  permissionDeniedMessage,
+} from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { getCurrentWorkspace } from "@/lib/workspaces";
@@ -29,13 +33,6 @@ function revalidateTaskPaths(leadId: string | null) {
     revalidatePath(`/dashboard/leads/${leadId}`);
     revalidatePath(`/dashboard/leads/${leadId}/edit`);
   }
-}
-
-function buildTaskOwnerScope(userId: string) {
-  return or(
-    eq(crmTasks.ownerUserId, userId),
-    and(isNull(crmTasks.ownerUserId), eq(crmTasks.userId, userId)),
-  );
 }
 
 async function createTaskActivity(params: {
@@ -73,6 +70,13 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
     };
   }
 
+  if (!hasWorkspacePermission(workspace.role, "crm:update")) {
+    return {
+      success: false,
+      message: permissionDeniedMessage("crm:update"),
+    };
+  }
+
   if (isDemoWorkspace(workspace)) {
     return {
       success: false,
@@ -98,7 +102,6 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
         and(
           eq(crmTasks.id, taskId),
           eq(crmTasks.workspaceId, workspace.id),
-          buildTaskOwnerScope(userId),
         ),
       )
       .limit(1);
@@ -128,7 +131,6 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
         and(
           eq(crmTasks.id, taskId),
           eq(crmTasks.workspaceId, workspace.id),
-          buildTaskOwnerScope(userId),
         ),
       )
       .returning({
@@ -167,8 +169,7 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
 }
 
 export async function reopenTaskAction(taskId: string): Promise<TaskMutationState> {
-  const [userId, workspace, protection] = await Promise.all([
-    requireUserId(),
+  const [workspace, protection] = await Promise.all([
     getCurrentWorkspace(),
     protectLeadMutation(),
   ]);
@@ -177,6 +178,13 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
     return {
       success: false,
       message: protection.message,
+    };
+  }
+
+  if (!hasWorkspacePermission(workspace.role, "crm:update")) {
+    return {
+      success: false,
+      message: permissionDeniedMessage("crm:update"),
     };
   }
 
@@ -198,7 +206,6 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
         and(
           eq(crmTasks.id, taskId),
           eq(crmTasks.workspaceId, workspace.id),
-          buildTaskOwnerScope(userId),
         ),
       )
       .limit(1);
@@ -221,7 +228,6 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
         and(
           eq(crmTasks.id, taskId),
           eq(crmTasks.workspaceId, workspace.id),
-          buildTaskOwnerScope(userId),
         ),
       )
       .returning({

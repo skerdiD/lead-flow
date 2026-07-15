@@ -1,24 +1,11 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityEvents } from "@/db/schema";
+import { activityEvents, type activityEventTypes } from "@/db/schema";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type ActivityFeedItem = {
   id: string;
-  eventType:
-    | "lead_created"
-    | "lead_updated"
-    | "lead_status_changed"
-    | "lead_deleted"
-    | "lead_archived"
-    | "lead_restored"
-    | "lead_note_added"
-    | "lead_note_updated"
-    | "lead_note_deleted"
-    | "task_created"
-    | "task_completed"
-    | "deal_stage_changed"
-    | "lead_qualified";
+  eventType: (typeof activityEventTypes)[number];
   message: string;
   leadId: string | null;
   leadName: string | null;

@@ -9,6 +9,7 @@ import { LeadFilters } from "@/components/leads/lead-filters";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { Button } from "@/components/ui/button";
 import { isDemoWorkspace } from "@/lib/demo";
+import { hasWorkspacePermission } from "@/lib/authorization";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 type LeadsPageProps = {
@@ -28,6 +29,8 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const params = (await searchParams) ?? {};
   const workspace = await getCurrentWorkspace();
   const readOnly = isDemoWorkspace(workspace);
+  const canExport = hasWorkspacePermission(workspace.role, "exports:create");
+  const canDelete = hasWorkspacePermission(workspace.role, "crm:delete");
 
   const tableData = await getLeadsList({
     search: params.search,
@@ -63,7 +66,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         className="shrink-0"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" />
+            {canExport ? <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" /> : null}
             {!readOnly ? (
               <Button asChild data-testid="add-lead-btn">
                 <Link href="/dashboard/leads/new">
@@ -109,6 +112,8 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           sortDir={tableData.sortDir}
           archiveView={isArchiveView}
           readOnly={readOnly}
+          canDelete={canDelete}
+          canExport={canExport}
         />
       )}
     </div>

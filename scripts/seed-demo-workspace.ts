@@ -1,9 +1,9 @@
 import { loadEnvConfig } from "@next/env";
-import { ensureDemoWorkspaceSeeded } from "../lib/demo.server";
 
 loadEnvConfig(process.cwd());
 
 async function main() {
+  const { ensureDemoWorkspaceSeeded } = await import("../lib/demo.server");
   const result = await ensureDemoWorkspaceSeeded({ forceReset: true });
 
   console.log(`Demo workspace ready: ${result.workspaceName} (${result.workspaceId})`);
@@ -12,7 +12,7 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
   console.error(`Demo seed failed: ${message}`);
   process.exitCode = 1;
 });

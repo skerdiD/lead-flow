@@ -38,6 +38,7 @@ type LeadQuickActionsProps = {
   isArchived: boolean;
   currentStatus: LeadStatus;
   readOnly?: boolean;
+  canDelete?: boolean;
 };
 
 function scrollToSection(id: string) {
@@ -54,6 +55,7 @@ export function LeadQuickActions({
   isArchived,
   currentStatus,
   readOnly = false,
+  canDelete = false,
 }: LeadQuickActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -139,11 +141,13 @@ export function LeadQuickActions({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {isArchived ? (
-            <RestoreLeadButton leadId={leadId} variant="button" />
-          ) : (
-            <DeleteLeadDialog leadId={leadId} leadName={leadName} variant="button" />
-          )}
+          {canDelete ? (
+            isArchived ? (
+              <RestoreLeadButton leadId={leadId} variant="button" />
+            ) : (
+              <DeleteLeadDialog leadId={leadId} leadName={leadName} variant="button" />
+            )
+          ) : null}
         </>
       ) : null}
     </div>

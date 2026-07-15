@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -46,14 +48,25 @@ export const activityEventTypes = [
   "task_completed",
   "deal_stage_changed",
   "lead_qualified",
+  "member_invited",
+  "invitation_accepted",
+  "member_removed",
+  "member_role_changed",
+  "ownership_transferred",
 ] as const;
 export const activityEventTypeEnum = pgEnum(
   "activity_event_type",
   activityEventTypes,
 );
 
-export const workspaceRoles = ["owner", "member"] as const;
+export const workspaceRoles = ["owner", "admin", "member"] as const;
 export const workspaceRoleEnum = pgEnum("workspace_role", workspaceRoles);
+
+export const invitationStatuses = ["pending", "accepted", "revoked"] as const;
+export const invitationStatusEnum = pgEnum(
+  "workspace_invitation_status",
+  invitationStatuses,
+);
 
 export const dealStages = [
   "new",
@@ -89,7 +102,10 @@ export const workspaces = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("workspaces_owner_user_id_unique").on(table.ownerUserId),
+    uniqueIndex("workspaces_owner_name_unique").on(
+      table.ownerUserId,
+      table.name,
+    ),
   ],
 );
 
@@ -113,6 +129,53 @@ export const workspaceMembers = pgTable(
       table.userId,
     ),
     index("workspace_members_user_id_idx").on(table.userId),
+    index("workspace_members_workspace_role_idx").on(
+      table.workspaceId,
+      table.role,
+    ),
+  ],
+);
+
+export const workspaceInvitations = pgTable(
+  "workspace_invitations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 255 }).notNull(),
+    role: workspaceRoleEnum("role").notNull().default("member"),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    status: invitationStatusEnum("status").notNull().default("pending"),
+    expiresAt: timestamp("expires_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    acceptedAt: timestamp("accepted_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    acceptedByUserId: varchar("accepted_by_user_id", { length: 255 }),
+    createdByUserId: varchar("created_by_user_id", { length: 255 }).notNull(),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      "workspace_invitations_role_non_owner",
+      sql`${table.role} <> 'owner'`,
+    ),
+    uniqueIndex("workspace_invitations_token_hash_unique").on(table.tokenHash),
+    index("workspace_invitations_workspace_status_idx").on(
+      table.workspaceId,
+      table.status,
+    ),
+    index("workspace_invitations_workspace_email_idx").on(
+      table.workspaceId,
+      table.email,
+    ),
   ],
 );
 

@@ -8,6 +8,7 @@ import {
   deals,
   leadNotes,
   leads,
+  type activityEventTypes,
 } from "@/db/schema";
 import { isUuid } from "@/lib/uuid";
 import { requireUserId } from "@/lib/auth";
@@ -47,20 +48,7 @@ export type LeadDetailsResult = {
   }>;
   activityEntries: Array<{
     id: string;
-    eventType:
-      | "lead_created"
-      | "lead_updated"
-      | "lead_status_changed"
-      | "lead_deleted"
-      | "lead_archived"
-      | "lead_restored"
-      | "lead_note_added"
-      | "lead_note_updated"
-      | "lead_note_deleted"
-      | "task_created"
-      | "task_completed"
-      | "deal_stage_changed"
-      | "lead_qualified";
+    eventType: (typeof activityEventTypes)[number];
     message: string;
     createdAt: Date;
   }>;

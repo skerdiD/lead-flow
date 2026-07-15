@@ -1,7 +1,10 @@
 import { Bell, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { TeamMembersSection } from "@/components/settings/team-members-section";
 import { Button } from "@/components/ui/button";
+import { hasWorkspacePermission, workspaceRoleLabels } from "@/lib/authorization";
 import { requireCurrentUser } from "@/lib/auth";
+import { getWorkspaceTeam } from "@/lib/workspace-team";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 function SettingsSection({
@@ -89,6 +92,7 @@ export default async function SettingsPage() {
     "Account owner";
 
   const primaryEmail = primaryEmailAddress || "No email available";
+  const members = await getWorkspaceTeam(workspace);
 
   return (
     <div className="space-y-6">
@@ -163,7 +167,7 @@ export default async function SettingsPage() {
               <SettingRow
                 label="Current workspace"
                 value={workspace.name}
-                hint={`Your role in this workspace is ${workspace.role}.`}
+                hint={`Your role in this workspace is ${workspaceRoleLabels[workspace.role]}.`}
               />
               <SettingRow
                 label="Data ownership"
@@ -193,6 +197,14 @@ export default async function SettingsPage() {
           </SettingsSection>
         </div>
       </div>
+
+      <TeamMembersSection
+        workspaceName={workspace.name}
+        members={members}
+        canInvite={hasWorkspacePermission(workspace.role, "members:invite")}
+        canTransferOwnership={hasWorkspacePermission(workspace.role, "workspace:transfer_ownership")}
+        canDeleteWorkspace={hasWorkspacePermission(workspace.role, "workspace:delete")}
+      />
     </div>
   );
 }
