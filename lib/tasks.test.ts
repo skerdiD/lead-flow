@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatTaskDueDate,
+  getTaskCountSummary,
   getTaskTimelineBucket,
   groupTasksByTimeline,
   normalizeTaskStatus,
@@ -114,6 +115,16 @@ describe("task helpers", () => {
   it("formats task dates without shifting the saved due day", () => {
     expect(formatTaskDueDate(new Date("2026-07-06T23:59:59.999Z"))).toBe(
       "06 Jul 2026",
+    );
+  });
+
+  it("formats task count summaries for zero, singular, and plural states", () => {
+    expect(getTaskCountSummary("dueToday", 0)).toBe("No tasks due today");
+    expect(getTaskCountSummary("overdue", 1)).toBe("1 task needs attention");
+    expect(getTaskCountSummary("overdue", 13)).toBe("13 tasks need attention");
+    expect(getTaskCountSummary("upcoming", 1)).toBe("1 task planned next");
+    expect(getTaskCountSummary("completed", 2)).toBe(
+      "2 tasks completed recently",
     );
   });
 });

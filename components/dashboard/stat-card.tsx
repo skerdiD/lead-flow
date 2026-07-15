@@ -12,6 +12,7 @@ type StatCardProps = {
   tone?: StatCardTone;
   badge?: string;
   helper?: string;
+  compact?: boolean;
 };
 
 const toneStyles: Record<
@@ -58,13 +59,15 @@ export function StatCard({
   tone = "neutral",
   badge,
   helper,
+  compact = false,
 }: StatCardProps) {
   const style = toneStyles[tone];
 
   return (
     <article
       className={cn(
-        "group relative overflow-hidden rounded-3xl border bg-background p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        "group relative overflow-hidden border bg-background shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        compact ? "rounded-2xl p-4" : "rounded-3xl p-5",
         className,
       )}
     >
@@ -75,24 +78,44 @@ export function StatCard({
         )}
       />
 
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="space-y-2">
+      <div className={cn("relative flex items-start justify-between", compact ? "gap-3" : "gap-4")}>
+        <div className={compact ? "space-y-1" : "space-y-2"}>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {title}
           </p>
-          <p className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
+          <p
+            className={cn(
+              "font-semibold tracking-tight text-foreground tabular-nums",
+              compact ? "text-3xl leading-none" : "text-3xl",
+            )}
+          >
+            {value}
+          </p>
           {helper ? (
-            <p className="text-xs font-medium text-muted-foreground">{helper}</p>
+            <p
+              className={cn(
+                "font-medium text-muted-foreground",
+                compact ? "pt-0.5 text-sm leading-5" : "text-xs",
+              )}
+            >
+              {helper}
+            </p>
           ) : null}
         </div>
 
-        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl border", style.iconWrap)}>
-          <Icon className={cn("h-5 w-5", style.icon)} />
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center border",
+            compact ? "h-9 w-9 rounded-xl" : "h-11 w-11 rounded-2xl",
+            style.iconWrap,
+          )}
+        >
+          <Icon className={cn(compact ? "h-4 w-4" : "h-5 w-5", style.icon)} />
         </div>
       </div>
 
       {description || badge ? (
-        <div className="relative mt-5 flex items-center justify-between gap-3">
+        <div className={cn("relative flex items-center justify-between gap-3", compact ? "mt-3" : "mt-5")}>
           {description ? (
             <p className="text-sm leading-6 text-muted-foreground">{description}</p>
           ) : null}

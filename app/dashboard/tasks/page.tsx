@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TaskSections } from "@/components/tasks/task-sections";
 import { isDemoWorkspace } from "@/lib/demo";
+import { getTaskCountSummary } from "@/lib/tasks";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export default async function TasksPage() {
@@ -15,39 +16,47 @@ export default async function TasksPage() {
   const readOnly = isDemoWorkspace(workspace);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Daily execution"
         title="Tasks"
         description="Manage your follow-ups and upcoming tasks."
+        compact
       />
 
       {readOnly ? <DemoReadOnlyHint /> : null}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Due today"
           value={taskData.counts.dueToday}
           icon={Clock3}
           tone="warning"
+          helper={getTaskCountSummary("dueToday", taskData.counts.dueToday)}
+          compact
         />
         <StatCard
           title="Overdue"
           value={taskData.counts.overdue}
           icon={TimerReset}
           tone="warning"
+          helper={getTaskCountSummary("overdue", taskData.counts.overdue)}
+          compact
         />
         <StatCard
           title="Upcoming"
           value={taskData.counts.upcoming}
           icon={ListTodo}
           tone="info"
+          helper={getTaskCountSummary("upcoming", taskData.counts.upcoming)}
+          compact
         />
         <StatCard
           title="Completed"
           value={taskData.counts.completed}
           icon={CheckCircle2}
           tone="positive"
+          helper={getTaskCountSummary("completed", taskData.counts.completed)}
+          compact
         />
       </section>
 

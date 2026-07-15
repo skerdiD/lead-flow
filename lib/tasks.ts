@@ -24,6 +24,7 @@ export type TaskListItem = {
 };
 
 export type GroupedTasks = Record<TaskTimelineBucket, TaskListItem[]>;
+export type TaskCountSummaryKind = TaskTimelineBucket;
 
 export const TASK_BUCKET_LABELS: Record<TaskTimelineBucket, string> = {
   dueToday: "Due today",
@@ -163,6 +164,28 @@ export function formatTaskDueDate(date: Date | null) {
 
 export function getTaskPriorityLabel(priority: TaskPriority) {
   return TASK_PRIORITY_LABELS[priority];
+}
+
+export function getTaskCountSummary(
+  kind: TaskCountSummaryKind,
+  count: number,
+) {
+  const taskLabel = `${count} task${count === 1 ? "" : "s"}`;
+
+  switch (kind) {
+    case "dueToday":
+      return count === 0 ? "No tasks due today" : `${taskLabel} due today`;
+    case "overdue":
+      return count === 0
+        ? "No overdue tasks"
+        : `${taskLabel} need${count === 1 ? "s" : ""} attention`;
+    case "upcoming":
+      return count === 0 ? "No upcoming tasks" : `${taskLabel} planned next`;
+    case "completed":
+      return count === 0
+        ? "No tasks completed recently"
+        : `${taskLabel} completed recently`;
+  }
 }
 
 export function getTaskStatusLabel(status: LegacyTaskStatus) {
