@@ -63,7 +63,7 @@ async function writeWorkspaceActivity(params: {
   });
 }
 
-async function getCurrentWorkspaceActor(permission: "members:invite" | "members:remove" | "members:change_role" | "workspace:transfer_ownership" | "workspace:delete") {
+async function getCurrentWorkspaceActor(permission: "members:manage" | "ownership:transfer" | "workspace:delete") {
   const [userId, workspace] = await Promise.all([requireUserId(), getCurrentWorkspace()]);
 
   if (isDemoWorkspace(workspace)) {
@@ -86,7 +86,7 @@ export async function inviteWorkspaceMemberAction(input: {
     return { success: false, message: "Enter a valid email address and role." };
   }
 
-  const actor = await getCurrentWorkspaceActor("members:invite");
+  const actor = await getCurrentWorkspaceActor("members:manage");
   if (actor.error) return { success: false, message: actor.error };
 
   try {
@@ -208,7 +208,7 @@ export async function updateWorkspaceMemberRoleAction(input: {
   const parsed = updateWorkspaceMemberRoleSchema.safeParse(input);
   if (!parsed.success) return { success: false, message: "Select a valid team role." };
 
-  const actor = await getCurrentWorkspaceActor("members:change_role");
+  const actor = await getCurrentWorkspaceActor("members:manage");
   if (actor.error) return { success: false, message: actor.error };
 
   try {
@@ -259,7 +259,7 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
   const parsed = updateWorkspaceMemberRoleSchema.shape.memberId.safeParse(memberId);
   if (!parsed.success) return { success: false, message: "This team member could not be found." };
 
-  const actor = await getCurrentWorkspaceActor("members:remove");
+  const actor = await getCurrentWorkspaceActor("members:manage");
   if (actor.error) return { success: false, message: actor.error };
 
   try {
@@ -309,7 +309,7 @@ export async function transferWorkspaceOwnershipAction(input: { memberId: string
   const parsed = transferWorkspaceOwnershipSchema.safeParse(input);
   if (!parsed.success) return { success: false, message: "Select a valid team member." };
 
-  const actor = await getCurrentWorkspaceActor("workspace:transfer_ownership");
+  const actor = await getCurrentWorkspaceActor("ownership:transfer");
   if (actor.error) return { success: false, message: actor.error };
 
   try {

@@ -27,6 +27,8 @@ type LeadNotesPanelProps = {
   notes: LeadNoteItem[];
   currentUserId: string;
   readOnly?: boolean;
+  canManageAllNotes?: boolean;
+  canDeleteNotes?: boolean;
 };
 
 const MAX_NOTE_LENGTH = 2000;
@@ -59,6 +61,8 @@ export function LeadNotesPanel({
   notes,
   currentUserId,
   readOnly = false,
+  canManageAllNotes = false,
+  canDeleteNotes = false,
 }: LeadNotesPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -181,6 +185,7 @@ export function LeadNotesPanel({
         ) : (
           sortedNotes.map((note) => {
             const isEditing = editingNoteId === note.id;
+            const canEditNote = canManageAllNotes || note.userId === currentUserId;
             const wasUpdated = note.updatedAt.getTime() !== note.createdAt.getTime();
             const authorLabel = getAuthorLabel(note.userId, currentUserId);
 
@@ -231,9 +236,9 @@ export function LeadNotesPanel({
                         )}
                       </Button>
                     </div>
-                  ) : !readOnly ? (
+                  ) : !readOnly && canEditNote ? (
                     <div className="flex items-center gap-1">
-                      <Button
+                      {canDeleteNotes ? <Button
                         type="button"
                         size="icon-sm"
                         variant="ghost"
@@ -245,7 +250,7 @@ export function LeadNotesPanel({
                         aria-label="Edit note"
                       >
                         <Pencil className="h-4 w-4" />
-                      </Button>
+                      </Button> : null}
                       <Button
                         type="button"
                         size="icon-sm"

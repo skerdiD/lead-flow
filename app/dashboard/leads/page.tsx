@@ -30,6 +30,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const workspace = await getCurrentWorkspace();
   const readOnly = isDemoWorkspace(workspace);
   const canExport = hasWorkspacePermission(workspace.role, "exports:create");
+  const canUpdate = hasWorkspacePermission(workspace.role, "crm:update_all") || hasWorkspacePermission(workspace.role, "crm:update_assigned");
   const canDelete = hasWorkspacePermission(workspace.role, "crm:delete");
 
   const tableData = await getLeadsList({
@@ -112,6 +113,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           sortDir={tableData.sortDir}
           archiveView={isArchiveView}
           readOnly={readOnly}
+          canUpdate={canUpdate}
           canDelete={canDelete}
           canExport={canExport}
         />

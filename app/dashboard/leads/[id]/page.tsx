@@ -22,5 +22,5 @@ export default async function LeadPage({ params }: LeadPageProps) {
     notFound();
   }
 
-  return <LeadDetailsCard lead={lead} readOnly={isDemoWorkspace(workspace)} canDelete={hasWorkspacePermission(workspace.role, "crm:delete")} />;
+  return <LeadDetailsCard lead={lead} readOnly={isDemoWorkspace(workspace)} canManageAllCrm={hasWorkspacePermission(workspace.role, "crm:update_all")} canDelete={hasWorkspacePermission(workspace.role, "crm:delete")} />;
 }

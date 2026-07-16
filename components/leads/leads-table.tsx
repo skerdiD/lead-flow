@@ -90,6 +90,7 @@ type LeadsTableProps = {
   sortDir: LeadsTableSortDirection;
   archiveView?: boolean;
   readOnly?: boolean;
+  canUpdate?: boolean;
   canDelete?: boolean;
   canExport?: boolean;
 };
@@ -176,6 +177,7 @@ export function LeadsTable({
   sortDir,
   archiveView = false,
   readOnly = false,
+  canUpdate = false,
   canDelete = false,
   canExport = false,
 }: LeadsTableProps) {
@@ -335,7 +337,7 @@ export function LeadsTable({
 
               {!archiveView ? (
                 <>
-                  <div className="w-[170px]">
+                  {canUpdate ? <div className="w-[170px]">
                     <Select value={bulkStatus || "none"} onValueChange={setBulkStatus} disabled={isPending}>
                       <SelectTrigger data-testid="bulk-status-select">
                         <SelectValue placeholder="Set stage" />
@@ -349,37 +351,39 @@ export function LeadsTable({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> : null}
 
-                  {canDelete ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleBulkStatusApply}
-                    disabled={!bulkStatus || bulkStatus === "none" || isPending}
-                    data-testid="bulk-apply-stage-btn"
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      "Apply stage"
-                    )}
-                  </Button>
+                  {canUpdate ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBulkStatusApply}
+                      disabled={!bulkStatus || bulkStatus === "none" || isPending}
+                      data-testid="bulk-apply-stage-btn"
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        "Apply stage"
+                      )}
+                    </Button>
                   ) : null}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDeleteOpen(true)}
-                    disabled={isPending}
-                    data-testid="bulk-delete-btn"
-                  >
-                    <Archive className="mr-2 h-4 w-4" />
-                    Archive selected
-                  </Button>
+                  {canDelete ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDeleteOpen(true)}
+                      disabled={isPending}
+                      data-testid="bulk-delete-btn"
+                    >
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive selected
+                    </Button>
+                  ) : null}
                 </>
               ) : null}
             </div>

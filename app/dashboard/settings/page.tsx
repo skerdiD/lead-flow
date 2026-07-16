@@ -93,7 +93,8 @@ export default async function SettingsPage() {
     "Account owner";
 
   const primaryEmail = primaryEmailAddress || "No email available";
-  const members = await getWorkspaceTeam(workspace);
+  const canViewMembers = hasWorkspacePermission(workspace.role, "members:view");
+  const members = canViewMembers ? await getWorkspaceTeam(workspace) : [];
   const demoWorkspace = isDemoWorkspace(workspace);
 
   return (
@@ -202,21 +203,36 @@ export default async function SettingsPage() {
               />
               <SettingRow
                 label="Lead access control"
-                value="Workspace member access"
-                hint="Only workspace members can read or manage CRM records in that workspace."
+                value={
+                  workspace.role === "member"
+                    ? "Assigned CRM records"
+                    : "Workspace CRM access"
+                }
+                hint={
+                  workspace.role === "member"
+                    ? "You can view and update records assigned to you."
+                    : "Owners and Admins can manage all CRM records in this workspace."
+                }
               />
             </div>
           </SettingsSection>
         </div>
       </div>
 
-      <TeamMembersSection
-        workspaceName={workspace.name}
-        members={members}
-        canInvite={!demoWorkspace && hasWorkspacePermission(workspace.role, "members:invite")}
-        canTransferOwnership={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:transfer_ownership")}
-        canDeleteWorkspace={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:delete")}
-      />
+      {canViewMembers ? (
+        <TeamMembersSection
+          workspaceName={workspace.name}
+          members={members}
+          canInvite={!demoWorkspace && hasWorkspacePermission(workspace.role, "members:manage")}
+          canTransferOwnership={!demoWorkspace && hasWorkspacePermission(workspace.role, "ownership:transfer")}
+          canDeleteWorkspace={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:delete")}
+        />
+      ) : (
+        <section className="rounded-3xl border bg-muted/20 px-6 py-5 text-sm leading-6 text-muted-foreground">
+          Team administration is available to workspace Owners and Admins. Your
+          assigned CRM work remains available from the dashboard.
+        </section>
+      )}
     </div>
   );
 }

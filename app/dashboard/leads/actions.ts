@@ -14,9 +14,13 @@ import {
 } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
 import {
+  canAccessRecord,
+  getRecordUpdateConditions,
+  getWorkspaceAuthorizationContext,
   hasWorkspacePermission,
   permissionDeniedMessage,
   type WorkspacePermission,
+  type WorkspaceRole,
 } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
@@ -364,6 +368,7 @@ async function saveLeadDeal(params: {
   expectedCloseDate?: string;
   closedDate?: string;
   lostReason?: string;
+  authorizationContext?: ReturnType<typeof getWorkspaceAuthorizationContext>;
 }) {
   const client = params.client ?? db;
 
@@ -379,12 +384,27 @@ async function saveLeadDeal(params: {
       id: deals.id,
       stage: deals.stage,
       closedAt: deals.closedAt,
+      ownerUserId: deals.ownerUserId,
     })
     .from(deals)
     .where(and(eq(deals.leadId, params.leadId), eq(deals.workspaceId, params.workspaceId)))
     .limit(1);
 
   if (existingDeal) {
+    if (
+      params.authorizationContext &&
+      !canAccessRecord(
+        params.authorizationContext,
+        {
+          workspaceId: params.workspaceId,
+          assignedUserId: existingDeal.ownerUserId,
+        },
+        "update",
+      )
+    ) {
+      throw new Error("This opportunity could not be found or you do not have permission to update it.");
+    }
+
     const [updatedDeal] = await client
       .update(deals)
       .set({
@@ -478,6 +498,26 @@ function workspacePermissionError(
   return hasWorkspacePermission(role, permission)
     ? null
     : permissionDeniedMessage(permission);
+}
+
+function crmUpdatePermissionError(role: "owner" | "admin" | "member") {
+  return hasWorkspacePermission(role, "crm:update_all") ||
+    hasWorkspacePermission(role, "crm:update_assigned")
+    ? null
+    : permissionDeniedMessage("crm:update_assigned");
+}
+
+function canAccessWorkspaceRecord(
+  workspace: { id: string; role: WorkspaceRole },
+  userId: string,
+  assignedUserId: string | null,
+  action: "view" | "update" | "delete" | "assign",
+) {
+  return canAccessRecord(
+    getWorkspaceAuthorizationContext(workspace, userId),
+    { workspaceId: workspace.id, assignedUserId },
+    action,
+  );
 }
 
 export async function createLeadAction(
@@ -576,6 +616,7 @@ export async function createLeadAction(
         expectedCloseDate: parsed.data.expectedCloseDate,
         closedDate: parsed.data.closedDate,
         lostReason: parsed.data.lostReason,
+        authorizationContext: getWorkspaceAuthorizationContext(workspace, userId),
       });
 
       return { createdLead: lead, createdDeal: deal };
@@ -634,7 +675,7 @@ export async function updateLeadAction(
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFormSchema.safeParse(input);
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -664,13 +705,22 @@ export async function updateLeadAction(
       .select({
         id: leads.id,
         fullName: leads.fullName,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
         status: leads.status,
         accountId: leads.accountId,
         primaryContactId: leads.primaryContactId,
-        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+      .where(
+        and(
+          eq(leads.id, leadId),
+          ...getRecordUpdateConditions(
+            getWorkspaceAuthorizationContext(workspace, userId),
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
+        ),
+      )
       .limit(1);
 
     if (!existingLead) {
@@ -678,6 +728,10 @@ export async function updateLeadAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (!canAccessWorkspaceRecord(workspace, userId, existingLead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
     }
 
     const reconciled = reconcileLeadAndDealStage(
@@ -722,7 +776,16 @@ export async function updateLeadAction(
           followUpStatus: parsed.data.followUpStatus,
           updatedAt: new Date(),
         })
-        .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+        .where(
+          and(
+            eq(leads.id, leadId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+          ),
+        )
         .returning({
           id: leads.id,
           fullName: leads.fullName,
@@ -752,6 +815,7 @@ export async function updateLeadAction(
         expectedCloseDate: parsed.data.expectedCloseDate,
         closedDate: parsed.data.closedDate,
         lostReason: parsed.data.lostReason,
+        authorizationContext: getWorkspaceAuthorizationContext(workspace, userId),
       });
 
       const notificationUserId = existingLead.assignedOwnerUserId ?? userId;
@@ -853,7 +917,7 @@ export async function updateLeadStatusQuickAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -886,7 +950,16 @@ export async function updateLeadStatusQuickAction(
         assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+      .where(
+        and(
+          eq(leads.id, leadId),
+          ...getRecordUpdateConditions(
+            getWorkspaceAuthorizationContext(workspace, userId),
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
+        ),
+      )
       .limit(1);
 
     if (!existingLead) {
@@ -894,6 +967,10 @@ export async function updateLeadStatusQuickAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (!canAccessWorkspaceRecord(workspace, userId, existingLead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
     }
 
     if (existingLead.status === status) {
@@ -904,7 +981,9 @@ export async function updateLeadStatusQuickAction(
       };
     }
 
-    const syncedDealStage = dealStageForLeadStatus(status);
+    const syncedDealStage = hasWorkspacePermission(workspace.role, "crm:update_all")
+      ? dealStageForLeadStatus(status)
+      : null;
     const { updatedLead, updatedDeal } = await db.transaction(async (tx) => {
       const [lead] = await tx
         .update(leads)
@@ -912,7 +991,16 @@ export async function updateLeadStatusQuickAction(
           status,
           updatedAt: new Date(),
         })
-        .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+        .where(
+          and(
+            eq(leads.id, leadId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+          ),
+        )
         .returning({
           id: leads.id,
           fullName: leads.fullName,
@@ -1041,7 +1129,7 @@ export async function updateDealStageAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -1096,6 +1184,15 @@ export async function updateDealStageAction(
       };
     }
 
+    if (!canAccessWorkspaceRecord(
+      workspace,
+      userId,
+      existingDeal.ownerUserId ?? existingDeal.assignedOwnerUserId,
+      "update",
+    )) {
+      return { success: false, message: "This opportunity could not be found or you do not have permission to update it." };
+    }
+
     if (existingDeal.stage === stage) {
       return {
         success: true,
@@ -1104,7 +1201,14 @@ export async function updateDealStageAction(
       };
     }
 
-    const syncedLeadStatus = leadStatusForDealStage(stage);
+    const syncedLeadStatus = canAccessWorkspaceRecord(
+      workspace,
+      userId,
+      existingDeal.assignedOwnerUserId,
+      "update",
+    )
+      ? leadStatusForDealStage(stage)
+      : null;
     const { updatedDeal, updatedLead } = await db.transaction(async (tx) => {
       const [deal] = await tx
         .update(deals)
@@ -1115,7 +1219,16 @@ export async function updateDealStageAction(
           lostReason: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(deals.id, dealId), eq(deals.workspaceId, workspace.id)))
+        .where(
+          and(
+            eq(deals.id, dealId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              deals.workspaceId,
+              deals.ownerUserId,
+            ),
+          ),
+        )
         .returning({ stage: deals.stage });
 
       const notificationUserId =
@@ -1144,7 +1257,16 @@ export async function updateDealStageAction(
           status: syncedLeadStatus,
           updatedAt: new Date(),
         })
-        .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+        .where(
+          and(
+            eq(leads.id, leadId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+          ),
+        )
         .returning({ status: leads.status });
 
       return { updatedDeal: deal, updatedLead: lead ?? null };
@@ -1208,7 +1330,7 @@ export async function updateLeadFollowUpAction(
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadFollowUpSchema.safeParse(input);
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -1238,11 +1360,21 @@ export async function updateLeadFollowUpAction(
       .select({
         id: leads.id,
         fullName: leads.fullName,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
         nextFollowUpDate: leads.nextFollowUpDate,
         followUpNote: leads.followUpNote,
       })
       .from(leads)
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+      .where(
+        and(
+          eq(leads.id, leadId),
+          ...getRecordUpdateConditions(
+            getWorkspaceAuthorizationContext(workspace, userId),
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
+        ),
+      )
       .limit(1);
 
     if (!existingLead) {
@@ -1250,6 +1382,10 @@ export async function updateLeadFollowUpAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (!canAccessWorkspaceRecord(workspace, userId, existingLead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
     }
 
     const nextFollowUpDate = parseDateInput(parsed.data.nextFollowUpDate);
@@ -1264,7 +1400,16 @@ export async function updateLeadFollowUpAction(
         followUpStatus: parsed.data.followUpStatus,
         updatedAt: new Date(),
       })
-      .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)));
+      .where(
+        and(
+          eq(leads.id, leadId),
+          ...getRecordUpdateConditions(
+            getWorkspaceAuthorizationContext(workspace, userId),
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
+        ),
+      );
 
     const hadFollowUp =
       Boolean(existingLead.nextFollowUpDate) ||
@@ -1359,6 +1504,10 @@ export async function createFollowUpTaskAction(
       };
     }
 
+    if (!canAccessWorkspaceRecord(workspace, userId, lead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
+    }
+
     const [leadDeal] = await db
       .select({ id: deals.id })
       .from(deals)
@@ -1373,7 +1522,9 @@ export async function createFollowUpTaskAction(
         .values({
           workspaceId: workspace.id,
           userId,
-          ownerUserId: lead.assignedOwnerUserId ?? userId,
+          ownerUserId: hasWorkspacePermission(workspace.role, "crm:assign")
+            ? lead.assignedOwnerUserId ?? userId
+            : userId,
           leadId,
           dealId: leadDeal?.id ?? null,
           contactId: lead.primaryContactId,
@@ -1385,7 +1536,9 @@ export async function createFollowUpTaskAction(
         })
         .returning({ id: crmTasks.id });
 
-      const notificationUserId = lead.assignedOwnerUserId ?? userId;
+      const notificationUserId = hasWorkspacePermission(workspace.role, "crm:assign")
+        ? lead.assignedOwnerUserId ?? userId
+        : userId;
       if (!task || notificationUserId === userId) return;
 
       const actionUrl = `/dashboard/leads/${leadId}#lead-tasks`;
@@ -1470,7 +1623,7 @@ export async function completeFollowUpTaskAction(
   const workspace = await getCurrentWorkspace();
   const protection = await ensureLeadMutationAllowed();
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -1492,6 +1645,7 @@ export async function completeFollowUpTaskAction(
       .select({
         id: leads.id,
         fullName: leads.fullName,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
       .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
@@ -1504,11 +1658,17 @@ export async function completeFollowUpTaskAction(
       };
     }
 
+    if (!canAccessWorkspaceRecord(workspace, userId, lead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
+    }
+
     const [task] = await db
       .select({
         id: crmTasks.id,
         title: crmTasks.title,
         status: crmTasks.status,
+        ownerUserId: crmTasks.ownerUserId,
+        userId: crmTasks.userId,
       })
       .from(crmTasks)
       .where(
@@ -1525,6 +1685,10 @@ export async function completeFollowUpTaskAction(
         success: false,
         message: "This task could not be found.",
       };
+    }
+
+    if (!canAccessWorkspaceRecord(workspace, userId, task.ownerUserId ?? task.userId, "update")) {
+      return { success: false, message: "This task could not be found or you do not have permission to update it." };
     }
 
     if (task.status === "completed") {
@@ -1754,7 +1918,7 @@ export async function bulkUpdateLeadStatusAction(
   const protection = await ensureLeadMutationAllowed();
   const normalizedIds = normalizeLeadIds(leadIds);
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -1790,6 +1954,7 @@ export async function bulkUpdateLeadStatusAction(
       .select({
         id: leads.id,
         status: leads.status,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
       .where(
@@ -1807,7 +1972,13 @@ export async function bulkUpdateLeadStatusAction(
       };
     }
 
+    const accessContext = getWorkspaceAuthorizationContext(workspace, userId);
     const leadIdsToUpdate = ownedLeads
+      .filter((lead) => canAccessRecord(
+        accessContext,
+        { workspaceId: workspace.id, assignedUserId: lead.assignedOwnerUserId },
+        "update",
+      ))
       .filter((lead) => lead.status !== status)
       .map((lead) => lead.id);
 
@@ -1827,7 +1998,11 @@ export async function bulkUpdateLeadStatusAction(
       })
       .where(
         and(
-          eq(leads.workspaceId, workspace.id),
+          ...getRecordUpdateConditions(
+            accessContext,
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
           eq(leads.isArchived, false),
           inArray(leads.id, leadIdsToUpdate),
         ),
@@ -1987,6 +2162,7 @@ export async function createLeadNoteAction(
       .select({
         id: leads.id,
         fullName: leads.fullName,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
       .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
@@ -1997,6 +2173,10 @@ export async function createLeadNoteAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (!canAccessWorkspaceRecord(workspace, userId, lead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
     }
 
     await db.insert(leadNotes).values({
@@ -2046,7 +2226,7 @@ export async function updateLeadNoteAction(
   const protection = await ensureLeadMutationAllowed();
   const parsed = leadNoteSchema.safeParse({ content });
 
-  const permissionError = workspacePermissionError(workspace.role, "crm:update");
+  const permissionError = crmUpdatePermissionError(workspace.role);
   if (permissionError) return { success: false, message: permissionError };
 
   if (!protection.ok) {
@@ -2076,6 +2256,7 @@ export async function updateLeadNoteAction(
       .select({
         id: leads.id,
         fullName: leads.fullName,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
       })
       .from(leads)
       .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
@@ -2086,6 +2267,26 @@ export async function updateLeadNoteAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (!canAccessWorkspaceRecord(workspace, userId, lead.assignedOwnerUserId, "update")) {
+      return { success: false, message: "This lead could not be found or you do not have permission to update it." };
+    }
+
+    const [existingNote] = await db
+      .select({ id: leadNotes.id, userId: leadNotes.userId })
+      .from(leadNotes)
+      .where(
+        and(
+          eq(leadNotes.id, noteId),
+          eq(leadNotes.leadId, leadId),
+          eq(leadNotes.workspaceId, workspace.id),
+        ),
+      )
+      .limit(1);
+
+    if (!existingNote || !canAccessWorkspaceRecord(workspace, userId, existingNote.userId, "update")) {
+      return { success: false, message: "This note could not be found or you do not have permission to update it." };
     }
 
     const [updatedNote] = await db

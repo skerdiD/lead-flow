@@ -44,8 +44,9 @@ export const demoRoleDetails: Record<
     description:
       "Explore the focused workspace access available to an individual contributor.",
     permissions: [
-      "View, create, and update CRM records",
-      "View workspace analytics and the team directory",
+      "View and update only records assigned to you",
+      "Create leads and work with your assigned follow-ups",
+      "See assignment-scoped dashboard metrics",
       "Cannot delete records, export data, or manage workspace settings",
     ],
   },

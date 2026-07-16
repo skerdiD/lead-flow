@@ -738,4 +738,59 @@ describe("lead actions", () => {
     });
     expect(protectLeadMutationMock).not.toHaveBeenCalled();
   });
+
+  it("rejects a member's tampered update for another member's lead", async () => {
+    getCurrentWorkspaceMock.mockResolvedValue({
+      id: "workspace_123",
+      name: "Personal Workspace",
+      ownerUserId: "owner_user",
+      role: "member",
+    });
+    selectResults.push([
+      {
+        id: leadId,
+        fullName: "Other member lead",
+        status: "New",
+        accountId: null,
+        primaryContactId: null,
+        assignedOwnerUserId: "other_member",
+      },
+    ]);
+
+    const result = await updateLeadAction(leadId, validLeadInput);
+
+    expect(result).toEqual({
+      success: false,
+      message: "This lead could not be found or you do not have permission to update it.",
+    });
+    expect(updateReturningMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a member task creation request for another member's lead", async () => {
+    getCurrentWorkspaceMock.mockResolvedValue({
+      id: "workspace_123",
+      name: "Personal Workspace",
+      ownerUserId: "owner_user",
+      role: "member",
+    });
+    selectResults.push([
+      {
+        id: leadId,
+        fullName: "Other member lead",
+        primaryContactId: "contact_123",
+        assignedOwnerUserId: "other_member",
+      },
+    ]);
+
+    const result = await createFollowUpTaskAction(leadId, {
+      title: "Tampered task",
+      priority: "medium",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      message: "This lead could not be found or you do not have permission to update it.",
+    });
+    expect(insertTaskValuesMock).not.toHaveBeenCalled();
+  });
 });

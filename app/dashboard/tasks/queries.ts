@@ -7,7 +7,13 @@ import {
   type GroupedTasks,
   type TaskListItem,
 } from "@/lib/tasks";
-import { getCurrentWorkspace } from "@/lib/workspaces";
+import {
+  hasWorkspacePermission,
+  getCurrentWorkspaceAuthorizationContext,
+  getRecordVisibilityConditions,
+  getTaskVisibilityConditions,
+  type WorkspaceAuthorizationContext,
+} from "@/lib/authorization";
 
 export type AttentionLeadItem = {
   id: string;
@@ -82,8 +88,8 @@ function mapTaskRow(row: {
   };
 }
 
-async function getScopedTasks() {
-  const workspace = await getCurrentWorkspace();
+async function getScopedTasks(context?: WorkspaceAuthorizationContext) {
+  const accessContext = context ?? await getCurrentWorkspaceAuthorizationContext();
 
   return db
     .select({
@@ -103,14 +109,32 @@ async function getScopedTasks() {
     .from(crmTasks)
     .leftJoin(
       leads,
-      and(eq(crmTasks.leadId, leads.id), eq(leads.workspaceId, workspace.id)),
+      and(eq(crmTasks.leadId, leads.id), eq(leads.workspaceId, accessContext.workspaceId)),
     )
-    .where(eq(crmTasks.workspaceId, workspace.id))
+    .where(
+      and(
+        ...getTaskVisibilityConditions(
+          accessContext,
+          crmTasks.workspaceId,
+          crmTasks.ownerUserId,
+          crmTasks.userId,
+        ),
+        ...(hasWorkspacePermission(accessContext.role, "crm:view_all")
+          ? []
+          : [
+              or(
+                isNull(crmTasks.leadId),
+                eq(leads.assignedOwnerUserId, accessContext.userId),
+              )!,
+            ]),
+      ),
+    )
     .orderBy(asc(crmTasks.dueAt), desc(crmTasks.createdAt));
 }
 
 export async function getTasksPageData(): Promise<TasksPageData> {
-  const tasks = (await getScopedTasks()).map(mapTaskRow);
+  const context = await getCurrentWorkspaceAuthorizationContext();
+  const tasks = (await getScopedTasks(context)).map(mapTaskRow);
   const groupedTasks = groupTasksByTimeline(tasks);
 
   return {
@@ -127,11 +151,11 @@ export async function getTasksPageData(): Promise<TasksPageData> {
 export async function getDashboardAttentionData(
   previewLimit = 3,
 ): Promise<DashboardAttentionData> {
+  const context = await getCurrentWorkspaceAuthorizationContext();
   const [tasks, followUpRows, staleLeadRows, proposalRows] =
     await Promise.all([
-      getScopedTasks(),
+      getScopedTasks(context),
       (async () => {
-        const currentWorkspace = await getCurrentWorkspace();
         const todayKey = getLocalDateKey();
 
         return db
@@ -146,7 +170,11 @@ export async function getDashboardAttentionData(
           .from(leads)
           .where(
             and(
-              eq(leads.workspaceId, currentWorkspace.id),
+              ...getRecordVisibilityConditions(
+                context,
+                leads.workspaceId,
+                leads.assignedOwnerUserId,
+              ),
               eq(leads.isArchived, false),
               notInArray(leads.followUpStatus, ["completed"]),
               sql`to_char(${leads.nextFollowUpDate} at time zone 'UTC', 'YYYY-MM-DD') = ${todayKey}`,
@@ -155,7 +183,6 @@ export async function getDashboardAttentionData(
           .orderBy(asc(leads.nextFollowUpDate), asc(leads.fullName));
       })(),
       (async () => {
-        const currentWorkspace = await getCurrentWorkspace();
         const staleCutoff = new Date();
         staleCutoff.setDate(staleCutoff.getDate() - 14);
 
@@ -169,7 +196,7 @@ export async function getDashboardAttentionData(
           .from(activityEvents)
           .where(
             and(
-              eq(activityEvents.workspaceId, currentWorkspace.id),
+              eq(activityEvents.workspaceId, context.workspaceId),
               sql`${activityEvents.leadId} is not null`,
             ),
           )
@@ -189,7 +216,11 @@ export async function getDashboardAttentionData(
           .leftJoin(latestActivityByLead, eq(leads.id, latestActivityByLead.leadId))
           .where(
             and(
-              eq(leads.workspaceId, currentWorkspace.id),
+              ...getRecordVisibilityConditions(
+                context,
+                leads.workspaceId,
+                leads.assignedOwnerUserId,
+              ),
               eq(leads.isArchived, false),
               notInArray(leads.status, ["Closed", "Lost"]),
               or(
@@ -204,8 +235,6 @@ export async function getDashboardAttentionData(
           );
       })(),
       (async () => {
-        const currentWorkspace = await getCurrentWorkspace();
-
         return db
           .select({
             id: deals.id,
@@ -219,11 +248,20 @@ export async function getDashboardAttentionData(
           .from(deals)
           .innerJoin(
             leads,
-            and(eq(deals.leadId, leads.id), eq(leads.workspaceId, currentWorkspace.id)),
+            and(eq(deals.leadId, leads.id), eq(leads.workspaceId, context.workspaceId)),
           )
           .where(
             and(
-              eq(deals.workspaceId, currentWorkspace.id),
+              ...getRecordVisibilityConditions(
+                context,
+                deals.workspaceId,
+                deals.ownerUserId,
+              ),
+              ...getRecordVisibilityConditions(
+                context,
+                leads.workspaceId,
+                leads.assignedOwnerUserId,
+              ),
               eq(leads.isArchived, false),
               eq(deals.stage, "proposal"),
             ),

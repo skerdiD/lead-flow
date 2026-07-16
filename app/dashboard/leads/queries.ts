@@ -1,7 +1,11 @@
 import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
-import { getCurrentWorkspace } from "@/lib/workspaces";
+import {
+  getCurrentWorkspaceAuthorizationContext,
+  getRecordVisibilityConditions,
+  type WorkspaceAuthorizationContext,
+} from "@/lib/authorization";
 import {
   DEFAULT_LEADS_TABLE_PAGE_SIZE,
   DEFAULT_LEADS_TABLE_SORT_DIRECTION,
@@ -133,12 +137,20 @@ export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLead
 export function buildLeadsWhereConditions(
   workspaceId: string,
   filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source" | "archived">,
+  context?: WorkspaceAuthorizationContext,
 ) {
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
-  const conditions = [
-    eq(leads.workspaceId, workspaceId),
+  const conditions = context
+    ? getRecordVisibilityConditions(
+        context,
+        leads.workspaceId,
+        leads.assignedOwnerUserId,
+      )
+    : [eq(leads.workspaceId, workspaceId)];
+
+  conditions.push(
     eq(leads.isArchived, filters.archived === "archived"),
-  ];
+  );
 
   if (filters.search) {
     conditions.push(
@@ -195,7 +207,7 @@ export function getLeadsSortOrder(
 }
 
 export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsListResult> {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
   const {
     search,
     status,
@@ -206,12 +218,12 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     requestedPage,
     pageSize,
   } = normalizeLeadsFilters(filters);
-  const { conditions, sourceLabel } = buildLeadsWhereConditions(workspace.id, {
+  const { conditions, sourceLabel } = buildLeadsWhereConditions(context.workspaceId, {
     search,
     status,
     source,
     archived,
-  });
+  }, context);
   const sourceCount = sql<number>`count(*)`;
 
   const [countRow] = await db
@@ -252,6 +264,13 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     .limit(pageSize)
     .offset(offset);
 
+  const sourceConditions = getRecordVisibilityConditions(
+    context,
+    leads.workspaceId,
+    leads.assignedOwnerUserId,
+  );
+  sourceConditions.push(eq(leads.isArchived, archived === "archived"));
+
   const sourceRows = await db
     .select({
       label: sourceLabel,
@@ -259,10 +278,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     })
     .from(leads)
     .where(
-      and(
-        eq(leads.workspaceId, workspace.id),
-        eq(leads.isArchived, archived === "archived"),
-      ),
+      and(...sourceConditions),
     )
     .groupBy(sourceLabel)
     .orderBy(desc(sourceCount), asc(sourceLabel));

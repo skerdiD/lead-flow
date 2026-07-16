@@ -675,8 +675,8 @@ async function ensureDemoCollaborator(params: DemoUserConfig & {
   ).id;
 }
 
-async function getWorkspaceSeedHealth(workspaceId: string) {
-  const [[leadStats], [taskStats], [activityStats], [notificationStats]] =
+async function getWorkspaceSeedHealth(workspaceId: string, memberUserId: string) {
+  const [[leadStats], [taskStats], [activityStats], [notificationStats], [memberLead]] =
     await Promise.all([
     demoDb
       .select({
@@ -702,6 +702,16 @@ async function getWorkspaceSeedHealth(workspaceId: string) {
       })
       .from(notifications)
       .where(eq(notifications.workspaceId, workspaceId)),
+    demoDb
+      .select({ id: leads.id })
+      .from(leads)
+      .where(
+        and(
+          eq(leads.workspaceId, workspaceId),
+          eq(leads.assignedOwnerUserId, memberUserId),
+        ),
+      )
+      .limit(1),
   ]);
 
   return {
@@ -709,6 +719,7 @@ async function getWorkspaceSeedHealth(workspaceId: string) {
     taskCount: Number(taskStats?.count ?? 0),
     activityCount: Number(activityStats?.count ?? 0),
     notificationCount: Number(notificationStats?.count ?? 0),
+    hasMemberAssignedLead: Boolean(memberLead),
   };
 }
 
@@ -725,11 +736,17 @@ async function clearWorkspaceData(workspaceId: string) {
   });
 }
 
-async function seedWorkspaceData(workspaceId: string, userId: string) {
+async function seedWorkspaceData(
+  workspaceId: string,
+  demoUserIds: { owner: string; admin: string; member: string },
+) {
   await demoDb.transaction(async (tx) => {
     let createdNotifications = 0;
 
-    for (const seed of seedLeads) {
+    for (const [seedIndex, seed] of seedLeads.entries()) {
+      const userId = [demoUserIds.owner, demoUserIds.admin, demoUserIds.member][
+        seedIndex % 3
+      ]!;
       const createdAt = dayOffset(seed.createdOffsetDays);
       const closedAt =
         seed.dealStage === "won" || seed.dealStage === "lost"
@@ -1063,17 +1080,22 @@ export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean
     return resolvedWorkspace;
   });
 
-  const health = await getWorkspaceSeedHealth(workspace.id);
+  const health = await getWorkspaceSeedHealth(workspace.id, memberUserId);
   const needsSeed =
     forceReset ||
     health.leadCount < seedLeads.length ||
     health.taskCount === 0 ||
     health.activityCount === 0 ||
-    health.notificationCount < 3;
+    health.notificationCount < 3 ||
+    !health.hasMemberAssignedLead;
 
   if (needsSeed) {
     await clearWorkspaceData(workspace.id);
-    await seedWorkspaceData(workspace.id, userId);
+    await seedWorkspaceData(workspace.id, {
+      owner: userId,
+      admin: adminUserId,
+      member: memberUserId,
+    });
   }
 
   return {

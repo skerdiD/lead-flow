@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts,
@@ -11,8 +11,11 @@ import {
   type activityEventTypes,
 } from "@/db/schema";
 import { isUuid } from "@/lib/uuid";
-import { requireUserId } from "@/lib/auth";
-import { getCurrentWorkspace } from "@/lib/workspaces";
+import {
+  getCurrentWorkspaceAuthorizationContext,
+  getRecordVisibilityConditions,
+  getTaskVisibilityConditions,
+} from "@/lib/authorization";
 
 export type LeadDetailsResult = {
   id: string;
@@ -85,8 +88,7 @@ export async function getLeadDetails(
     return null;
   }
 
-  const workspace = await getCurrentWorkspace();
-  const userId = await requireUserId();
+  const context = await getCurrentWorkspaceAuthorizationContext();
 
   const [lead] = await db
     .select({
@@ -117,16 +119,25 @@ export async function getLeadDetails(
     .from(leads)
     .leftJoin(
       accounts,
-      and(eq(leads.accountId, accounts.id), eq(accounts.workspaceId, workspace.id)),
+      and(eq(leads.accountId, accounts.id), eq(accounts.workspaceId, context.workspaceId)),
     )
     .leftJoin(
       contacts,
       and(
         eq(leads.primaryContactId, contacts.id),
-        eq(contacts.workspaceId, workspace.id),
+        eq(contacts.workspaceId, context.workspaceId),
       ),
     )
-    .where(and(eq(leads.id, leadId), eq(leads.workspaceId, workspace.id)))
+    .where(
+      and(
+        eq(leads.id, leadId),
+        ...getRecordVisibilityConditions(
+          context,
+          leads.workspaceId,
+          leads.assignedOwnerUserId,
+        ),
+      ),
+    )
     .limit(1);
 
   if (!lead) {
@@ -144,7 +155,7 @@ export async function getLeadDetails(
       })
       .from(leadNotes)
       .where(
-        and(eq(leadNotes.leadId, leadId), eq(leadNotes.workspaceId, workspace.id)),
+        and(eq(leadNotes.leadId, leadId), eq(leadNotes.workspaceId, context.workspaceId)),
       )
       .orderBy(desc(leadNotes.createdAt)),
     db
@@ -158,7 +169,7 @@ export async function getLeadDetails(
       .where(
         and(
           eq(activityEvents.leadId, leadId),
-          eq(activityEvents.workspaceId, workspace.id),
+          eq(activityEvents.workspaceId, context.workspaceId),
         ),
       )
       .orderBy(desc(activityEvents.createdAt))
@@ -179,10 +190,11 @@ export async function getLeadDetails(
       .where(
         and(
           eq(crmTasks.leadId, leadId),
-          eq(crmTasks.workspaceId, workspace.id),
-          or(
-            eq(crmTasks.ownerUserId, userId),
-            and(isNull(crmTasks.ownerUserId), eq(crmTasks.userId, userId)),
+          ...getTaskVisibilityConditions(
+            context,
+            crmTasks.workspaceId,
+            crmTasks.ownerUserId,
+            crmTasks.userId,
           ),
         ),
       )
@@ -202,13 +214,22 @@ export async function getLeadDetails(
         updatedAt: deals.updatedAt,
       })
       .from(deals)
-      .where(and(eq(deals.leadId, leadId), eq(deals.workspaceId, workspace.id)))
+      .where(
+        and(
+          eq(deals.leadId, leadId),
+          ...getRecordVisibilityConditions(
+            context,
+            deals.workspaceId,
+            deals.ownerUserId,
+          ),
+        ),
+      )
       .limit(1),
   ]);
 
   return {
     ...lead,
-    viewerUserId: userId,
+    viewerUserId: context.userId,
     noteEntries,
     activityEntries,
     taskEntries,

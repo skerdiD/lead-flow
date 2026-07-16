@@ -9,10 +9,13 @@ import {
   type LeadsListFilters,
 } from "@/app/dashboard/leads/queries";
 import { protectLeadExport } from "@/lib/arcjet";
-import { hasWorkspacePermission, permissionDeniedMessage } from "@/lib/authorization";
+import {
+  getCurrentWorkspaceAuthorizationContext,
+  hasWorkspacePermission,
+  permissionDeniedMessage,
+} from "@/lib/authorization";
 import { buildLeadsCsv, buildLeadsPdf } from "@/lib/leads-export";
 import { normalizeUuidList } from "@/lib/uuid";
-import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export const runtime = "nodejs";
 
@@ -34,9 +37,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
 
-  if (!hasWorkspacePermission(workspace.role, "exports:create")) {
+  if (!hasWorkspacePermission(context.role, "exports:create")) {
     return NextResponse.json(
       { error: permissionDeniedMessage("exports:create") },
       { status: 403 },
@@ -65,8 +68,9 @@ export async function GET(request: Request) {
   const normalized = normalizeLeadsFilters(filters);
   const selectedIds = normalizeSelectedIds(searchParams.get("selected"));
   const { conditions, sourceLabel } = buildLeadsWhereConditions(
-    workspace.id,
+    context.workspaceId,
     normalized,
+    context,
   );
   const { primarySort, secondarySort } = getLeadsSortOrder(
     normalized.sortBy,

@@ -1,7 +1,11 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityEvents, type activityEventTypes } from "@/db/schema";
-import { getCurrentWorkspace } from "@/lib/workspaces";
+import { activityEvents, leads, type activityEventTypes } from "@/db/schema";
+import {
+  getCurrentWorkspaceAuthorizationContext,
+  getRecordVisibilityConditions,
+  hasWorkspacePermission,
+} from "@/lib/authorization";
 
 export type ActivityFeedItem = {
   id: string;
@@ -13,7 +17,23 @@ export type ActivityFeedItem = {
 };
 
 export async function getActivityFeed(limit = 40): Promise<ActivityFeedItem[]> {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
+
+  if (hasWorkspacePermission(context.role, "crm:view_all")) {
+    return db
+      .select({
+        id: activityEvents.id,
+        eventType: activityEvents.eventType,
+        message: activityEvents.message,
+        leadId: activityEvents.leadId,
+        leadName: activityEvents.leadName,
+        createdAt: activityEvents.createdAt,
+      })
+      .from(activityEvents)
+      .where(eq(activityEvents.workspaceId, context.workspaceId))
+      .orderBy(desc(activityEvents.createdAt))
+      .limit(limit);
+  }
 
   return db
     .select({
@@ -25,7 +45,23 @@ export async function getActivityFeed(limit = 40): Promise<ActivityFeedItem[]> {
       createdAt: activityEvents.createdAt,
     })
     .from(activityEvents)
-    .where(eq(activityEvents.workspaceId, workspace.id))
+    .innerJoin(
+      leads,
+      and(
+        eq(activityEvents.leadId, leads.id),
+        eq(activityEvents.workspaceId, leads.workspaceId),
+      ),
+    )
+    .where(
+      and(
+        eq(activityEvents.workspaceId, context.workspaceId),
+        ...getRecordVisibilityConditions(
+          context,
+          leads.workspaceId,
+          leads.assignedOwnerUserId,
+        ),
+      ),
+    )
     .orderBy(desc(activityEvents.createdAt))
     .limit(limit);
 }

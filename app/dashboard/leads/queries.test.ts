@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getCurrentWorkspaceMock, selectResults, leadsTable } = vi.hoisted(() => ({
+const { getCurrentWorkspaceMock, requireUserIdMock, selectResults, leadsTable } = vi.hoisted(() => ({
   getCurrentWorkspaceMock: vi.fn(),
+  requireUserIdMock: vi.fn(),
   selectResults: [] as unknown[],
   leadsTable: {
     id: "id",
@@ -52,6 +53,10 @@ vi.mock("@/lib/workspaces", () => ({
   getCurrentWorkspace: getCurrentWorkspaceMock,
 }));
 
+vi.mock("@/lib/auth", () => ({
+  requireUserId: requireUserIdMock,
+}));
+
 import { getLeadsList } from "@/app/dashboard/leads/queries";
 
 describe("getLeadsList", () => {
@@ -64,6 +69,7 @@ describe("getLeadsList", () => {
       ownerUserId: "user_123",
       role: "owner",
     });
+    requireUserIdMock.mockResolvedValue("user_123");
   });
 
   it("normalizes filters and applies pagination metadata", async () => {

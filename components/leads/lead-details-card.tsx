@@ -29,6 +29,7 @@ import { groupTasksByTimeline } from "@/lib/tasks";
 type LeadDetailsCardProps = {
   lead: LeadDetailsResult;
   readOnly?: boolean;
+  canManageAllCrm?: boolean;
   canDelete?: boolean;
 };
 
@@ -221,6 +222,7 @@ function SummaryCard({
 export function LeadDetailsCard({
   lead,
   readOnly = false,
+  canManageAllCrm = false,
   canDelete = false,
 }: LeadDetailsCardProps) {
   const nextStep = getNextStep(lead.status);
@@ -465,6 +467,8 @@ export function LeadDetailsCard({
           notes={lead.noteEntries}
           currentUserId={lead.viewerUserId}
           readOnly={readOnly}
+          canManageAllNotes={canManageAllCrm}
+          canDeleteNotes={canDelete}
         />
 
         <section

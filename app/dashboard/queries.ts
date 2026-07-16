@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { crmTasks, deals, leadNotes, leads } from "@/db/schema";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
@@ -6,7 +6,12 @@ import {
   calculateRevenueSummary,
   type RevenueSummary,
 } from "@/lib/revenue";
-import { getCurrentWorkspace } from "@/lib/workspaces";
+import {
+  getCurrentWorkspaceAuthorizationContext,
+  getRecordVisibilityConditions,
+  getTaskVisibilityConditions,
+  hasWorkspacePermission,
+} from "@/lib/authorization";
 
 export type LeadPipelineDatum = {
   status: LeadStatus;
@@ -25,7 +30,7 @@ export type SourcePerformanceDatum = {
 export type RevenueDashboardData = RevenueSummary;
 
 export async function getDashboardStats() {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
 
   const [[stats], [notesStats], [dealStats], [taskStats]] = await Promise.all([
     db
@@ -39,13 +44,35 @@ export async function getDashboardStats() {
         lostLeads: sql<number>`count(*) filter (where ${leads.status} = 'Lost')`,
       })
       .from(leads)
-      .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false))),
+      .where(
+        and(
+          ...getRecordVisibilityConditions(
+            context,
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
+          eq(leads.isArchived, false),
+        ),
+      ),
     db
       .select({
         notesCount: sql<number>`count(*)`,
       })
       .from(leadNotes)
-      .where(eq(leadNotes.workspaceId, workspace.id)),
+      .innerJoin(
+        leads,
+        and(eq(leadNotes.leadId, leads.id), eq(leadNotes.workspaceId, leads.workspaceId)),
+      )
+      .where(
+        and(
+          eq(leadNotes.workspaceId, context.workspaceId),
+          ...getRecordVisibilityConditions(
+            context,
+            leads.workspaceId,
+            leads.assignedOwnerUserId,
+          ),
+        ),
+      ),
     db
       .select({
         totalDeals: sql<number>`count(*)`,
@@ -53,14 +80,46 @@ export async function getDashboardStats() {
         wonDeals: sql<number>`count(*) filter (where ${deals.stage} = 'won')`,
       })
       .from(deals)
-      .where(eq(deals.workspaceId, workspace.id)),
+      .where(
+        and(
+          ...getRecordVisibilityConditions(
+            context,
+            deals.workspaceId,
+            deals.ownerUserId,
+          ),
+        ),
+      ),
     db
       .select({
         openTasks: sql<number>`count(*) filter (where ${crmTasks.status} <> 'completed')`,
         overdueTasks: sql<number>`count(*) filter (where ${crmTasks.status} = 'pending' and ${crmTasks.dueAt} < now())`,
       })
       .from(crmTasks)
-      .where(eq(crmTasks.workspaceId, workspace.id)),
+      .leftJoin(
+        leads,
+        and(
+          eq(crmTasks.leadId, leads.id),
+          eq(crmTasks.workspaceId, leads.workspaceId),
+        ),
+      )
+      .where(
+        and(
+          ...getTaskVisibilityConditions(
+            context,
+            crmTasks.workspaceId,
+            crmTasks.ownerUserId,
+            crmTasks.userId,
+          ),
+          ...(hasWorkspacePermission(context.role, "crm:view_all")
+            ? []
+            : [
+                or(
+                  isNull(crmTasks.leadId),
+                  eq(leads.assignedOwnerUserId, context.userId),
+                )!,
+              ]),
+        ),
+      ),
   ]);
 
   return {
@@ -81,7 +140,7 @@ export async function getDashboardStats() {
 }
 
 export async function getRecentLeads(limit = 5) {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
 
   return db
     .select({
@@ -92,13 +151,22 @@ export async function getRecentLeads(limit = 5) {
       createdAt: leads.createdAt,
     })
     .from(leads)
-    .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false)))
+    .where(
+      and(
+        ...getRecordVisibilityConditions(
+          context,
+          leads.workspaceId,
+          leads.assignedOwnerUserId,
+        ),
+        eq(leads.isArchived, false),
+      ),
+    )
     .orderBy(desc(leads.createdAt))
     .limit(limit);
 }
 
 export async function getLeadPipelineData() {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
 
   const rows = await db
     .select({
@@ -106,7 +174,16 @@ export async function getLeadPipelineData() {
       total: sql<number>`count(*)`,
     })
     .from(leads)
-    .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false)))
+    .where(
+      and(
+        ...getRecordVisibilityConditions(
+          context,
+          leads.workspaceId,
+          leads.assignedOwnerUserId,
+        ),
+        eq(leads.isArchived, false),
+      ),
+    )
     .groupBy(leads.status);
 
   const countByStatus = new Map<LeadStatus, number>();
@@ -132,7 +209,7 @@ export async function getLeadPipelineData() {
 }
 
 export async function getRevenueDashboardData(): Promise<RevenueDashboardData> {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
 
   const dealRows = await db
     .select({
@@ -144,13 +221,21 @@ export async function getRevenueDashboardData(): Promise<RevenueDashboardData> {
       currency: deals.currency,
     })
     .from(deals)
-    .where(eq(deals.workspaceId, workspace.id));
+    .where(
+      and(
+        ...getRecordVisibilityConditions(
+          context,
+          deals.workspaceId,
+          deals.ownerUserId,
+        ),
+      ),
+    );
 
   return calculateRevenueSummary(dealRows);
 }
 
 export async function getSourcePerformanceData(limit = 6) {
-  const workspace = await getCurrentWorkspace();
+  const context = await getCurrentWorkspaceAuthorizationContext();
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
 
   const rows = await db
@@ -161,7 +246,16 @@ export async function getSourcePerformanceData(limit = 6) {
       won: sql<number>`count(*) filter (where ${leads.status} = 'Closed')`,
     })
     .from(leads)
-    .where(and(eq(leads.workspaceId, workspace.id), eq(leads.isArchived, false)))
+    .where(
+      and(
+        ...getRecordVisibilityConditions(
+          context,
+          leads.workspaceId,
+          leads.assignedOwnerUserId,
+        ),
+        eq(leads.isArchived, false),
+      ),
+    )
     .groupBy(sourceLabel)
     .orderBy(desc(sql<number>`count(*)`))
     .limit(limit);

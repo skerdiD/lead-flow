@@ -6,6 +6,8 @@ import { db } from "@/db";
 import { activityEvents, crmTasks, leads } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
 import {
+  canAccessRecord,
+  getWorkspaceAuthorizationContext,
   hasWorkspacePermission,
   permissionDeniedMessage,
 } from "@/lib/authorization";
@@ -70,10 +72,10 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
     };
   }
 
-  if (!hasWorkspacePermission(workspace.role, "crm:update")) {
+  if (!hasWorkspacePermission(workspace.role, "crm:update_all") && !hasWorkspacePermission(workspace.role, "crm:update_assigned")) {
     return {
       success: false,
-      message: permissionDeniedMessage("crm:update"),
+      message: permissionDeniedMessage("crm:update_assigned"),
     };
   }
 
@@ -90,6 +92,8 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
         id: crmTasks.id,
         title: crmTasks.title,
         status: crmTasks.status,
+        ownerUserId: crmTasks.ownerUserId,
+        userId: crmTasks.userId,
         leadId: crmTasks.leadId,
         leadName: leads.fullName,
       })
@@ -111,6 +115,14 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
         success: false,
         message: "This task could not be found.",
       };
+    }
+
+    if (!canAccessRecord(
+      getWorkspaceAuthorizationContext(workspace, userId),
+      { workspaceId: workspace.id, assignedUserId: task.ownerUserId ?? task.userId },
+      "update",
+    )) {
+      return { success: false, message: "This task could not be found or you do not have permission to update it." };
     }
 
     if (task.status === "completed") {
@@ -169,7 +181,8 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
 }
 
 export async function reopenTaskAction(taskId: string): Promise<TaskMutationState> {
-  const [workspace, protection] = await Promise.all([
+  const [userId, workspace, protection] = await Promise.all([
+    requireUserId(),
     getCurrentWorkspace(),
     protectLeadMutation(),
   ]);
@@ -181,10 +194,10 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
     };
   }
 
-  if (!hasWorkspacePermission(workspace.role, "crm:update")) {
+  if (!hasWorkspacePermission(workspace.role, "crm:update_all") && !hasWorkspacePermission(workspace.role, "crm:update_assigned")) {
     return {
       success: false,
-      message: permissionDeniedMessage("crm:update"),
+      message: permissionDeniedMessage("crm:update_assigned"),
     };
   }
 
@@ -200,6 +213,8 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
       .select({
         id: crmTasks.id,
         leadId: crmTasks.leadId,
+        ownerUserId: crmTasks.ownerUserId,
+        userId: crmTasks.userId,
       })
       .from(crmTasks)
       .where(
@@ -215,6 +230,14 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
         success: false,
         message: "This task could not be found.",
       };
+    }
+
+    if (!canAccessRecord(
+      getWorkspaceAuthorizationContext(workspace, userId),
+      { workspaceId: workspace.id, assignedUserId: task.ownerUserId ?? task.userId },
+      "update",
+    )) {
+      return { success: false, message: "This task could not be found or you do not have permission to update it." };
     }
 
     const [reopenedTask] = await db
