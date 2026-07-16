@@ -22,10 +22,9 @@ import {
   type taskStatuses,
 } from "@/db/schema";
 import {
-  DEMO_DEFAULT_EMAIL,
-  DEMO_USER_EXTERNAL_ID,
   DEMO_WORKSPACE_NAME,
 } from "@/lib/demo";
+import { getDemoUserConfigs, type DemoUserConfig } from "@/lib/demo-config.server";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 
 type LeadStatus = (typeof leadStatuses)[number];
@@ -70,11 +69,6 @@ type SeedLead = {
 };
 
 const DEMO_EMAIL_DOMAIN = "leadflow-demo.example";
-const DEMO_SIGN_IN_EXPIRY_SECONDS = 300;
-const DEMO_ADMIN_EXTERNAL_ID = "leadflow-demo-admin";
-const DEMO_MEMBER_EXTERNAL_ID = "leadflow-demo-member";
-const DEMO_ADMIN_EMAIL = "leadflow-demo-admin@example.com";
-const DEMO_MEMBER_EMAIL = "leadflow-demo-member@example.com";
 const demoDb = drizzle(
   new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -569,10 +563,6 @@ const seedLeads: SeedLead[] = [
   },
 ];
 
-function getDemoEmail() {
-  return process.env.LEADFLOW_DEMO_EMAIL?.trim() || DEMO_DEFAULT_EMAIL;
-}
-
 function getClerkClient() {
   const secretKey = process.env.CLERK_SECRET_KEY;
 
@@ -594,31 +584,43 @@ function addHours(date: Date, hours: number) {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
-async function findDemoUserId() {
+async function findDemoUserId(config: DemoUserConfig) {
   const client = getClerkClient();
   const [byExternalId, byEmail] = await Promise.all([
     client.users.getUserList({
-      externalId: [DEMO_USER_EXTERNAL_ID],
+      externalId: [config.externalId],
       limit: 1,
     }),
     client.users.getUserList({
-      emailAddress: [getDemoEmail()],
+      emailAddress: [config.email],
       limit: 1,
     }),
   ]);
 
+  if (
+    byExternalId.data[0] &&
+    byEmail.data[0] &&
+    byExternalId.data[0].id !== byEmail.data[0].id
+  ) {
+    throw new Error(`Demo ${config.role} identity does not resolve consistently.`);
+  }
+
   return byExternalId.data[0]?.id ?? byEmail.data[0]?.id ?? null;
 }
 
-async function ensureDemoUser() {
+async function ensureDemoUser(
+  config: DemoUserConfig,
+  firstName: string,
+  lastName: string,
+) {
   const client = getClerkClient();
-  const existingUserId = await findDemoUserId();
+  const existingUserId = await findDemoUserId(config);
 
   if (existingUserId) {
     await client.users.updateUser(existingUserId, {
-      externalId: DEMO_USER_EXTERNAL_ID,
-      firstName: "LeadFlow",
-      lastName: "Demo",
+      externalId: config.externalId,
+      firstName,
+      lastName,
       skipLegalChecks: true,
       deleteSelfEnabled: false,
       createOrganizationEnabled: false,
@@ -628,10 +630,10 @@ async function ensureDemoUser() {
   }
 
   const createdUser = await client.users.createUser({
-    externalId: DEMO_USER_EXTERNAL_ID,
-    emailAddress: [getDemoEmail()],
-    firstName: "LeadFlow",
-    lastName: "Demo",
+    externalId: config.externalId,
+    emailAddress: [config.email],
+    firstName,
+    lastName,
     skipPasswordRequirement: true,
     skipLegalChecks: true,
   });
@@ -639,9 +641,7 @@ async function ensureDemoUser() {
   return createdUser.id;
 }
 
-async function ensureDemoCollaborator(params: {
-  externalId: string;
-  email: string;
+async function ensureDemoCollaborator(params: DemoUserConfig & {
   firstName: string;
   lastName: string;
 }) {
@@ -982,17 +982,16 @@ async function seedWorkspaceData(workspaceId: string, userId: string) {
 
 export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean }) {
   const forceReset = options?.forceReset ?? false;
-  const userId = await ensureDemoUser();
+  const demoUsers = getDemoUserConfigs();
+  const userId = await ensureDemoUser(demoUsers.owner, "LeadFlow", "Demo");
   const [adminUserId, memberUserId] = await Promise.all([
     ensureDemoCollaborator({
-      externalId: DEMO_ADMIN_EXTERNAL_ID,
-      email: DEMO_ADMIN_EMAIL,
+      ...demoUsers.admin,
       firstName: "Demo",
       lastName: "Admin",
     }),
     ensureDemoCollaborator({
-      externalId: DEMO_MEMBER_EXTERNAL_ID,
-      email: DEMO_MEMBER_EMAIL,
+      ...demoUsers.member,
       firstName: "Demo",
       lastName: "Member",
     }),
@@ -1085,19 +1084,4 @@ export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean
     workspaceName: DEMO_WORKSPACE_NAME,
     seeded: needsSeed,
   };
-}
-
-export async function createDemoSignInUrl() {
-  const { userId } = await ensureDemoWorkspaceSeeded();
-  const client = getClerkClient();
-  const token = await client.signInTokens.createSignInToken({
-    userId,
-    expiresInSeconds: DEMO_SIGN_IN_EXPIRY_SECONDS,
-  });
-
-  if (!token.url) {
-    throw new Error("Clerk did not return a demo sign-in URL.");
-  }
-
-  return token.url;
 }

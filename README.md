@@ -192,6 +192,21 @@ DATABASE_URL=
 ARCJET_KEY=
 ```
 
+To enable the public role-selection demo, also configure the three dedicated
+Clerk users and explicitly turn the feature on:
+
+```env
+DEMO_LOGIN_ENABLED=true
+DEMO_OWNER_EMAIL=leadflow-demo@example.com
+DEMO_ADMIN_EMAIL=leadflow-demo-admin@example.com
+DEMO_MEMBER_EMAIL=leadflow-demo-member@example.com
+```
+
+`/demo` remains unavailable until `DEMO_LOGIN_ENABLED` is exactly `true`. The
+demo sign-in endpoint accepts only the Owner, Admin, or Member role value, then
+verifies that the configured Clerk user has the matching membership in the
+dedicated demo workspace before issuing a five-minute sign-in token.
+
 ### 4. Run database migrations
 
 ```bash
@@ -210,7 +225,20 @@ npm run db:seed:screenshots
 
 The seed finds that Clerk user by email, uses the matching Clerk user id for ownership, and replaces only the known fake screenshot leads in that user's workspace. Empty or seed-only workspaces are named `Lead Flow Demo Workspace`; workspaces with other leads keep their existing name. It does not create a public demo account or bypass authentication.
 
-### 6. Start the development server
+### 6. Seed the role-selection demo
+
+After configuring the three `DEMO_*_EMAIL` values above, create or refresh the
+isolated shared demo workspace:
+
+```bash
+npm run db:seed:demo
+```
+
+The seed creates the dedicated Clerk identities and assigns exactly one Owner,
+Admin, and Member membership. The login flow never creates users, changes
+memberships, or resets demo data.
+
+### 7. Start the development server
 
 ```bash
 npm run dev
@@ -236,6 +264,7 @@ npm run test         # Run Vitest tests
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Apply Drizzle migrations
 npm run db:seed:screenshots # Seed screenshot-ready CRM data
+npm run db:seed:demo # Seed the Owner, Admin, and Member demo workspace
 npm run e2e:install  # Install Playwright browsers
 npm run e2e          # Run Playwright E2E tests
 npm run e2e:headed   # Run Playwright tests in headed mode

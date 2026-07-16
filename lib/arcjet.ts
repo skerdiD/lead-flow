@@ -68,3 +68,7 @@ export async function protectLeadMutation() {
 export async function protectLeadExport() {
   return protectRequest();
 }
+
+export async function protectDemoLogin() {
+  return protectRequest();
+}

@@ -3,6 +3,8 @@ import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/demo(.*)",
+  "/api/demo-login",
   "/sign-in(.*)",
   "/sign-up(.*)",
 ]);

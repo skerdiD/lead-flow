@@ -4,6 +4,7 @@ import { TeamMembersSection } from "@/components/settings/team-members-section";
 import { Button } from "@/components/ui/button";
 import { hasWorkspacePermission, workspaceRoleLabels } from "@/lib/authorization";
 import { requireCurrentUser } from "@/lib/auth";
+import { isDemoWorkspace } from "@/lib/demo";
 import { getWorkspaceTeam } from "@/lib/workspace-team";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
@@ -93,14 +94,25 @@ export default async function SettingsPage() {
 
   const primaryEmail = primaryEmailAddress || "No email available";
   const members = await getWorkspaceTeam(workspace);
+  const demoWorkspace = isDemoWorkspace(workspace);
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Workspace settings"
         title="Settings"
-        description="Manage your account and workspace settings."
+        description={
+          demoWorkspace
+            ? "Review how workspace controls are organized in the shared demo."
+            : "Manage your account and workspace settings."
+        }
       />
+
+      {demoWorkspace ? (
+        <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-cyan-950 dark:border-cyan-900 dark:bg-cyan-950/35 dark:text-cyan-100">
+          This shared demo workspace is read-only. Team changes, ownership transfer, and workspace deletion are disabled.
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
         <div className="space-y-6">
@@ -201,9 +213,9 @@ export default async function SettingsPage() {
       <TeamMembersSection
         workspaceName={workspace.name}
         members={members}
-        canInvite={hasWorkspacePermission(workspace.role, "members:invite")}
-        canTransferOwnership={hasWorkspacePermission(workspace.role, "workspace:transfer_ownership")}
-        canDeleteWorkspace={hasWorkspacePermission(workspace.role, "workspace:delete")}
+        canInvite={!demoWorkspace && hasWorkspacePermission(workspace.role, "members:invite")}
+        canTransferOwnership={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:transfer_ownership")}
+        canDeleteWorkspace={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:delete")}
       />
     </div>
   );

@@ -18,6 +18,7 @@ import {
   workspaceRoleLabels,
 } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
+import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import {
   deleteWorkspaceSchema,
   inviteWorkspaceMemberSchema,
@@ -64,6 +65,10 @@ async function writeWorkspaceActivity(params: {
 
 async function getCurrentWorkspaceActor(permission: "members:invite" | "members:remove" | "members:change_role" | "workspace:transfer_ownership" | "workspace:delete") {
   const [userId, workspace] = await Promise.all([requireUserId(), getCurrentWorkspace()]);
+
+  if (isDemoWorkspace(workspace)) {
+    return { userId, workspace, error: DEMO_MUTATION_MESSAGE };
+  }
 
   if (!hasWorkspacePermission(workspace.role, permission)) {
     return { userId, workspace, error: permissionDeniedMessage(permission) };
@@ -355,7 +360,15 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
     return { success: false, message: "This invitation is invalid or has expired." };
   }
 
-  const [userId, user] = await Promise.all([requireUserId(), currentUser()]);
+  const [userId, user, currentWorkspace] = await Promise.all([
+    requireUserId(),
+    currentUser(),
+    getCurrentWorkspace(),
+  ]);
+  if (isDemoWorkspace(currentWorkspace)) {
+    return { success: false, message: DEMO_MUTATION_MESSAGE };
+  }
+
   const verifiedEmails = (user?.emailAddresses ?? [])
     .filter((email) => email.verification?.status === "verified")
     .map((email) => email.emailAddress.toLowerCase());
