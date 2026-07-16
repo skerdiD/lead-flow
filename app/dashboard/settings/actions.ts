@@ -26,6 +26,10 @@ import {
 } from "@/lib/validations/workspace";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { sendWorkspaceInvitationEmail } from "@/lib/workspace-invitations-email";
+import {
+  WorkspaceOwnershipError,
+  transferWorkspaceOwnershipInTransaction,
+} from "@/lib/workspace-ownership";
 
 type WorkspaceActionState = { success: true; message: string } | { success: false; message: string };
 
@@ -222,7 +226,13 @@ export async function updateWorkspaceMemberRoleAction(input: {
     const [updated] = await db
       .update(workspaceMembers)
       .set({ role: parsed.data.role })
-      .where(and(eq(workspaceMembers.id, target.id), eq(workspaceMembers.workspaceId, actor.workspace.id)))
+      .where(
+        and(
+          eq(workspaceMembers.id, target.id),
+          eq(workspaceMembers.workspaceId, actor.workspace.id),
+          eq(workspaceMembers.role, target.role),
+        ),
+      )
       .returning({ id: workspaceMembers.id });
 
     if (!updated) return { success: false, message: "This team member could not be found." };
@@ -260,7 +270,23 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
       return { success: false, message: "You do not have permission to remove this team member." };
     }
 
-    await db.delete(workspaceMembers).where(and(eq(workspaceMembers.id, target.id), eq(workspaceMembers.workspaceId, actor.workspace.id)));
+    const [removed] = await db
+      .delete(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.id, target.id),
+          eq(workspaceMembers.workspaceId, actor.workspace.id),
+          eq(workspaceMembers.role, target.role),
+        ),
+      )
+      .returning({ id: workspaceMembers.id });
+
+    if (!removed) {
+      return {
+        success: false,
+        message: "This team member changed before they could be removed.",
+      };
+    }
     await writeWorkspaceActivity({
       workspaceId: actor.workspace.id,
       userId: actor.userId,
@@ -283,41 +309,20 @@ export async function transferWorkspaceOwnershipAction(input: { memberId: string
 
   try {
     await db.transaction(async (tx) => {
-      const [owner] = await tx
-        .select({ id: workspaceMembers.id, role: workspaceMembers.role })
-        .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.workspaceId, actor.workspace.id), eq(workspaceMembers.userId, actor.userId)))
-        .limit(1);
-      const [target] = await tx
-        .select({ id: workspaceMembers.id, userId: workspaceMembers.userId, role: workspaceMembers.role })
-        .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.id, parsed.data.memberId), eq(workspaceMembers.workspaceId, actor.workspace.id)))
-        .limit(1);
-
-      if (!owner || owner.role !== "owner") throw new Error("Only the workspace owner can transfer ownership.");
-      if (!target) throw new Error("This team member could not be found.");
-      if (target.role === "owner") throw new Error("This person is already the workspace owner.");
-
-      // Demote first so the database's one-owner index is never violated.
-      await tx.update(workspaceMembers).set({ role: "admin" }).where(eq(workspaceMembers.id, owner.id));
-      await tx.update(workspaceMembers).set({ role: "owner" }).where(eq(workspaceMembers.id, target.id));
-      await tx
-        .update(workspaces)
-        .set({ ownerUserId: target.userId, updatedAt: new Date() })
-        .where(and(eq(workspaces.id, actor.workspace.id), eq(workspaces.ownerUserId, actor.userId)));
-    });
-
-    await writeWorkspaceActivity({
-      workspaceId: actor.workspace.id,
-      userId: actor.userId,
-      eventType: "ownership_transferred",
-      message: "Workspace ownership was transferred to another team member.",
+      await transferWorkspaceOwnershipInTransaction(tx, {
+        workspaceId: actor.workspace.id,
+        actorUserId: actor.userId,
+        targetMemberId: parsed.data.memberId,
+      });
     });
     revalidateWorkspaceSettings();
     return { success: true, message: "Ownership transferred. You are now an admin in this workspace." };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "We couldn't transfer ownership right now. Please try again.";
-    return { success: false, message: message.startsWith("Only the workspace owner") || message.startsWith("This team member") || message.startsWith("This person") ? message : "We couldn't transfer ownership right now. Please try again." };
+    if (error instanceof WorkspaceOwnershipError) {
+      return { success: false, message: error.message };
+    }
+
+    return { success: false, message: "We couldn't transfer ownership right now. Please try again." };
   }
 }
 

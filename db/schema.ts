@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  ForeignKeyBuilder,
   foreignKey,
   index,
   integer,
@@ -91,6 +92,13 @@ export const notificationTypeEnum = pgEnum(
   NOTIFICATION_TYPES,
 );
 
+function getWorkspaceMemberReferenceColumns(): {
+  workspaceId: import("drizzle-orm/pg-core").AnyPgColumn;
+  userId: import("drizzle-orm/pg-core").AnyPgColumn;
+} {
+  return workspaceMembers;
+}
+
 export const workspaces = pgTable(
   "workspaces",
   {
@@ -109,6 +117,14 @@ export const workspaces = pgTable(
       .notNull(),
   },
   (table) => [
+    new ForeignKeyBuilder(() => ({
+      name: "workspaces_owner_member_fk",
+      columns: [table.id, table.ownerUserId],
+      foreignColumns: [
+        getWorkspaceMemberReferenceColumns().workspaceId,
+        getWorkspaceMemberReferenceColumns().userId,
+      ],
+    })),
     uniqueIndex("workspaces_owner_name_unique").on(
       table.ownerUserId,
       table.name,
@@ -131,6 +147,9 @@ export const workspaceMembers = pgTable(
     }).defaultNow().notNull(),
   },
   (table) => [
+    uniqueIndex("workspace_members_one_owner_per_workspace")
+      .on(table.workspaceId)
+      .where(sql`${table.role} = 'owner'`),
     uniqueIndex("workspace_members_workspace_user_unique").on(
       table.workspaceId,
       table.userId,
@@ -224,9 +243,7 @@ export const contacts = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
-    accountId: uuid("account_id").references(() => accounts.id, {
-      onDelete: "set null",
-    }),
+    accountId: uuid("account_id"),
     fullName: varchar("full_name", { length: 120 }).notNull(),
     email: varchar("email", { length: 255 }),
     phone: varchar("phone", { length: 32 }),
