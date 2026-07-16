@@ -51,6 +51,14 @@ export const activityEventTypes = [
   "task_created",
   "task_completed",
   "deal_stage_changed",
+  "deal_updated",
+  "deal_lost",
+  "account_created",
+  "account_updated",
+  "account_archived",
+  "contact_created",
+  "contact_updated",
+  "contact_archived",
   "lead_qualified",
   "member_invited",
   "invitation_accepted",
@@ -213,9 +221,15 @@ export const accounts = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
+    assignedOwnerUserId: varchar("assigned_owner_user_id", { length: 255 }),
     name: varchar("name", { length: 160 }).notNull(),
     website: varchar("website", { length: 255 }),
     industry: varchar("industry", { length: 120 }),
+    isArchived: boolean("is_archived").notNull().default(false),
+    archivedAt: timestamp("archived_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",
@@ -231,6 +245,14 @@ export const accounts = pgTable(
     uniqueIndex("accounts_workspace_id_id_unique").on(table.workspaceId, table.id),
     index("accounts_workspace_id_idx").on(table.workspaceId),
     index("accounts_workspace_id_name_idx").on(table.workspaceId, table.name),
+    index("accounts_workspace_id_archived_idx").on(
+      table.workspaceId,
+      table.isArchived,
+    ),
+    index("accounts_workspace_id_owner_idx").on(
+      table.workspaceId,
+      table.assignedOwnerUserId,
+    ),
     index("accounts_user_id_idx").on(table.userId),
   ],
 );
@@ -243,11 +265,18 @@ export const contacts = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
+    assignedOwnerUserId: varchar("assigned_owner_user_id", { length: 255 }),
     accountId: uuid("account_id"),
     fullName: varchar("full_name", { length: 120 }).notNull(),
     email: varchar("email", { length: 255 }),
     phone: varchar("phone", { length: 32 }),
     title: varchar("title", { length: 120 }),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    isArchived: boolean("is_archived").notNull().default(false),
+    archivedAt: timestamp("archived_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",
@@ -272,6 +301,17 @@ export const contacts = pgTable(
       table.accountId,
     ),
     index("contacts_workspace_id_email_idx").on(table.workspaceId, table.email),
+    index("contacts_workspace_id_archived_idx").on(
+      table.workspaceId,
+      table.isArchived,
+    ),
+    index("contacts_workspace_id_owner_idx").on(
+      table.workspaceId,
+      table.assignedOwnerUserId,
+    ),
+    uniqueIndex("contacts_one_primary_per_account")
+      .on(table.workspaceId, table.accountId)
+      .where(sql`${table.isPrimary} = true and ${table.accountId} is not null`),
     index("contacts_user_id_idx").on(table.userId),
   ],
 );
@@ -560,6 +600,9 @@ export const activityEvents = pgTable(
     message: varchar("message", { length: 255 }).notNull(),
     leadId: uuid("lead_id"),
     leadName: varchar("lead_name", { length: 120 }),
+    accountId: uuid("account_id"),
+    contactId: uuid("contact_id"),
+    dealId: uuid("deal_id"),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",
@@ -570,6 +613,21 @@ export const activityEvents = pgTable(
       name: "activity_events_workspace_lead_tenant_fk",
       columns: [table.workspaceId, table.leadId],
       foreignColumns: [leads.workspaceId, leads.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "activity_events_workspace_account_tenant_fk",
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [accounts.workspaceId, accounts.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "activity_events_workspace_contact_tenant_fk",
+      columns: [table.workspaceId, table.contactId],
+      foreignColumns: [contacts.workspaceId, contacts.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "activity_events_workspace_deal_tenant_fk",
+      columns: [table.workspaceId, table.dealId],
+      foreignColumns: [deals.workspaceId, deals.id],
     }).onDelete("set null"),
     index("activity_events_workspace_id_idx").on(table.workspaceId),
     index("activity_events_workspace_id_created_at_idx").on(
@@ -588,6 +646,21 @@ export const activityEvents = pgTable(
     index("activity_events_user_id_event_type_idx").on(
       table.userId,
       table.eventType,
+    ),
+    index("activity_events_workspace_account_created_at_idx").on(
+      table.workspaceId,
+      table.accountId,
+      table.createdAt,
+    ),
+    index("activity_events_workspace_contact_created_at_idx").on(
+      table.workspaceId,
+      table.contactId,
+      table.createdAt,
+    ),
+    index("activity_events_workspace_deal_created_at_idx").on(
+      table.workspaceId,
+      table.dealId,
+      table.createdAt,
     ),
   ],
 );

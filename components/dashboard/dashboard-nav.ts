@@ -2,6 +2,9 @@ import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
+  Building2,
+  ContactRound,
+  Handshake,
   PlusSquare,
   Clock3,
   Settings,
@@ -41,6 +44,24 @@ export const dashboardNavItems: DashboardNavItem[] = [
     href: "/dashboard/leads/new",
     icon: PlusSquare,
     exact: true,
+  },
+  {
+    title: "Accounts",
+    description: "Manage customer companies and relationships",
+    href: "/dashboard/accounts",
+    icon: Building2,
+  },
+  {
+    title: "Contacts",
+    description: "Manage the people behind your opportunities",
+    href: "/dashboard/contacts",
+    icon: ContactRound,
+  },
+  {
+    title: "Deals",
+    description: "Manage your revenue pipeline",
+    href: "/dashboard/deals",
+    icon: Handshake,
   },
   {
     title: "Activity",

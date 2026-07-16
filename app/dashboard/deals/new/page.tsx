@@ -1,0 +1,7 @@
+import { redirect } from "next/navigation";
+import { getCrmSelectors } from "@/app/dashboard/crm-queries";
+import { DealForm } from "@/components/deals/deal-form";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { isDemoWorkspace } from "@/lib/demo";
+import { getCurrentWorkspace } from "@/lib/workspaces";
+export default async function NewDealPage() { const [workspace, selectors] = await Promise.all([getCurrentWorkspace(), getCrmSelectors()]); if (isDemoWorkspace(workspace)) redirect("/dashboard/deals"); return <div className="mx-auto max-w-4xl space-y-6"><PageHeader eyebrow="Revenue pipeline" title="Create deal" description="Link an opportunity to the people and company driving it." /><DealForm selectors={selectors} /></div>; }

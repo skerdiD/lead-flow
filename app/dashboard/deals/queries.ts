@@ -1,0 +1,25 @@
+import { and, asc, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
+import { db } from "@/db";
+import { accounts, contacts, deals, leads } from "@/db/schema";
+import { getCurrentWorkspaceAuthorizationContext, getRecordVisibilityConditions } from "@/lib/authorization";
+import { DEAL_STAGES, type DealStage } from "@/lib/constants/crm";
+import { isUuid } from "@/lib/uuid";
+
+export type DealPipelineFilters = { search?: string; owner?: string; account?: string; stage?: string; state?: string; closeFrom?: string; closeTo?: string };
+export type PipelineDeal = { id: string; name: string; stage: DealStage; valueCents: number; currency: string; probability: number; expectedCloseAt: string | null; closedAt: string | null; lostReason: string | null; ownerUserId: string | null; accountId: string | null; accountName: string | null; contactId: string | null; contactName: string | null; leadId: string | null; leadName: string | null; updatedAt: string };
+
+export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
+  const context = await getCurrentWorkspaceAuthorizationContext(); const conditions = [...getRecordVisibilityConditions(context, deals.workspaceId, deals.ownerUserId)]; const query = filters.search?.trim().slice(0, 120);
+  if (query) conditions.push(or(ilike(deals.name, `%${query}%`), ilike(accounts.name, `%${query}%`), ilike(contacts.fullName, `%${query}%`))!); if (filters.owner) conditions.push(eq(deals.ownerUserId, filters.owner)); if (filters.account && isUuid(filters.account)) conditions.push(eq(deals.accountId, filters.account)); if (filters.stage && DEAL_STAGES.includes(filters.stage as DealStage)) conditions.push(eq(deals.stage, filters.stage as DealStage)); if (filters.state === "open") conditions.push(or(eq(deals.stage, "new"), eq(deals.stage, "contacted"), eq(deals.stage, "qualified"), eq(deals.stage, "proposal"))!); if (filters.state === "closed") conditions.push(or(eq(deals.stage, "won"), eq(deals.stage, "lost"))!); if (filters.closeFrom) conditions.push(gte(deals.expectedCloseAt, new Date(`${filters.closeFrom}T00:00:00Z`))); if (filters.closeTo) conditions.push(lte(deals.expectedCloseAt, new Date(`${filters.closeTo}T23:59:59Z`)));
+  const rows = await db.select({ id: deals.id, name: deals.name, stage: deals.stage, valueCents: deals.valueCents, currency: deals.currency, probability: deals.probability, expectedCloseAt: deals.expectedCloseAt, closedAt: deals.closedAt, lostReason: deals.lostReason, ownerUserId: deals.ownerUserId, accountId: deals.accountId, accountName: accounts.name, contactId: deals.contactId, contactName: contacts.fullName, leadId: deals.leadId, leadName: leads.fullName, updatedAt: deals.updatedAt }).from(deals).leftJoin(accounts, and(eq(deals.accountId, accounts.id), eq(deals.workspaceId, accounts.workspaceId))).leftJoin(contacts, and(eq(deals.contactId, contacts.id), eq(deals.workspaceId, contacts.workspaceId))).leftJoin(leads, and(eq(deals.leadId, leads.id), eq(deals.workspaceId, leads.workspaceId))).where(and(...conditions)).orderBy(asc(deals.expectedCloseAt), desc(deals.updatedAt));
+  const grouped = Object.fromEntries(DEAL_STAGES.map((stage) => [stage, [] as PipelineDeal[]])) as Record<DealStage, PipelineDeal[]>; for (const row of rows) grouped[row.stage].push({ ...row, expectedCloseAt: row.expectedCloseAt?.toISOString() ?? null, closedAt: row.closedAt?.toISOString() ?? null, updatedAt: row.updatedAt.toISOString() });
+  const totals = Object.fromEntries(DEAL_STAGES.map((stage) => [stage, { count: grouped[stage].length, valueCents: grouped[stage].reduce((sum, deal) => sum + deal.valueCents, 0) }])) as Record<DealStage, { count: number; valueCents: number }>;
+  return { grouped, totals };
+}
+
+export async function getDealDetails(id: string) {
+  if (!isUuid(id)) return null;
+  const context = await getCurrentWorkspaceAuthorizationContext();
+  const [deal] = await db.select({ id: deals.id, name: deals.name, stage: deals.stage, valueCents: deals.valueCents, currency: deals.currency, probability: deals.probability, expectedCloseAt: deals.expectedCloseAt, closedAt: deals.closedAt, lostReason: deals.lostReason, ownerUserId: deals.ownerUserId, accountId: deals.accountId, accountName: accounts.name, contactId: deals.contactId, contactName: contacts.fullName, leadId: deals.leadId, leadName: leads.fullName, updatedAt: deals.updatedAt }).from(deals).leftJoin(accounts, and(eq(deals.accountId, accounts.id), eq(deals.workspaceId, accounts.workspaceId), ...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId))).leftJoin(contacts, and(eq(deals.contactId, contacts.id), eq(deals.workspaceId, contacts.workspaceId), ...getRecordVisibilityConditions(context, contacts.workspaceId, contacts.assignedOwnerUserId))).leftJoin(leads, and(eq(deals.leadId, leads.id), eq(deals.workspaceId, leads.workspaceId), ...getRecordVisibilityConditions(context, leads.workspaceId, leads.assignedOwnerUserId))).where(and(eq(deals.id, id), ...getRecordVisibilityConditions(context, deals.workspaceId, deals.ownerUserId))).limit(1);
+  return deal ?? null;
+}
