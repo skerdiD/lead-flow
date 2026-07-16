@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -208,6 +209,7 @@ export const accounts = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex("accounts_workspace_id_id_unique").on(table.workspaceId, table.id),
     index("accounts_workspace_id_idx").on(table.workspaceId),
     index("accounts_workspace_id_name_idx").on(table.workspaceId, table.name),
     index("accounts_user_id_idx").on(table.userId),
@@ -241,6 +243,12 @@ export const contacts = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex("contacts_workspace_id_id_unique").on(table.workspaceId, table.id),
+    foreignKey({
+      name: "contacts_workspace_account_tenant_fk",
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [accounts.workspaceId, accounts.id],
+    }).onDelete("set null"),
     index("contacts_workspace_id_idx").on(table.workspaceId),
     index("contacts_workspace_id_account_id_idx").on(
       table.workspaceId,
@@ -260,12 +268,8 @@ export const leads = pgTable(
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
     assignedOwnerUserId: varchar("assigned_owner_user_id", { length: 255 }),
-    accountId: uuid("account_id").references(() => accounts.id, {
-      onDelete: "set null",
-    }),
-    primaryContactId: uuid("primary_contact_id").references(() => contacts.id, {
-      onDelete: "set null",
-    }),
+    accountId: uuid("account_id"),
+    primaryContactId: uuid("primary_contact_id"),
     fullName: varchar("full_name", { length: 120 }).notNull(),
     company: varchar("company", { length: 160 }),
     email: varchar("email", { length: 255 }),
@@ -301,6 +305,17 @@ export const leads = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex("leads_workspace_id_id_unique").on(table.workspaceId, table.id),
+    foreignKey({
+      name: "leads_workspace_account_tenant_fk",
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [accounts.workspaceId, accounts.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "leads_workspace_primary_contact_tenant_fk",
+      columns: [table.workspaceId, table.primaryContactId],
+      foreignColumns: [contacts.workspaceId, contacts.id],
+    }).onDelete("set null"),
     index("leads_workspace_id_idx").on(table.workspaceId),
     index("leads_workspace_id_status_idx").on(table.workspaceId, table.status),
     index("leads_workspace_id_archived_idx").on(
@@ -342,15 +357,9 @@ export const deals = pgTable(
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
     ownerUserId: varchar("owner_user_id", { length: 255 }),
-    leadId: uuid("lead_id").references(() => leads.id, {
-      onDelete: "set null",
-    }),
-    accountId: uuid("account_id").references(() => accounts.id, {
-      onDelete: "set null",
-    }),
-    contactId: uuid("contact_id").references(() => contacts.id, {
-      onDelete: "set null",
-    }),
+    leadId: uuid("lead_id"),
+    accountId: uuid("account_id"),
+    contactId: uuid("contact_id"),
     name: varchar("name", { length: 160 }).notNull(),
     stage: dealStageEnum("stage").notNull().default("new"),
     valueCents: integer("value_cents").notNull().default(0),
@@ -377,6 +386,32 @@ export const deals = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex("deals_workspace_id_id_unique").on(table.workspaceId, table.id),
+    foreignKey({
+      name: "deals_workspace_lead_tenant_fk",
+      columns: [table.workspaceId, table.leadId],
+      foreignColumns: [leads.workspaceId, leads.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "deals_workspace_account_tenant_fk",
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [accounts.workspaceId, accounts.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "deals_workspace_contact_tenant_fk",
+      columns: [table.workspaceId, table.contactId],
+      foreignColumns: [contacts.workspaceId, contacts.id],
+    }).onDelete("set null"),
+    check("deals_value_cents_non_negative_check", sql`${table.valueCents} >= 0`),
+    check(
+      "deals_probability_range_check",
+      sql`${table.probability} BETWEEN 0 AND 100`,
+    ),
+    check("deals_currency_uppercase_check", sql`${table.currency} = upper(${table.currency})`),
+    check(
+      "deals_closed_at_for_final_stage_check",
+      sql`(${table.stage} IN ('won', 'lost') AND ${table.closedAt} IS NOT NULL) OR ${table.stage} NOT IN ('won', 'lost')`,
+    ),
     index("deals_workspace_id_idx").on(table.workspaceId),
     index("deals_workspace_id_stage_idx").on(table.workspaceId, table.stage),
     index("deals_workspace_id_lead_id_idx").on(table.workspaceId, table.leadId),
@@ -402,15 +437,9 @@ export const crmTasks = pgTable(
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
     ownerUserId: varchar("owner_user_id", { length: 255 }),
-    leadId: uuid("lead_id").references(() => leads.id, {
-      onDelete: "cascade",
-    }),
-    dealId: uuid("deal_id").references(() => deals.id, {
-      onDelete: "set null",
-    }),
-    contactId: uuid("contact_id").references(() => contacts.id, {
-      onDelete: "set null",
-    }),
+    leadId: uuid("lead_id"),
+    dealId: uuid("deal_id"),
+    contactId: uuid("contact_id"),
     title: varchar("title", { length: 160 }).notNull(),
     description: text("description"),
     dueAt: timestamp("due_at", {
@@ -435,6 +464,21 @@ export const crmTasks = pgTable(
       .notNull(),
   },
   (table) => [
+    foreignKey({
+      name: "crm_tasks_workspace_lead_tenant_fk",
+      columns: [table.workspaceId, table.leadId],
+      foreignColumns: [leads.workspaceId, leads.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "crm_tasks_workspace_deal_tenant_fk",
+      columns: [table.workspaceId, table.dealId],
+      foreignColumns: [deals.workspaceId, deals.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "crm_tasks_workspace_contact_tenant_fk",
+      columns: [table.workspaceId, table.contactId],
+      foreignColumns: [contacts.workspaceId, contacts.id],
+    }).onDelete("set null"),
     index("crm_tasks_workspace_id_idx").on(table.workspaceId),
     index("crm_tasks_workspace_id_status_idx").on(table.workspaceId, table.status),
     index("crm_tasks_workspace_id_due_at_idx").on(table.workspaceId, table.dueAt),
@@ -457,9 +501,7 @@ export const leadNotes = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 255 }).notNull(),
-    leadId: uuid("lead_id")
-      .notNull()
-      .references(() => leads.id, { onDelete: "cascade" }),
+    leadId: uuid("lead_id").notNull(),
     content: text("content").notNull(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
@@ -473,6 +515,11 @@ export const leadNotes = pgTable(
       .notNull(),
   },
   (table) => [
+    foreignKey({
+      name: "lead_notes_workspace_lead_tenant_fk",
+      columns: [table.workspaceId, table.leadId],
+      foreignColumns: [leads.workspaceId, leads.id],
+    }).onDelete("cascade"),
     index("lead_notes_workspace_id_idx").on(table.workspaceId),
     index("lead_notes_workspace_id_created_at_idx").on(
       table.workspaceId,
@@ -502,6 +549,11 @@ export const activityEvents = pgTable(
     }).defaultNow().notNull(),
   },
   (table) => [
+    foreignKey({
+      name: "activity_events_workspace_lead_tenant_fk",
+      columns: [table.workspaceId, table.leadId],
+      foreignColumns: [leads.workspaceId, leads.id],
+    }).onDelete("set null"),
     index("activity_events_workspace_id_idx").on(table.workspaceId),
     index("activity_events_workspace_id_created_at_idx").on(
       table.workspaceId,

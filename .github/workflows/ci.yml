@@ -51,6 +51,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run database migrations
+        run: npm run db:migrate
+
+      - name: Run database integration tests
+        run: npm run test:db
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leadflow_ci
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -65,9 +73,6 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-
-      - name: Run database migrations
-        run: npm run db:migrate
 
       - name: Run Playwright E2E tests
         run: npm run test:e2e
