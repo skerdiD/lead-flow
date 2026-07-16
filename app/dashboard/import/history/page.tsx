@@ -1,0 +1,65 @@
+import Link from "next/link";
+import { ArrowLeft, Eye } from "lucide-react";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { ImportUnavailable } from "@/components/imports/import-wizard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { hasWorkspacePermission } from "@/lib/authorization";
+import { isDemoWorkspace } from "@/lib/demo";
+import { getImportHistory } from "@/lib/imports/server";
+import { getCurrentWorkspace } from "@/lib/workspaces";
+
+function duration(startedAt: Date | null, completedAt: Date | null) {
+  if (!startedAt || !completedAt) return "—";
+  const seconds = Math.max(0, Math.round((completedAt.getTime() - startedAt.getTime()) / 1000));
+  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
+export default async function ImportHistoryPage() {
+  const workspace = await getCurrentWorkspace();
+  if (!hasWorkspacePermission(workspace.role, "crm:import") || isDemoWorkspace(workspace)) {
+    return <ImportUnavailable demo={isDemoWorkspace(workspace)} />;
+  }
+  const jobs = await getImportHistory();
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Data management"
+        title="Import history"
+        description="Review recent CSV imports, processing outcomes, and rejected rows."
+        action={<Button asChild variant="outline"><Link href="/dashboard/import"><ArrowLeft className="mr-2 h-4 w-4" />New import</Link></Button>}
+      />
+      {jobs.length === 0 ? (
+        <div className="rounded-3xl border border-dashed bg-muted/20 px-6 py-14 text-center">
+          <h2 className="font-semibold">No imports yet</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Your completed and in-progress CSV imports will appear here.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-3xl border bg-background shadow-sm">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="border-b bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr><th className="p-4">Date and file</th><th className="p-4">Type</th><th className="p-4">Actor</th><th className="p-4">Status</th><th className="p-4">Imported</th><th className="p-4">Updated</th><th className="p-4">Skipped</th><th className="p-4">Failed</th><th className="p-4">Duration</th><th className="p-4"><span className="sr-only">Actions</span></th></tr>
+            </thead>
+            <tbody>
+              {jobs.map((job) => (
+                <tr key={job.id} className="border-b last:border-0">
+                  <td className="p-4"><p className="font-medium">{job.originalFileName}</p><p className="mt-1 text-xs text-muted-foreground">{job.createdAt.toLocaleString()}</p></td>
+                  <td className="p-4 capitalize">{job.entityType}</td>
+                  <td className="p-4 text-muted-foreground">{job.actorName}</td>
+                  <td className="p-4"><Badge variant="outline" className="capitalize">{job.status}</Badge></td>
+                  <td className="p-4">{job.importedRows}</td>
+                  <td className="p-4">{job.updatedRows}</td>
+                  <td className="p-4">{job.skippedRows}</td>
+                  <td className="p-4">{job.failedRows}</td>
+                  <td className="p-4 text-muted-foreground">{duration(job.startedAt, job.completedAt)}</td>
+                  <td className="p-4"><Button asChild size="sm" variant="ghost"><Link href={`/dashboard/import/${job.id}`}><Eye className="mr-2 h-4 w-4" />View results</Link></Button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

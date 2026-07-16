@@ -21,6 +21,7 @@ describe("workspace RBAC permission matrix", () => {
     expect(hasWorkspacePermission("admin", "crm:view_all")).toBe(true);
     expect(hasWorkspacePermission("admin", "crm:update_all")).toBe(true);
     expect(hasWorkspacePermission("admin", "crm:delete")).toBe(true);
+    expect(hasWorkspacePermission("admin", "crm:import")).toBe(true);
     expect(hasWorkspacePermission("admin", "analytics:view")).toBe(true);
     expect(hasWorkspacePermission("admin", "exports:create")).toBe(true);
     expect(hasWorkspacePermission("admin", "members:manage")).toBe(true);
@@ -35,6 +36,7 @@ describe("workspace RBAC permission matrix", () => {
     expect(hasWorkspacePermission("member", "crm:update_assigned")).toBe(true);
     expect(hasWorkspacePermission("member", "analytics:view")).toBe(true);
     expect(hasWorkspacePermission("member", "crm:delete")).toBe(false);
+    expect(hasWorkspacePermission("member", "crm:import")).toBe(false);
     expect(hasWorkspacePermission("member", "members:manage")).toBe(false);
     expect(hasWorkspacePermission("member", "workspace:manage")).toBe(false);
     expect(hasWorkspacePermission("member", "workspace:delete")).toBe(false);

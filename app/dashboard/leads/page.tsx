@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { getLeadsList } from "@/app/dashboard/leads/queries";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
@@ -30,6 +30,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const workspace = await getCurrentWorkspace();
   const readOnly = isDemoWorkspace(workspace);
   const canExport = hasWorkspacePermission(workspace.role, "exports:create");
+  const canImport = hasWorkspacePermission(workspace.role, "crm:import");
   const canUpdate = hasWorkspacePermission(workspace.role, "crm:update_all") || hasWorkspacePermission(workspace.role, "crm:update_assigned");
   const canDelete = hasWorkspacePermission(workspace.role, "crm:delete");
 
@@ -67,6 +68,14 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         className="shrink-0"
         action={
           <div className="flex flex-wrap items-center gap-2">
+            {canImport && !readOnly ? (
+              <Button asChild variant="outline">
+                <Link href="/dashboard/import">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </Link>
+              </Button>
+            ) : null}
             {canExport ? <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" /> : null}
             {!readOnly ? (
               <Button asChild data-testid="add-lead-btn">

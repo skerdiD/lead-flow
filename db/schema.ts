@@ -65,6 +65,7 @@ export const activityEventTypes = [
   "member_removed",
   "member_role_changed",
   "ownership_transferred",
+  "crm_import_completed",
 ] as const;
 export const activityEventTypeEnum = pgEnum(
   "activity_event_type",
@@ -98,6 +99,46 @@ export const taskPriorityEnum = pgEnum("task_priority", taskPriorities);
 export const notificationTypeEnum = pgEnum(
   "notification_type",
   NOTIFICATION_TYPES,
+);
+
+export const importEntityTypes = ["lead", "contact", "account"] as const;
+export const importEntityTypeEnum = pgEnum(
+  "import_entity_type",
+  importEntityTypes,
+);
+export const importJobStatuses = [
+  "draft",
+  "reviewed",
+  "processing",
+  "completed",
+  "failed",
+] as const;
+export const importJobStatusEnum = pgEnum(
+  "import_job_status",
+  importJobStatuses,
+);
+export const importDuplicateStrategies = [
+  "skip",
+  "update",
+  "create_new",
+] as const;
+export const importDuplicateStrategyEnum = pgEnum(
+  "import_duplicate_strategy",
+  importDuplicateStrategies,
+);
+export const importRowStatuses = [
+  "pending",
+  "ready",
+  "duplicate",
+  "invalid",
+  "imported",
+  "updated",
+  "skipped",
+  "failed",
+] as const;
+export const importRowStatusEnum = pgEnum(
+  "import_row_status",
+  importRowStatuses,
 );
 
 function getWorkspaceMemberReferenceColumns(): {
@@ -661,6 +702,144 @@ export const activityEvents = pgTable(
       table.workspaceId,
       table.dealId,
       table.createdAt,
+    ),
+  ],
+);
+
+export const importJobs = pgTable(
+  "import_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    actorUserId: varchar("actor_user_id", { length: 255 }).notNull(),
+    actorName: varchar("actor_name", { length: 160 }).notNull(),
+    entityType: importEntityTypeEnum("entity_type").notNull(),
+    originalFileName: varchar("original_file_name", { length: 255 }).notNull(),
+    fileHash: varchar("file_hash", { length: 64 }).notNull(),
+    status: importJobStatusEnum("status").notNull().default("draft"),
+    totalRows: integer("total_rows").notNull().default(0),
+    validRows: integer("valid_rows").notNull().default(0),
+    invalidRows: integer("invalid_rows").notNull().default(0),
+    duplicateRows: integer("duplicate_rows").notNull().default(0),
+    importedRows: integer("imported_rows").notNull().default(0),
+    updatedRows: integer("updated_rows").notNull().default(0),
+    skippedRows: integer("skipped_rows").notNull().default(0),
+    failedRows: integer("failed_rows").notNull().default(0),
+    mapping: jsonb("mapping").$type<Record<string, string | null>>(),
+    duplicateStrategy:
+      importDuplicateStrategyEnum("duplicate_strategy").default("skip"),
+    idempotencyKey: uuid("idempotency_key").defaultRandom().notNull(),
+    requestId: uuid("request_id").defaultRandom().notNull(),
+    errorMessage: varchar("error_message", { length: 255 }),
+    startedAt: timestamp("started_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    completedAt: timestamp("completed_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("import_jobs_workspace_id_id_unique").on(
+      table.workspaceId,
+      table.id,
+    ),
+    uniqueIndex("import_jobs_workspace_idempotency_unique").on(
+      table.workspaceId,
+      table.idempotencyKey,
+    ),
+    index("import_jobs_workspace_created_at_idx").on(
+      table.workspaceId,
+      table.createdAt,
+    ),
+    index("import_jobs_workspace_status_idx").on(
+      table.workspaceId,
+      table.status,
+    ),
+  ],
+);
+
+export const importRows = pgTable(
+  "import_rows",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull(),
+    importJobId: uuid("import_job_id").notNull(),
+    rowNumber: integer("row_number").notNull(),
+    status: importRowStatusEnum("status").notNull().default("pending"),
+    rawData: jsonb("raw_data").$type<Record<string, string>>().notNull(),
+    normalizedData: jsonb("normalized_data").$type<Record<string, unknown>>(),
+    errors: jsonb("errors").$type<
+      Array<{ field: string; value?: string; message: string }>
+    >(),
+    warnings: jsonb("warnings").$type<string[]>(),
+    duplicateKind: varchar("duplicate_kind", { length: 32 }),
+    existingRecordId: uuid("existing_record_id"),
+    createdRecordId: uuid("created_record_id"),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "import_rows_workspace_job_tenant_fk",
+      columns: [table.workspaceId, table.importJobId],
+      foreignColumns: [importJobs.workspaceId, importJobs.id],
+    }).onDelete("cascade"),
+    uniqueIndex("import_rows_job_row_number_unique").on(
+      table.importJobId,
+      table.rowNumber,
+    ),
+    index("import_rows_job_status_idx").on(table.importJobId, table.status),
+    index("import_rows_workspace_job_idx").on(
+      table.workspaceId,
+      table.importJobId,
+    ),
+  ],
+);
+
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    actorUserId: varchar("actor_user_id", { length: 255 }).notNull(),
+    action: varchar("action", { length: 120 }).notNull(),
+    entityType: varchar("entity_type", { length: 80 }).notNull(),
+    entityId: uuid("entity_id"),
+    requestId: uuid("request_id").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "date",
+    }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("audit_logs_workspace_created_at_idx").on(
+      table.workspaceId,
+      table.createdAt,
+    ),
+    index("audit_logs_workspace_action_idx").on(
+      table.workspaceId,
+      table.action,
     ),
   ],
 );

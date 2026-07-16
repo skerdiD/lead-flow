@@ -4,9 +4,11 @@ import { db } from "@/db";
 import {
   accounts,
   activityEvents,
+  auditLogs,
   contacts,
   crmTasks,
   deals,
+  importJobs,
   leadNotes,
   leads,
   notifications,
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
 
   const userId = process.env.E2E_USER_ID || "e2e-user";
 
+  await db.delete(auditLogs).where(eq(auditLogs.actorUserId, userId));
+  await db.delete(importJobs).where(eq(importJobs.actorUserId, userId));
   await db.delete(notifications).where(eq(notifications.userId, userId));
   await db.delete(leadNotes).where(eq(leadNotes.userId, userId));
   await db.delete(activityEvents).where(eq(activityEvents.userId, userId));

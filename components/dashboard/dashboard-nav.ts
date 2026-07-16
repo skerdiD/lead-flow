@@ -9,6 +9,7 @@ import {
   Clock3,
   Settings,
   ListTodo,
+  Upload,
 } from "lucide-react";
 
 export type DashboardNavItem = {
@@ -76,6 +77,12 @@ export const dashboardNavItems: DashboardNavItem[] = [
     href: "/dashboard/tasks",
     icon: ListTodo,
     exact: true,
+  },
+  {
+    title: "Import",
+    description: "Import leads, contacts, and accounts from CSV",
+    href: "/dashboard/import",
+    icon: Upload,
   },
   {
     title: "Settings",

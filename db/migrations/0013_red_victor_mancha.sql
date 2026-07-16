@@ -107,6 +107,20 @@ CREATE UNIQUE INDEX "leads_workspace_id_id_unique" ON "leads" USING btree ("work
 CREATE UNIQUE INDEX "deals_workspace_id_id_unique" ON "deals" USING btree ("workspace_id", "id");
 --> statement-breakpoint
 
+-- Historical lead activity may outlive a lead that was hard-deleted before
+-- workspace-aware foreign keys existed. Preserve the activity message while
+-- clearing only the dead reference, matching the new ON DELETE SET NULL rule.
+UPDATE "activity_events" child
+SET "lead_id" = NULL
+WHERE child."lead_id" IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "leads" parent
+    WHERE parent."workspace_id" = child."workspace_id"
+      AND parent."id" = child."lead_id"
+  );
+--> statement-breakpoint
+
 ALTER TABLE "contacts" DROP CONSTRAINT "contacts_account_id_accounts_id_fk";
 --> statement-breakpoint
 ALTER TABLE "leads" DROP CONSTRAINT "leads_account_id_accounts_id_fk";

@@ -69,6 +69,10 @@ export async function protectLeadExport() {
   return protectRequest();
 }
 
+export async function protectCsvImport() {
+  return protectRequest();
+}
+
 export async function protectDemoLogin() {
   return protectRequest();
 }

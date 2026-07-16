@@ -20,6 +20,7 @@ export const workspacePermissions = [
   "crm:update_assigned",
   "crm:delete",
   "crm:assign",
+  "crm:import",
   "analytics:view",
   "exports:create",
   "members:view",
@@ -40,6 +41,7 @@ const permissionsByRole: Record<WorkspaceRole, readonly WorkspacePermission[]> =
     "crm:update_all",
     "crm:delete",
     "crm:assign",
+    "crm:import",
     "analytics:view",
     "exports:create",
     "members:view",
@@ -324,6 +326,8 @@ export function permissionDeniedMessage(permission: WorkspacePermission) {
       return "You do not have permission to delete workspace data.";
     case "crm:assign":
       return "You do not have permission to change record assignments.";
+    case "crm:import":
+      return "You do not have permission to import workspace data.";
     case "crm:view_all":
     case "crm:view_assigned":
       return "You do not have permission to view these records.";

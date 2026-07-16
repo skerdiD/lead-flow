@@ -70,9 +70,9 @@ describe("Arcjet protection", () => {
       },
     });
 
-    const { protectLeadExport } = await import("@/lib/arcjet");
+    const { protectCsvImport } = await import("@/lib/arcjet");
 
-    await expect(protectLeadExport()).resolves.toEqual({
+    await expect(protectCsvImport()).resolves.toEqual({
       ok: false,
       message: "Too many requests. Please wait a moment and try again.",
       status: 429,
