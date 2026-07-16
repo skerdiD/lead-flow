@@ -99,7 +99,7 @@ export function DashboardShell({
   }
 
   return (
-    <div className="h-dvh overflow-hidden bg-gradient-to-b from-muted/35 via-muted/20 to-background">
+    <div className="fixed inset-0 h-dvh overflow-hidden bg-gradient-to-b from-muted/35 via-muted/20 to-background">
       <div className="flex h-full min-h-0">
         <DashboardSidebar
           open={mobileSidebarOpen}
@@ -119,7 +119,7 @@ export function DashboardShell({
             notificationReferenceTime={notificationReferenceTime}
           />
 
-          <main className="min-h-0 flex-1 overflow-y-auto px-4 py-7 sm:px-6 sm:py-8 lg:px-8 [scrollbar-gutter:stable]">
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-7 sm:px-6 sm:py-8 lg:px-8 [scrollbar-gutter:stable]">
             <div className="mx-auto w-full max-w-[1600px]">
               {children}
             </div>
