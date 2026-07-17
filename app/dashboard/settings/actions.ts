@@ -31,6 +31,9 @@ import {
   WorkspaceOwnershipError,
   transferWorkspaceOwnershipInTransaction,
 } from "@/lib/workspace-ownership";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
+import { logger } from "@/lib/logger.server";
 
 type WorkspaceActionState = { success: true; message: string } | { success: false; message: string };
 
@@ -67,10 +70,21 @@ async function getCurrentWorkspaceActor(permission: "members:manage" | "ownershi
   const [userId, workspace] = await Promise.all([requireUserId(), getCurrentWorkspace()]);
 
   if (isDemoWorkspace(workspace)) {
+    logger.warn("security_demo_mutation_blocked", "A destructive demo workspace action was blocked.", {
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      entityType: "workspace",
+    });
     return { userId, workspace, error: DEMO_MUTATION_MESSAGE };
   }
 
   if (!hasWorkspacePermission(workspace.role, permission)) {
+    logger.warn("security_forbidden_workspace_action", "Workspace member attempted an action without permission.", {
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      entityType: "workspace",
+      attemptedPermission: permission,
+    });
     return { userId, workspace, error: permissionDeniedMessage(permission) };
   }
 
@@ -119,6 +133,7 @@ export async function inviteWorkspaceMemberAction(input: {
     const tokenHash = hashInvitationToken(token);
     const expiresAt = new Date(now.getTime() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
+    const requestId = await getRequestId();
     await db.transaction(async (tx) => {
       await tx
         .update(workspaceInvitations)
@@ -148,13 +163,18 @@ export async function inviteWorkspaceMemberAction(input: {
         throw new Error("A pending invitation already exists for this email address.");
       }
 
-      await tx.insert(workspaceInvitations).values({
+      const [invitation] = await tx.insert(workspaceInvitations).values({
         workspaceId: actor.workspace.id,
         email: parsed.data.email,
         role: parsed.data.role,
         tokenHash,
         expiresAt,
         createdByUserId: actor.userId,
+      }).returning({ id: workspaceInvitations.id });
+      await writeAuditEvent({
+        tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role },
+        action: "member.invited", entity: { type: "invitation", id: invitation!.id },
+        after: { role: parsed.data.role }, metadata: { invitedEmail: parsed.data.email }, requestId,
       });
     });
 
@@ -228,8 +248,9 @@ export async function updateWorkspaceMemberRoleAction(input: {
       return { success: true, message: "This team member already has that role." };
     }
 
-    const [updated] = await db
-      .update(workspaceMembers)
+    const requestId = await getRequestId();
+    const updated = await db.transaction(async (tx) => {
+      const [changed] = await tx.update(workspaceMembers)
       .set({ role: parsed.data.role })
       .where(
         and(
@@ -239,6 +260,9 @@ export async function updateWorkspaceMemberRoleAction(input: {
         ),
       )
       .returning({ id: workspaceMembers.id });
+      if (changed) await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.role_changed", entity: { type: "member", id: target.id }, before: { role: target.role }, after: { role: parsed.data.role }, requestId });
+      return changed;
+    });
 
     if (!updated) return { success: false, message: "This team member could not be found." };
 
@@ -275,8 +299,9 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
       return { success: false, message: "You do not have permission to remove this team member." };
     }
 
-    const [removed] = await db
-      .delete(workspaceMembers)
+    const requestId = await getRequestId();
+    const removed = await db.transaction(async (tx) => {
+      const [deleted] = await tx.delete(workspaceMembers)
       .where(
         and(
           eq(workspaceMembers.id, target.id),
@@ -285,6 +310,9 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
         ),
       )
       .returning({ id: workspaceMembers.id });
+      if (deleted) await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.removed", entity: { type: "member", id: target.id }, before: { role: target.role }, requestId });
+      return deleted;
+    });
 
     if (!removed) {
       return {
@@ -313,17 +341,24 @@ export async function transferWorkspaceOwnershipAction(input: { memberId: string
   if (actor.error) return { success: false, message: actor.error };
 
   try {
+    const requestId = await getRequestId();
     await db.transaction(async (tx) => {
       await transferWorkspaceOwnershipInTransaction(tx, {
         workspaceId: actor.workspace.id,
         actorUserId: actor.userId,
         targetMemberId: parsed.data.memberId,
+        requestId,
       });
     });
     revalidateWorkspaceSettings();
     return { success: true, message: "Ownership transferred. You are now an admin in this workspace." };
   } catch (error) {
     if (error instanceof WorkspaceOwnershipError) {
+      logger.warn("security_ownership_transfer_failed", "Workspace ownership transfer was rejected.", {
+        workspaceId: actor.workspace.id,
+        actorUserId: actor.userId,
+        entityType: "workspace",
+      });
       return { success: false, message: error.message };
     }
 
@@ -342,10 +377,14 @@ export async function deleteWorkspaceAction(input: { confirmationName: string })
   }
 
   try {
-    const [deleted] = await db
-      .delete(workspaces)
+    const requestId = await getRequestId();
+    const deleted = await db.transaction(async (tx) => {
+      await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "workspace.deleted", entity: { type: "workspace", id: actor.workspace.id }, before: { name: actor.workspace.name }, requestId });
+      const [removed] = await tx.delete(workspaces)
       .where(and(eq(workspaces.id, actor.workspace.id), eq(workspaces.ownerUserId, actor.userId)))
       .returning({ id: workspaces.id });
+      return removed;
+    });
 
     if (!deleted) return { success: false, message: "Only the workspace owner can delete this workspace." };
     revalidateWorkspaceSettings();
@@ -357,6 +396,9 @@ export async function deleteWorkspaceAction(input: { confirmationName: string })
 
 export async function acceptWorkspaceInvitationAction(token: string): Promise<WorkspaceActionState> {
   if (!/^[A-Za-z0-9_-]{20,200}$/.test(token)) {
+    logger.warn("security_invitation_rejected", "An invitation token had an invalid format.", {
+      entityType: "invitation",
+    });
     return { success: false, message: "This invitation is invalid or has expired." };
   }
 
@@ -375,6 +417,7 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
 
   try {
     const tokenHash = hashInvitationToken(token);
+    const requestId = await getRequestId();
     const accepted = await db.transaction(async (tx) => {
       const [invitation] = await tx
         .select({
@@ -421,6 +464,7 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
         eventType: "invitation_accepted",
         message: `A new ${workspaceRoleLabels[invitation.role]} joined the workspace.`,
       });
+      await writeAuditEvent({ tx, workspaceId: invitation.workspaceId, actor: { userId, role: invitation.role }, action: "member.invitation_accepted", entity: { type: "invitation", id: invitation.id }, after: { role: invitation.role }, requestId });
       return invitation;
     });
 
@@ -430,6 +474,12 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
     return { success: true, message: "You joined the workspace." };
   } catch (error) {
     const message = error instanceof Error ? error.message : "We couldn't accept this invitation right now. Please try again.";
+    if (message.startsWith("This invitation") || message.startsWith("You already")) {
+      logger.warn("security_invitation_rejected", "An invitation was invalid, expired, or already used.", {
+        actorUserId: userId,
+        entityType: "invitation",
+      });
+    }
     return { success: false, message: message.startsWith("This invitation") || message.startsWith("Sign in") || message.startsWith("You already") ? message : "We couldn't accept this invitation right now. Please try again." };
   }
 }

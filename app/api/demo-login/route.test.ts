@@ -52,8 +52,9 @@ describe("POST /api/demo-login", () => {
     const response = await POST(demoRequest(payload));
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
+    await expect(response.json()).resolves.toMatchObject({
       error: "Choose one of the available demo roles to continue.",
+      requestId: expect.any(String),
     });
     expect(mocks.createDemoSignInUrl).not.toHaveBeenCalled();
   });

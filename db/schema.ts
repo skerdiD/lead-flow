@@ -818,15 +818,20 @@ export const auditLogs = pgTable(
   "audit_logs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    workspaceId: uuid("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+    // Deliberately no FK: audit history survives a workspace deletion request.
+    workspaceId: uuid("workspace_id").notNull(),
     actorUserId: varchar("actor_user_id", { length: 255 }).notNull(),
+    actorRole: varchar("actor_role", { length: 16 }).notNull().default("system"),
     action: varchar("action", { length: 120 }).notNull(),
     entityType: varchar("entity_type", { length: 80 }).notNull(),
     entityId: uuid("entity_id"),
     requestId: uuid("request_id").notNull(),
+    before: jsonb("before").$type<Record<string, unknown>>(),
+    after: jsonb("after").$type<Record<string, unknown>>(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    ipHash: varchar("ip_hash", { length: 64 }),
+    userAgentSummary: varchar("user_agent_summary", { length: 160 }),
+    eventKey: varchar("event_key", { length: 120 }),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",
@@ -841,6 +846,20 @@ export const auditLogs = pgTable(
       table.workspaceId,
       table.action,
     ),
+    index("audit_logs_workspace_actor_created_at_idx").on(
+      table.workspaceId,
+      table.actorUserId,
+      table.createdAt,
+    ),
+    index("audit_logs_workspace_entity_created_at_idx").on(
+      table.workspaceId,
+      table.entityType,
+      table.entityId,
+      table.createdAt,
+    ),
+    uniqueIndex("audit_logs_workspace_event_key_unique")
+      .on(table.workspaceId, table.eventKey)
+      .where(sql`${table.eventKey} is not null`),
   ],
 );
 

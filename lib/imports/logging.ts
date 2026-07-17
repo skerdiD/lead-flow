@@ -1,23 +1,9 @@
-type ImportLogLevel = "info" | "warn" | "error";
+import { log, type LogLevel } from "@/lib/logger.server";
 
 export function logImportEvent(
-  level: ImportLogLevel,
+  level: Exclude<LogLevel, "debug">,
   event: string,
   context: Record<string, unknown>,
 ) {
-  const payload = JSON.stringify({
-    level,
-    event,
-    service: "leadflow-csv-import",
-    timestamp: new Date().toISOString(),
-    ...context,
-  });
-
-  if (level === "error") {
-    console.error(payload);
-  } else if (level === "warn") {
-    console.warn(payload);
-  } else {
-    console.info(payload);
-  }
+  log(level, event, "CSV import event.", { service: "leadflow-csv-import", ...context });
 }

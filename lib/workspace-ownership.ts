@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { activityEvents, workspaceMembers, workspaces } from "@/db/schema";
+import { writeAuditEvent } from "@/lib/audit-log.server";
 import type { db } from "@/db";
 
 type WorkspaceOwnershipTransaction = Pick<
@@ -15,6 +16,7 @@ export async function transferWorkspaceOwnershipInTransaction(
     workspaceId: string;
     actorUserId: string;
     targetMemberId: string;
+    requestId?: string;
   },
 ) {
   const [workspace] = await tx
@@ -153,6 +155,17 @@ export async function transferWorkspaceOwnershipInTransaction(
     userId: input.actorUserId,
     eventType: "ownership_transferred",
     message: "Workspace ownership was transferred to another team member.",
+  });
+  await writeAuditEvent({
+    tx,
+    workspaceId: input.workspaceId,
+    actor: { userId: input.actorUserId, role: "owner" },
+    action: "workspace.ownership_transferred",
+    entity: { type: "workspace", id: input.workspaceId },
+    before: { ownerUserId: input.actorUserId },
+    after: { ownerUserId: target.userId },
+    metadata: { previousOwnerMemberId: currentOwner.id, newOwnerMemberId: target.id },
+    requestId: input.requestId,
   });
 
   return {

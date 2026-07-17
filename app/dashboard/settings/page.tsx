@@ -1,4 +1,5 @@
 import { Bell, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { TeamMembersSection } from "@/components/settings/team-members-section";
 import { Button } from "@/components/ui/button";
@@ -187,6 +188,14 @@ export default async function SettingsPage() {
                 value="Workspace-scoped CRM records"
                 hint="Leads, notes, and activity are isolated by workspace membership."
               />
+              {hasWorkspacePermission(workspace.role, "workspace:manage") ? (
+                <SettingRow
+                  label="Audit log"
+                  value="Structured records for sensitive workspace and CRM changes."
+                  hint="Available to Workspace Owners and Admins."
+                  action={<Button asChild variant="outline"><Link href="/dashboard/settings/audit-log">View audit log</Link></Button>}
+                />
+              ) : null}
             </div>
           </SettingsSection>
 

@@ -16,13 +16,13 @@ import { db } from "@/db";
 import {
   accounts,
   activityEvents,
-  auditLogs,
   contacts,
   importJobs,
   importRows,
   leads,
   workspaceMembers,
 } from "@/db/schema";
+import { writeAuditEvent } from "@/lib/audit-log.server";
 import {
   hasWorkspacePermission,
   permissionDeniedMessage,
@@ -846,12 +846,12 @@ export async function confirmImportJob(jobId: string) {
         eventType: "crm_import_completed",
         message: `${job.actorName} imported ${refreshed.importedRows + refreshed.updatedRows} ${job.entityType}${refreshed.importedRows + refreshed.updatedRows === 1 ? "" : "s"} from ${job.originalFileName}.`.slice(0, 255),
       });
-      await tx.insert(auditLogs).values({
+      await writeAuditEvent({
+        tx,
         workspaceId: job.workspaceId,
-        actorUserId: job.actorUserId,
+        actor: { userId: job.actorUserId, role: "system" },
         action: "crm.import.completed",
-        entityType: job.entityType,
-        entityId: job.id,
+        entity: { type: "import", id: job.id },
         requestId: job.requestId,
         metadata: {
           importJobId: job.id,
@@ -861,6 +861,7 @@ export async function confirmImportJob(jobId: string) {
           duplicateStrategy: job.duplicateStrategy,
           ...refreshed,
         },
+        eventKey: `import-completed:${job.id}`,
       });
       return refreshed;
     });

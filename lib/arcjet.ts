@@ -5,6 +5,8 @@ import arcjet, {
   shield,
 } from "@arcjet/next";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
+import { getRequestId } from "@/lib/request-context.server";
+import { logger, logMetric } from "@/lib/logger.server";
 
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
@@ -49,10 +51,19 @@ async function protectRequest() {
   const decision = await aj.protect(req);
 
   if (decision.isDenied()) {
+    const requestId = await getRequestId();
+    const status = decision.reason.isRateLimit() ? 429 : 403;
+    logger.warn("security_request_rejected", "Request was rejected by the application protection layer.", {
+      requestId,
+      route: req.url ? new URL(req.url).pathname : undefined,
+      statusCode: status,
+      rejection: decision.reason.isRateLimit() ? "rate_limit" : decision.reason.isBot() ? "bot" : "shield",
+    });
+    if (status === 429) logMetric("rate_limit.rejected.count", 1, { requestId });
     return {
       ok: false as const,
       message: getDeniedMessage(decision),
-      status: decision.reason.isRateLimit() ? 429 : 403,
+      status,
     };
   }
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { protectDemoLogin } from "@/lib/arcjet";
 import { createDemoSignInUrl, DemoLoginError } from "@/lib/demo-auth.server";
 import { isDemoRole } from "@/lib/demo";
+import { logger } from "@/lib/logger.server";
+import { createRequestId, requestIdHeaders, REQUEST_ID_HEADER } from "@/lib/request-id";
 
 const INVALID_DEMO_REQUEST_MESSAGE =
   "Choose one of the available demo roles to continue.";
@@ -17,11 +19,13 @@ function readDemoRoleRequest(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  const requestId = createRequestId(request.headers.get(REQUEST_ID_HEADER));
+  const responseHeaders = requestIdHeaders(requestId);
   const protection = await protectDemoLogin();
   if (!protection.ok) {
     return NextResponse.json(
-      { error: protection.message },
-      { status: protection.status },
+      { error: protection.message, requestId },
+      { status: protection.status, headers: responseHeaders },
     );
   }
 
@@ -30,22 +34,28 @@ export async function POST(request: Request) {
     payload = await request.json();
   } catch {
     return NextResponse.json(
-      { error: INVALID_DEMO_REQUEST_MESSAGE },
-      { status: 400 },
+      { error: INVALID_DEMO_REQUEST_MESSAGE, requestId },
+      { status: 400, headers: responseHeaders },
     );
   }
 
   const role = readDemoRoleRequest(payload);
   if (!role) {
+    logger.warn("security_demo_role_verification_failed", "Demo login request used an invalid role payload.", {
+      requestId,
+      route: "/api/demo-login",
+      method: "POST",
+      statusCode: 400,
+    });
     return NextResponse.json(
-      { error: INVALID_DEMO_REQUEST_MESSAGE },
-      { status: 400 },
+      { error: INVALID_DEMO_REQUEST_MESSAGE, requestId },
+      { status: 400, headers: responseHeaders },
     );
   }
 
   try {
     const signInUrl = await createDemoSignInUrl(role);
-    return NextResponse.json({ signInUrl });
+    return NextResponse.json({ signInUrl }, { headers: responseHeaders });
   } catch (error) {
     const status = error instanceof DemoLoginError ? error.status : 503;
     const internalMessage =
@@ -55,16 +65,18 @@ export async function POST(request: Request) {
           ? error.message
           : "Unknown demo login error.";
 
-    console.error("Demo login could not be prepared.", {
+    logger.error("demo_login_failed", "Demo login could not be prepared.", {
+      requestId,
       role,
-      internalMessage,
+      errorName: internalMessage,
     });
 
     return NextResponse.json(
       {
         error: "We couldn't prepare this demo role right now. Please try again.",
+        requestId,
       },
-      { status },
+      { status, headers: responseHeaders },
     );
   }
 }
