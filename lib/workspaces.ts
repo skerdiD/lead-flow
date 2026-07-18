@@ -4,8 +4,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "@/db";
-import { workspaceMembers, workspaces, type workspaceRoles } from "@/db/schema";
+import { workspaceMembers, workspaces, workspaceRoles } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 export type WorkspaceRole = (typeof workspaceRoles)[number];
 
@@ -18,6 +19,22 @@ export type CurrentWorkspace = {
 
 const PERSONAL_WORKSPACE_NAME = "Personal Workspace";
 const ACTIVE_WORKSPACE_COOKIE = "leadflow_active_workspace";
+export const E2E_WORKSPACE_ROLE_COOKIE = "leadflow_e2e_workspace_role";
+
+function withE2EWorkspaceRole(
+  workspace: CurrentWorkspace,
+  roleOverride: string | undefined,
+): CurrentWorkspace {
+  if (
+    isSafeE2ETestMode() &&
+    roleOverride &&
+    workspaceRoles.includes(roleOverride as WorkspaceRole)
+  ) {
+    return { ...workspace, role: roleOverride as WorkspaceRole };
+  }
+
+  return workspace;
+}
 
 async function getWorkspaceForUser(userId: string, workspaceId?: string) {
   const conditions = [eq(workspaceMembers.userId, userId)];
@@ -101,28 +118,32 @@ async function createPersonalWorkspace(userId: string) {
 export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace> => {
   const userId = await requireUserId();
   const cookieStore = await cookies();
+  const e2eRoleOverride = cookieStore.get(E2E_WORKSPACE_ROLE_COOKIE)?.value;
   const preferredWorkspaceId = cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value;
   const preferredWorkspace = preferredWorkspaceId
     ? await getWorkspaceForUser(userId, preferredWorkspaceId)
     : null;
 
   if (preferredWorkspace) {
-    return preferredWorkspace;
+    return withE2EWorkspaceRole(preferredWorkspace, e2eRoleOverride);
   }
 
   const existingWorkspace = await getWorkspaceForUser(userId);
 
   if (existingWorkspace) {
-    return existingWorkspace;
+    return withE2EWorkspaceRole(existingWorkspace, e2eRoleOverride);
   }
 
   try {
-    return await createPersonalWorkspace(userId);
+    return withE2EWorkspaceRole(
+      await createPersonalWorkspace(userId),
+      e2eRoleOverride,
+    );
   } catch {
     const resolvedWorkspace = await getWorkspaceForUser(userId);
 
     if (resolvedWorkspace) {
-      return resolvedWorkspace;
+      return withE2EWorkspaceRole(resolvedWorkspace, e2eRoleOverride);
     }
 
     throw new Error("Unable to resolve workspace for current user.");

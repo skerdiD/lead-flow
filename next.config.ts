@@ -63,6 +63,45 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/accounts",
+        destination: "/dashboard/customers/accounts",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/accounts/:path*",
+        destination: "/dashboard/customers/accounts/:path*",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/contacts",
+        destination: "/dashboard/customers/contacts",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/contacts/:path*",
+        destination: "/dashboard/customers/contacts/:path*",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/activity",
+        destination: "/dashboard/settings/activity",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/import/history",
+        destination: "/dashboard/settings/imports/history",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/import/:id",
+        destination: "/dashboard/settings/imports/:id",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

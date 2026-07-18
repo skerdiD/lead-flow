@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ImportUnavailable, ImportWizard } from "@/components/imports/import-wizard";
@@ -11,6 +12,7 @@ import { getCurrentWorkspace } from "@/lib/workspaces";
 export default async function ImportPage() {
   const workspace = await getCurrentWorkspace();
   const canImport = hasWorkspacePermission(workspace.role, "crm:import");
+  if (!canImport) notFound();
   const demo = isDemoWorkspace(workspace);
 
   return (
@@ -22,7 +24,7 @@ export default async function ImportPage() {
         action={
           canImport && !demo ? (
             <Button asChild variant="outline">
-              <Link href="/dashboard/import/history">
+              <Link href="/dashboard/settings/imports/history">
                 <History className="mr-2 h-4 w-4" />
                 Import history
               </Link>
@@ -30,8 +32,8 @@ export default async function ImportPage() {
           ) : undefined
         }
       />
-      {canImport && !demo ? <ImportWizard /> : <ImportUnavailable demo={demo} />}
-      {canImport && !demo ? (
+      {!demo ? <ImportWizard /> : <ImportUnavailable demo />}
+      {!demo ? (
         <p className="text-xs leading-5 text-muted-foreground">
           Staged row data is retained for {IMPORT_LIMITS.stagedDataRetentionDays} days to support review and rejected-row downloads. Import history and aggregate audit metadata remain available without the raw CSV file.
         </p>

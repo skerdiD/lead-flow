@@ -1,4 +1,4 @@
-import { Bell, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
+import { Database, FileClock, LockKeyhole, ShieldCheck, UserCircle2 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { TeamMembersSection } from "@/components/settings/team-members-section";
@@ -14,14 +14,16 @@ function SettingsSection({
   title,
   description,
   children,
+  id,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
-    <section className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section id={id} className="scroll-mt-24 rounded-3xl border bg-background p-6 shadow-sm">
       <div className="flex items-start gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border bg-muted/40">
           <Icon className="h-5 w-5 text-muted-foreground" />
@@ -91,10 +93,14 @@ export default async function SettingsPage() {
   const fullName =
     [firstName, lastName].filter(Boolean).join(" ") ||
     username ||
-    "Account owner";
+    "LeadFlow user";
 
   const primaryEmail = primaryEmailAddress || "No email available";
   const canViewMembers = hasWorkspacePermission(workspace.role, "members:view");
+  const canImport = hasWorkspacePermission(workspace.role, "crm:import");
+  const canViewWorkspaceActivity = hasWorkspacePermission(workspace.role, "analytics:view");
+  const canManageWorkspace = hasWorkspacePermission(workspace.role, "workspace:manage");
+  const canViewAllCrm = hasWorkspacePermission(workspace.role, "crm:view_all");
   const members = canViewMembers ? await getWorkspaceTeam(workspace) : [];
   const demoWorkspace = isDemoWorkspace(workspace);
 
@@ -122,6 +128,7 @@ export default async function SettingsPage() {
             icon={UserCircle2}
             title="Account"
             description="Your profile and sign-in details."
+            id="profile"
           >
             <div className="space-y-4">
               <SettingRow
@@ -146,29 +153,35 @@ export default async function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <SettingsSection
-            icon={Bell}
-            title="Notifications"
-            description="Notification controls are coming soon."
-          >
-            <div className="space-y-4">
+          {canImport ? (
+            <SettingsSection
+              icon={Database}
+              title="Data & imports"
+              description="Bring workspace CRM data into LeadFlow and review prior imports."
+            >
               <SettingRow
-                label="Product notifications"
-                value="Notification settings are not available yet."
-                hint="This area will include reminders and activity updates."
-                action={
-                  <Button variant="outline" disabled>
-                    Coming soon
-                  </Button>
-                }
+                label="CSV data management"
+                value={demoWorkspace ? "Import tools are view-only in the shared demo." : "Import leads, accounts, and contacts through a staged review workflow."}
+                hint="Import history includes processing outcomes and rejected-row details."
+                action={<Button asChild variant="outline"><Link href="/dashboard/settings/imports">Open data & imports</Link></Button>}
               />
+            </SettingsSection>
+          ) : null}
+
+          {canViewWorkspaceActivity ? (
+            <SettingsSection
+              icon={FileClock}
+              title="Workspace activity"
+              description="Review recent CRM changes you are permitted to see."
+            >
               <SettingRow
-                label="Lead activity reminders"
-                value="No reminder system is active yet."
-                hint="Follow-up reminders and inactivity alerts are planned."
+                label="Activity history"
+                value={canViewAllCrm ? "Workspace-wide CRM activity" : "Activity for CRM records assigned to you"}
+                hint="Sensitive administrative events remain in the separate audit log."
+                action={<Button asChild variant="outline"><Link href="/dashboard/settings/activity">View activity</Link></Button>}
               />
-            </div>
-          </SettingsSection>
+            </SettingsSection>
+          ) : null}
         </div>
 
         <div className="space-y-6">
@@ -176,6 +189,7 @@ export default async function SettingsPage() {
             icon={ShieldCheck}
             title="Workspace and data"
             description="Your workspace and data access."
+            id="access-security"
           >
             <div className="space-y-4">
               <SettingRow
@@ -188,7 +202,7 @@ export default async function SettingsPage() {
                 value="Workspace-scoped CRM records"
                 hint="Leads, notes, and activity are isolated by workspace membership."
               />
-              {hasWorkspacePermission(workspace.role, "workspace:manage") ? (
+              {canManageWorkspace ? (
                 <SettingRow
                   label="Audit log"
                   value="Structured records for sensitive workspace and CRM changes."
@@ -213,14 +227,12 @@ export default async function SettingsPage() {
               <SettingRow
                 label="Lead access control"
                 value={
-                  workspace.role === "member"
-                    ? "Assigned CRM records"
-                    : "Workspace CRM access"
+                  canViewAllCrm ? "Workspace CRM access" : "Assigned CRM records"
                 }
                 hint={
-                  workspace.role === "member"
-                    ? "You can view and update records assigned to you."
-                    : "Owners and Admins can manage all CRM records in this workspace."
+                  canViewAllCrm
+                    ? "Your role can manage all CRM records in this workspace."
+                    : "You can view and update records assigned to you."
                 }
               />
             </div>
@@ -229,19 +241,16 @@ export default async function SettingsPage() {
       </div>
 
       {canViewMembers ? (
-        <TeamMembersSection
-          workspaceName={workspace.name}
-          members={members}
-          canInvite={!demoWorkspace && hasWorkspacePermission(workspace.role, "members:manage")}
-          canTransferOwnership={!demoWorkspace && hasWorkspacePermission(workspace.role, "ownership:transfer")}
-          canDeleteWorkspace={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:delete")}
-        />
-      ) : (
-        <section className="rounded-3xl border bg-muted/20 px-6 py-5 text-sm leading-6 text-muted-foreground">
-          Team administration is available to workspace Owners and Admins. Your
-          assigned CRM work remains available from the dashboard.
-        </section>
-      )}
+        <div id="team-roles" className="scroll-mt-24">
+          <TeamMembersSection
+            workspaceName={workspace.name}
+            members={members}
+            canInvite={!demoWorkspace && hasWorkspacePermission(workspace.role, "members:manage")}
+            canTransferOwnership={!demoWorkspace && hasWorkspacePermission(workspace.role, "ownership:transfer")}
+            canDeleteWorkspace={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:delete")}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

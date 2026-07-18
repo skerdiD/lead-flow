@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ImportUnavailable } from "@/components/imports/import-wizard";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +16,8 @@ export default async function ImportResultPage({
   params: Promise<{ id: string }>;
 }) {
   const workspace = await getCurrentWorkspace();
-  if (!hasWorkspacePermission(workspace.role, "crm:import") || isDemoWorkspace(workspace)) {
-    return <ImportUnavailable demo={isDemoWorkspace(workspace)} />;
-  }
+  if (!hasWorkspacePermission(workspace.role, "crm:import")) notFound();
+  if (isDemoWorkspace(workspace)) return <ImportUnavailable demo />;
   const { id } = await params;
   const details = await getImportJobDetails(id);
   const job = details.job;
@@ -28,7 +28,7 @@ export default async function ImportResultPage({
         eyebrow="Import results"
         title={job.originalFileName}
         description={`Review the ${job.entityType} import outcome and any rejected rows.`}
-        action={<Button asChild variant="outline"><Link href="/dashboard/import/history"><ArrowLeft className="mr-2 h-4 w-4" />Import history</Link></Button>}
+        action={<Button asChild variant="outline"><Link href="/dashboard/settings/imports/history"><ArrowLeft className="mr-2 h-4 w-4" />Import history</Link></Button>}
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {[["Status", job.status], ["Imported", job.importedRows], ["Updated", job.updatedRows], ["Skipped", job.skippedRows], ["Failed", job.failedRows]].map(([label, value]) => (

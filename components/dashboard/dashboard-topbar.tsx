@@ -1,10 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Menu, Plus } from "lucide-react";
+import { Building2, Menu } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
-import { getDashboardRouteMeta } from "@/components/dashboard/dashboard-nav";
+import {
+  getDashboardRouteMeta,
+  type CreateAction,
+} from "@/components/dashboard/dashboard-nav";
+import { GlobalCreateMenu } from "@/components/dashboard/global-create-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Badge } from "@/components/ui/badge";
 import type { NotificationListItem } from "@/lib/notifications-types";
@@ -13,6 +16,7 @@ type DashboardTopbarProps = {
   onOpenSidebar: () => void;
   currentWorkspaceName: string;
   isDemoWorkspace?: boolean;
+  createActions: readonly CreateAction[];
   searchSlot?: React.ReactNode;
   initialNotifications: NotificationListItem[];
   initialUnreadNotificationCount: number;
@@ -23,6 +27,7 @@ export function DashboardTopbar({
   onOpenSidebar,
   currentWorkspaceName,
   isDemoWorkspace = false,
+  createActions,
   searchSlot,
   initialNotifications,
   initialUnreadNotificationCount,
@@ -31,7 +36,6 @@ export function DashboardTopbar({
   const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
   const pathname = usePathname();
   const page = getDashboardRouteMeta(pathname);
-  const onCreatePage = pathname === "/dashboard/leads/new";
 
   return (
     <header className="z-30 shrink-0 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -73,15 +77,7 @@ export function DashboardTopbar({
             ) : null}
           </div>
 
-          {!onCreatePage && !isDemoWorkspace ? (
-            <Link
-              href="/dashboard/leads/new"
-              className="hidden items-center rounded-xl border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted md:inline-flex"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New lead
-            </Link>
-          ) : null}
+          {!isDemoWorkspace ? <GlobalCreateMenu actions={createActions} /> : null}
 
           <NotificationBell
             initialNotifications={initialNotifications}

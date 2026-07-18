@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Eye } from "lucide-react";
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ImportUnavailable } from "@/components/imports/import-wizard";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +18,8 @@ function duration(startedAt: Date | null, completedAt: Date | null) {
 
 export default async function ImportHistoryPage() {
   const workspace = await getCurrentWorkspace();
-  if (!hasWorkspacePermission(workspace.role, "crm:import") || isDemoWorkspace(workspace)) {
-    return <ImportUnavailable demo={isDemoWorkspace(workspace)} />;
-  }
+  if (!hasWorkspacePermission(workspace.role, "crm:import")) notFound();
+  if (isDemoWorkspace(workspace)) return <ImportUnavailable demo />;
   const jobs = await getImportHistory();
 
   return (
@@ -53,7 +53,7 @@ export default async function ImportHistoryPage() {
                   <td className="p-4">{job.skippedRows}</td>
                   <td className="p-4">{job.failedRows}</td>
                   <td className="p-4 text-muted-foreground">{duration(job.startedAt, job.completedAt)}</td>
-                  <td className="p-4"><Button asChild size="sm" variant="ghost"><Link href={`/dashboard/import/${job.id}`}><Eye className="mr-2 h-4 w-4" />View results</Link></Button></td>
+                  <td className="p-4"><Button asChild size="sm" variant="ghost"><Link href={`/dashboard/settings/imports/${job.id}`}><Eye className="mr-2 h-4 w-4" />View results</Link></Button></td>
                 </tr>
               ))}
             </tbody>

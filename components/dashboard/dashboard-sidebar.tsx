@@ -2,9 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListChecks, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { LeadFlowLogo } from "@/components/brand/lead-flow-logo";
-import { dashboardNavItems } from "@/components/dashboard/dashboard-nav";
+import {
+  getPrimaryNavigationForUser,
+  getSecondaryNavigationForUser,
+  isNavigationItemActive,
+  navigationSectionLabels,
+  type NavigationContext,
+  type NavigationItem,
+  type NavigationSection,
+} from "@/components/dashboard/dashboard-nav";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type DashboardSidebarProps = {
@@ -12,154 +33,229 @@ type DashboardSidebarProps = {
   onClose: () => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  navigationContext: NavigationContext;
+  roleLabel: string;
 };
 
-function isActivePath(
-  pathname: string,
-  href: string,
-  exact?: boolean,
-) {
-  if (exact) return pathname === href;
-  if (href === "/dashboard") return pathname === href;
-  if (href === "/dashboard/leads") {
-    return (
-      pathname === href ||
-      (pathname.startsWith("/dashboard/leads/") &&
-        pathname !== "/dashboard/leads/new")
-    );
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+function NavigationLink({
+  item,
+  active,
+  collapsed,
+  onNavigate,
+}: {
+  item: NavigationItem;
+  active: boolean;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  const link = (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group flex min-h-10 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        collapsed ? "justify-center px-0" : "gap-3 px-3",
+        active
+          ? "bg-primary/10 text-primary ring-1 ring-primary/15"
+          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+      )}
+    >
+      <Icon
+        className={cn(
+          "size-[1.125rem] shrink-0",
+          active ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+        )}
+        aria-hidden="true"
+      />
+      <span className={cn("truncate", collapsed && "sr-only")}>{item.label}</span>
+    </Link>
+  );
+
+  if (!collapsed) return link;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">{item.label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function SidebarSection({
+  label,
+  items,
+  pathname,
+  collapsed,
+  onNavigate,
+}: {
+  label?: string;
+  items: readonly NavigationItem[];
+  pathname: string;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="space-y-1">
+      {label && !collapsed ? (
+        <p className="px-3 pb-1 pt-3 text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground/80 uppercase">
+          {label}
+        </p>
+      ) : label ? (
+        <div className="mx-auto my-3 h-px w-8 bg-border" aria-hidden="true" />
+      ) : null}
+      {items.map((item) => (
+        <NavigationLink
+          key={item.href}
+          item={item}
+          active={isNavigationItemActive(pathname, item)}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </div>
+  );
 }
 
 function SidebarContent({
+  navigationContext,
+  roleLabel,
   collapsed = false,
-  onClose,
+  onNavigate,
   onToggleCollapsed,
 }: {
+  navigationContext: NavigationContext;
+  roleLabel: string;
   collapsed?: boolean;
-  onClose?: () => void;
+  onNavigate?: () => void;
   onToggleCollapsed?: () => void;
 }) {
   const pathname = usePathname();
+  const primaryItems = getPrimaryNavigationForUser(navigationContext);
+  const secondaryItems = getSecondaryNavigationForUser(navigationContext);
+  const sections: NavigationSection[] = ["overview", "sales", "work"];
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div
-        className={cn(
-          "flex h-16 items-center border-b transition-[padding] duration-200",
-          collapsed ? "justify-between gap-1 px-2" : "gap-3 px-5",
-        )}
-      >
-        <Link
-          href="/dashboard"
-          className={cn(
-            "flex min-w-0 items-center transition-all",
-            collapsed ? "justify-center" : "gap-3",
-          )}
-          onClick={onClose}
-          aria-label="LeadFlow dashboard"
-          title={collapsed ? "LeadFlow dashboard" : undefined}
-        >
-          <LeadFlowLogo
-            showWordmark={!collapsed}
-            subtitle="Lead management"
-            className={collapsed ? "gap-0" : undefined}
-            wordmarkClassName="text-foreground"
-          />
-        </Link>
-
-        {onToggleCollapsed ? (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
-          </button>
-        ) : null}
-      </div>
-
-      <div
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-5"
-      >
-        <nav className="space-y-1">
-          {dashboardNavItems.map((item) => {
-            const active = isActivePath(pathname, item.href, item.exact);
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                title={collapsed ? item.title : undefined}
-                aria-label={collapsed ? item.title : undefined}
-                className={cn(
-                  "group flex items-center rounded-xl text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  collapsed
-                    ? "h-11 justify-center px-0"
-                    : "gap-3 px-3 py-2.5",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : cn(
-                        "text-muted-foreground hover:bg-muted hover:text-foreground",
-                        !collapsed && "hover:translate-x-0.5",
-                      ),
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "h-4 w-4 shrink-0 transition-colors",
-                    active
-                      ? "text-primary-foreground"
-                      : "text-muted-foreground group-hover:text-foreground",
-                  )}
-                />
-                <span className={cn(collapsed ? "sr-only" : "truncate")}>
-                  {item.title}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div
-        className={cn(
-          "shrink-0 border-t py-4 transition-[padding] duration-200",
-          collapsed ? "px-3" : "px-4",
-        )}
-      >
+    <TooltipProvider>
+      <div className="flex h-full min-h-0 flex-col">
         <div
           className={cn(
-            "rounded-2xl border bg-gradient-to-br from-muted/55 via-muted/35 to-background transition-all duration-200",
-            collapsed
-              ? "flex h-11 items-center justify-center px-0"
-              : "p-4",
+            "flex h-16 shrink-0 items-center border-b",
+            collapsed ? "justify-center px-2" : "justify-between gap-3 px-4",
           )}
-          title={collapsed ? "Stay organized" : undefined}
         >
-          {collapsed ? (
-            <ListChecks className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <>
-              <p className="text-sm font-semibold tracking-tight text-foreground">
-                Stay organized
-              </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Track every lead from first contact to close.
-              </p>
-            </>
+          <Link
+            href="/dashboard"
+            className="min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={onNavigate}
+            aria-label="LeadFlow dashboard"
+          >
+            <LeadFlowLogo
+              showWordmark={!collapsed}
+              subtitle="Lead management"
+              className={collapsed ? "gap-0" : undefined}
+              wordmarkClassName="text-foreground"
+            />
+          </Link>
+
+          {onToggleCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleCollapsed}
+                  className={cn(
+                    "inline-flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    collapsed && "absolute -right-3 top-4 z-10",
+                  )}
+                  aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {collapsed ? (
+                    <PanelLeftOpen className="size-4" aria-hidden="true" />
+                  ) : (
+                    <PanelLeftClose className="size-4" aria-hidden="true" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+
+        <nav
+          aria-label="Primary navigation"
+          data-testid="sidebar-navigation-scroll-region"
+          className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="space-y-2">
+            {sections.map((section) => (
+              <SidebarSection
+                key={section}
+                label={navigationSectionLabels[section]}
+                items={primaryItems.filter((item) => item.section === section)}
+                pathname={pathname}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </nav>
+
+        <div
+          className={cn(
+            "shrink-0 space-y-1 border-t bg-background/95 py-3",
+            collapsed ? "px-3" : "px-3",
           )}
+          data-testid="sidebar-bottom-navigation"
+        >
+          {secondaryItems.map((item) => (
+            <NavigationLink
+              key={item.href}
+              item={item}
+              active={isNavigationItemActive(pathname, item)}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
+          ))}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/dashboard/settings#profile"
+                onClick={onNavigate}
+                aria-label={collapsed ? `Profile, ${roleLabel}` : undefined}
+                className={cn(
+                  "flex min-h-11 items-center rounded-lg text-sm transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  collapsed ? "justify-center" : "gap-3 px-2",
+                )}
+              >
+                <Avatar size="sm" className={cn(!collapsed && "size-8")}>
+                  <AvatarFallback className="font-semibold">
+                    {roleLabel.slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className={cn("min-w-0", collapsed && "sr-only")}>
+                  <span className="block truncate font-medium text-foreground">
+                    Your profile
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {roleLabel} workspace role
+                  </span>
+                </span>
+              </Link>
+            </TooltipTrigger>
+            {collapsed ? (
+              <TooltipContent side="right">Profile · {roleLabel}</TooltipContent>
+            ) : null}
+          </Tooltip>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -168,50 +264,43 @@ export function DashboardSidebar({
   onClose,
   collapsed,
   onToggleCollapsed,
+  navigationContext,
+  roleLabel,
 }: DashboardSidebarProps) {
   return (
     <>
       <aside
         className={cn(
-          "hidden h-dvh shrink-0 border-r bg-background/95 backdrop-blur transition-[width] duration-300 ease-in-out lg:block",
-          collapsed ? "w-[5.5rem]" : "w-72",
+          "relative hidden h-dvh shrink-0 border-r bg-background/95 backdrop-blur transition-[width] duration-300 ease-in-out lg:block",
+          collapsed ? "w-[4.5rem]" : "w-64",
         )}
+        data-testid="desktop-sidebar"
       >
         <SidebarContent
+          navigationContext={navigationContext}
+          roleLabel={roleLabel}
           collapsed={collapsed}
           onToggleCollapsed={onToggleCollapsed}
         />
       </aside>
 
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-black/50 transition-opacity lg:hidden",
-          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
-        )}
-        onClick={onClose}
-      />
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 border-r bg-background shadow-xl transition-transform duration-200 lg:hidden",
-          open ? "translate-x-0" : "-translate-x-full",
-        )}
-      >
-        <div className="flex h-16 items-center justify-end border-b px-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Close navigation"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="h-[calc(100vh-4rem)]">
-          <SidebarContent onClose={onClose} />
-        </div>
-      </aside>
+      <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+        <SheetContent
+          side="left"
+          className="w-[min(19rem,88vw)] gap-0 p-0 lg:hidden"
+          aria-describedby="mobile-navigation-description"
+        >
+          <SheetTitle className="sr-only">LeadFlow navigation</SheetTitle>
+          <SheetDescription id="mobile-navigation-description" className="sr-only">
+            Navigate the LeadFlow dashboard and account settings.
+          </SheetDescription>
+          <SidebarContent
+            navigationContext={navigationContext}
+            roleLabel={roleLabel}
+            onNavigate={onClose}
+          />
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

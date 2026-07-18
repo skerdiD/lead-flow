@@ -234,8 +234,8 @@ export function ImportWizard() {
     entityType === "lead"
       ? "/dashboard/leads"
       : entityType === "contact"
-        ? "/dashboard/contacts"
-        : "/dashboard/accounts";
+        ? "/dashboard/customers/contacts"
+        : "/dashboard/customers/accounts";
 
   return (
     <div className="space-y-6">
@@ -560,7 +560,7 @@ export function ImportWizard() {
                 {(details.job.failedRows > 0 || details.job.invalidRows > 0) ? (
                   <Button asChild variant="outline"><a href={`/api/imports/${details.job.id}/rejected`}><Download className="mr-2 h-4 w-4" />Download rejected rows</a></Button>
                 ) : null}
-                <Button asChild variant="outline"><Link href="/dashboard/import/history"><History className="mr-2 h-4 w-4" />Import history</Link></Button>
+                <Button asChild variant="outline"><Link href="/dashboard/settings/imports/history"><History className="mr-2 h-4 w-4" />Import history</Link></Button>
               </div>
             </div>
           </CardContent>

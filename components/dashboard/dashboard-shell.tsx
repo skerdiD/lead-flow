@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import {
+  getCreateActionsForUser,
+  type NavigationContext,
+} from "@/components/dashboard/dashboard-nav";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
 import type { NotificationListItem } from "@/lib/notifications-types";
@@ -71,6 +75,8 @@ function setSidebarCollapsedPreference(collapsed: boolean) {
 type DashboardShellProps = {
   children: React.ReactNode;
   currentWorkspaceName: string;
+  navigationContext: NavigationContext;
+  roleLabel: string;
   isDemoWorkspace?: boolean;
   searchSlot?: React.ReactNode;
   initialNotifications: NotificationListItem[];
@@ -81,6 +87,8 @@ type DashboardShellProps = {
 export function DashboardShell({
   children,
   currentWorkspaceName,
+  navigationContext,
+  roleLabel,
   isDemoWorkspace = false,
   searchSlot,
   initialNotifications,
@@ -98,6 +106,8 @@ export function DashboardShell({
     setSidebarCollapsedPreference(!sidebarCollapsed);
   }
 
+  const createActions = getCreateActionsForUser(navigationContext);
+
   return (
     <div className="fixed inset-0 h-dvh overflow-hidden bg-gradient-to-b from-muted/35 via-muted/20 to-background">
       <div className="flex h-full min-h-0">
@@ -106,6 +116,8 @@ export function DashboardShell({
           onClose={() => setMobileSidebarOpen(false)}
           collapsed={sidebarCollapsed}
           onToggleCollapsed={toggleSidebarCollapsed}
+          navigationContext={navigationContext}
+          roleLabel={roleLabel}
         />
 
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
@@ -113,6 +125,7 @@ export function DashboardShell({
             onOpenSidebar={() => setMobileSidebarOpen(true)}
             currentWorkspaceName={currentWorkspaceName}
             isDemoWorkspace={isDemoWorkspace}
+            createActions={createActions}
             searchSlot={searchSlot}
             initialNotifications={initialNotifications}
             initialUnreadNotificationCount={initialUnreadNotificationCount}
