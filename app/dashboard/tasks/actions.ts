@@ -7,12 +7,14 @@ import { activityEvents, crmTasks, leads } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";
 import {
   canAccessRecord,
+  getTaskUpdateConditions,
   getWorkspaceAuthorizationContext,
   hasWorkspacePermission,
   permissionDeniedMessage,
 } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
+import { isUuid } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 export type TaskMutationState =
@@ -59,6 +61,10 @@ async function createTaskActivity(params: {
 }
 
 export async function completeTaskAction(taskId: string): Promise<TaskMutationState> {
+  if (!isUuid(taskId)) {
+    return { success: false, message: "This task could not be found." };
+  }
+
   const [userId, workspace, protection] = await Promise.all([
     requireUserId(),
     getCurrentWorkspace(),
@@ -87,6 +93,7 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
   }
 
   try {
+    const authorizationContext = getWorkspaceAuthorizationContext(workspace, userId);
     const [task] = await db
       .select({
         id: crmTasks.id,
@@ -105,7 +112,12 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
       .where(
         and(
           eq(crmTasks.id, taskId),
-          eq(crmTasks.workspaceId, workspace.id),
+          ...getTaskUpdateConditions(
+            authorizationContext,
+            crmTasks.workspaceId,
+            crmTasks.ownerUserId,
+            crmTasks.userId,
+          ),
         ),
       )
       .limit(1);
@@ -118,7 +130,7 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
     }
 
     if (!canAccessRecord(
-      getWorkspaceAuthorizationContext(workspace, userId),
+      authorizationContext,
       { workspaceId: workspace.id, assignedUserId: task.ownerUserId ?? task.userId },
       "update",
     )) {
@@ -142,7 +154,12 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
       .where(
         and(
           eq(crmTasks.id, taskId),
-          eq(crmTasks.workspaceId, workspace.id),
+          ...getTaskUpdateConditions(
+            authorizationContext,
+            crmTasks.workspaceId,
+            crmTasks.ownerUserId,
+            crmTasks.userId,
+          ),
         ),
       )
       .returning({
@@ -181,6 +198,10 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
 }
 
 export async function reopenTaskAction(taskId: string): Promise<TaskMutationState> {
+  if (!isUuid(taskId)) {
+    return { success: false, message: "This task could not be found." };
+  }
+
   const [userId, workspace, protection] = await Promise.all([
     requireUserId(),
     getCurrentWorkspace(),
@@ -209,6 +230,7 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
   }
 
   try {
+    const authorizationContext = getWorkspaceAuthorizationContext(workspace, userId);
     const [task] = await db
       .select({
         id: crmTasks.id,
@@ -220,7 +242,12 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
       .where(
         and(
           eq(crmTasks.id, taskId),
-          eq(crmTasks.workspaceId, workspace.id),
+          ...getTaskUpdateConditions(
+            authorizationContext,
+            crmTasks.workspaceId,
+            crmTasks.ownerUserId,
+            crmTasks.userId,
+          ),
         ),
       )
       .limit(1);
@@ -233,7 +260,7 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
     }
 
     if (!canAccessRecord(
-      getWorkspaceAuthorizationContext(workspace, userId),
+      authorizationContext,
       { workspaceId: workspace.id, assignedUserId: task.ownerUserId ?? task.userId },
       "update",
     )) {
@@ -250,7 +277,12 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
       .where(
         and(
           eq(crmTasks.id, taskId),
-          eq(crmTasks.workspaceId, workspace.id),
+          ...getTaskUpdateConditions(
+            authorizationContext,
+            crmTasks.workspaceId,
+            crmTasks.ownerUserId,
+            crmTasks.userId,
+          ),
         ),
       )
       .returning({

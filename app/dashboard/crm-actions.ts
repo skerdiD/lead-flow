@@ -6,8 +6,8 @@ import { db } from "@/db";
 import { accounts, activityEvents, contacts, deals, leads, workspaceMembers } from "@/db/schema";
 import {
   canAccessRecord,
-  getCurrentWorkspaceAuthorizationContext,
   getRecordUpdateConditions,
+  getWorkspaceAuthorizationContext,
   hasWorkspacePermission,
 } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
@@ -37,11 +37,16 @@ async function activity(input: { workspaceId: string; userId: string; eventType:
   await db.insert(activityEvents).values(input);
 }
 
-async function prepareMutation(permission: "crm:create" | "crm:delete" | "crm:assign") {
-  const [workspace, userId, context] = await Promise.all([getCurrentWorkspace(), requireUserId(), getCurrentWorkspaceAuthorizationContext()]);
+type CrmMutationPermission = "crm:create" | "crm:update" | "crm:delete";
+
+async function prepareMutation(permission: CrmMutationPermission) {
+  const [workspace, userId] = await Promise.all([getCurrentWorkspace(), requireUserId()]);
   if (isDemoWorkspace(workspace)) return { error: DEMO_MUTATION_MESSAGE } as const;
-  if (!hasWorkspacePermission(workspace.role, permission)) return { error: "You do not have permission to make this change." } as const;
-  return { workspace, userId: userId!, context } as const;
+  const allowed = permission === "crm:update"
+    ? hasWorkspacePermission(workspace.role, "crm:update_all") || hasWorkspacePermission(workspace.role, "crm:update_assigned")
+    : hasWorkspacePermission(workspace.role, permission);
+  if (!allowed) return { error: "You do not have permission to make this change." } as const;
+  return { workspace, userId, context: getWorkspaceAuthorizationContext(workspace, userId) } as const;
 }
 
 export async function createAccountAction(values: AccountFormValues): Promise<MutationResult> {
@@ -60,7 +65,7 @@ export async function createAccountAction(values: AccountFormValues): Promise<Mu
 export async function updateAccountAction(id: string, values: AccountFormValues): Promise<MutationResult> {
   if (!isUuid(id)) return { success: false, message: "This account could not be found." };
   const parsed = accountFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the account details.", fieldErrors: parsed.error.flatten().fieldErrors };
-  const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const state = await prepareMutation("crm:update"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   const [existing] = await db.select({ workspaceId: accounts.workspaceId, assignedUserId: accounts.assignedOwnerUserId }).from(accounts).where(and(eq(accounts.id, id), eq(accounts.workspaceId, state.workspace.id))).limit(1);
   if (!existing || !canAccessRecord(state.context, existing, "update")) return { success: false, message: "This account could not be found or you do not have permission to update it." };
   const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") ? await validateMember(state.workspace.id, parsed.data.assignedOwnerUserId) : existing.assignedUserId;
@@ -89,7 +94,7 @@ export async function createContactAction(values: ContactFormValues): Promise<Mu
 
 export async function updateContactAction(id: string, values: ContactFormValues): Promise<MutationResult> {
   if (!isUuid(id)) return { success: false, message: "This contact could not be found." }; const parsed = contactFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the contact details.", fieldErrors: parsed.error.flatten().fieldErrors };
-  const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const state = await prepareMutation("crm:update"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   const [existing] = await db.select({ workspaceId: contacts.workspaceId, assignedUserId: contacts.assignedOwnerUserId, accountId: contacts.accountId }).from(contacts).where(and(eq(contacts.id, id), eq(contacts.workspaceId, state.workspace.id))).limit(1); if (!existing || !canAccessRecord(state.context, existing, "update")) return { success: false, message: "This contact could not be found or you do not have permission to update it." };
   const accountId = parsed.data.accountId && isUuid(parsed.data.accountId) ? parsed.data.accountId : null; if (parsed.data.accountId && (!accountId || !(await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.workspaceId, state.workspace.id), eq(accounts.isArchived, false))).limit(1))[0])) return { success: false, message: "Choose an active account in this workspace." };
   const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") ? await validateMember(state.workspace.id, parsed.data.assignedOwnerUserId) : existing.assignedUserId; if (parsed.data.assignedOwnerUserId && !owner) return { success: false, message: "Choose a valid workspace member as the owner." };
@@ -117,7 +122,7 @@ export async function createDealAction(values: DealFormValues): Promise<Mutation
 }
 
 export async function moveDealAction(input: { dealId: string; stage: string; updatedAt: string; lostReason?: string }): Promise<MoveResult> {
-  const parsed = dealMoveSchema.safeParse(input); if (!parsed.success) return { success: false, message: "This deal transition is not valid." }; const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const parsed = dealMoveSchema.safeParse(input); if (!parsed.success) return { success: false, message: "This deal transition is not valid." }; const state = await prepareMutation("crm:update"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   const [existing] = await db.select({ id: deals.id, workspaceId: deals.workspaceId, assignedUserId: deals.ownerUserId, name: deals.name, stage: deals.stage, updatedAt: deals.updatedAt, closedAt: deals.closedAt, leadId: deals.leadId }).from(deals).where(and(eq(deals.id, parsed.data.dealId), eq(deals.workspaceId, state.workspace.id))).limit(1); if (!existing || !canAccessRecord(state.context, existing, "update")) return { success: false, message: "This deal could not be found or you do not have permission to update it." }; if (existing.updatedAt.toISOString() !== parsed.data.updatedAt) return { success: false, message: "This deal changed elsewhere. Refresh and try again." }; if (parsed.data.stage === "lost" && !parsed.data.lostReason) return { success: false, message: "A lost reason is required before closing a deal as lost." };
   const reopening = ["won", "lost"].includes(existing.stage) && !["won", "lost"].includes(parsed.data.stage); const [updated] = await db.update(deals).set({ stage: parsed.data.stage, closedAt: reopening ? null : ["won", "lost"].includes(parsed.data.stage) ? existing.closedAt ?? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null, updatedAt: new Date() }).where(and(eq(deals.id, existing.id), eq(deals.workspaceId, state.workspace.id), eq(deals.updatedAt, existing.updatedAt), ...getRecordUpdateConditions(state.context, deals.workspaceId, deals.ownerUserId))).returning({ updatedAt: deals.updatedAt }); if (!updated) return { success: false, message: "This deal changed elsewhere. Refresh and try again." };
   await activity({ workspaceId: state.workspace.id, userId: state.userId, eventType: parsed.data.stage === "lost" ? "deal_lost" : "deal_stage_changed", message: `Deal moved to ${parsed.data.stage}: ${existing.name}`, dealId: existing.id, leadId: existing.leadId }); mutationPaths("/dashboard/deals", `/dashboard/deals/${existing.id}`); return { success: true, stage: parsed.data.stage, updatedAt: updated.updatedAt.toISOString(), message: reopening ? "Deal reopened; the closed date was cleared." : "Deal stage updated." };
