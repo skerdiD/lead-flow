@@ -5,9 +5,14 @@ import { Button } from "@/components/ui/button";
 type EmptyLeadsStateProps = {
   hasFilters: boolean;
   archiveView?: boolean;
+  canCreate?: boolean;
 };
 
-export function EmptyLeadsState({ hasFilters, archiveView = false }: EmptyLeadsStateProps) {
+export function EmptyLeadsState({
+  hasFilters,
+  archiveView = false,
+  canCreate = false,
+}: EmptyLeadsStateProps) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-dashed bg-background px-6 py-12 shadow-sm">
       <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-muted/50 blur-3xl" />
@@ -34,17 +39,17 @@ export function EmptyLeadsState({ hasFilters, archiveView = false }: EmptyLeadsS
             : "Start by adding your first lead. Once records are in, you can sort, filter, and manage them from one table."}
         </p>
 
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Button asChild>
-            <Link href="/dashboard/leads/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add lead
-            </Link>
-          </Button>
-
+        <div className="mt-6 flex items-center justify-center">
           {hasFilters ? (
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link href="/dashboard/leads">Clear filters</Link>
+            </Button>
+          ) : canCreate ? (
+            <Button asChild>
+              <Link href="/dashboard/leads/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add lead
+              </Link>
             </Button>
           ) : null}
         </div>

@@ -31,6 +31,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const readOnly = isDemoWorkspace(workspace);
   const canExport = hasWorkspacePermission(workspace.role, "exports:create");
   const canImport = hasWorkspacePermission(workspace.role, "crm:import");
+  const canCreate = hasWorkspacePermission(workspace.role, "crm:create") && !readOnly;
   const canUpdate = hasWorkspacePermission(workspace.role, "crm:update_all") || hasWorkspacePermission(workspace.role, "crm:update_assigned");
   const canDelete = hasWorkspacePermission(workspace.role, "crm:delete");
 
@@ -66,6 +67,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
             : "Search, filter, and manage your leads."
         }
         className="shrink-0"
+        compact
         action={
           <div className="flex flex-wrap items-center gap-2">
             {canImport && !readOnly ? (
@@ -77,7 +79,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
               </Button>
             ) : null}
             {canExport ? <ExportLeadsMenu buttonLabel="Export leads" testId="export-all-leads" /> : null}
-            {!readOnly ? (
+            {canCreate ? (
               <Button asChild data-testid="add-lead-btn">
                 <Link href="/dashboard/leads/new">
                   <Plus className="mr-2 h-4 w-4" />
@@ -91,8 +93,8 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
 
       {readOnly ? <DemoReadOnlyHint /> : null}
 
-      <div className="shrink-0 rounded-3xl border bg-background p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="shrink-0 rounded-2xl border bg-background p-3 shadow-sm sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             {tableData.totalCount === 0
               ? "No leads found"
@@ -110,7 +112,11 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       </div>
 
       {tableData.totalCount === 0 ? (
-        <EmptyLeadsState hasFilters={hasFilters} archiveView={isArchiveView} />
+        <EmptyLeadsState
+          hasFilters={hasFilters}
+          archiveView={isArchiveView}
+          canCreate={canCreate}
+        />
       ) : (
         <LeadsTable
           leads={tableData.leads}

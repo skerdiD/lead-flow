@@ -21,6 +21,10 @@ import {
   type FollowUpStatus,
   type LeadStatus,
 } from "@/lib/constants/leads";
+import {
+  resolveWorkspaceMemberProfiles,
+  type WorkspaceMemberProfile,
+} from "@/lib/workspace-member-profiles.server";
 
 export type LeadsListFilters = {
   search?: string;
@@ -53,6 +57,7 @@ export type LeadsListItem = {
   status: LeadStatus;
   source: string | null;
   sourceLabel: string;
+  owner: WorkspaceMemberProfile | null;
   nextFollowUpDate: string | null;
   followUpNote: string | null;
   followUpPriority: FollowUpPriority;
@@ -250,6 +255,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       status: leads.status,
       source: leads.source,
       sourceLabel,
+      assignedOwnerUserId: leads.assignedOwnerUserId,
       nextFollowUpDate: leads.nextFollowUpDate,
       followUpNote: leads.followUpNote,
       followUpPriority: leads.followUpPriority,
@@ -271,17 +277,23 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
   );
   sourceConditions.push(eq(leads.isArchived, archived === "archived"));
 
-  const sourceRows = await db
-    .select({
-      label: sourceLabel,
-      count: sourceCount,
-    })
-    .from(leads)
-    .where(
-      and(...sourceConditions),
-    )
-    .groupBy(sourceLabel)
-    .orderBy(desc(sourceCount), asc(sourceLabel));
+  const [sourceRows, memberProfiles] = await Promise.all([
+    db
+      .select({
+        label: sourceLabel,
+        count: sourceCount,
+      })
+      .from(leads)
+      .where(and(...sourceConditions))
+      .groupBy(sourceLabel)
+      .orderBy(desc(sourceCount), asc(sourceLabel)),
+    resolveWorkspaceMemberProfiles(
+      context.workspaceId,
+      rows.flatMap((row) =>
+        row.assignedOwnerUserId ? [row.assignedOwnerUserId] : [],
+      ),
+    ),
+  ]);
 
   return {
     leads: rows.map((row) => ({
@@ -293,6 +305,12 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       status: row.status,
       source: row.source,
       sourceLabel: row.sourceLabel,
+      owner: row.assignedOwnerUserId
+        ? (memberProfiles.get(row.assignedOwnerUserId) ?? {
+            name: "Unknown member",
+            imageUrl: null,
+          })
+        : null,
       nextFollowUpDate: row.nextFollowUpDate?.toISOString() ?? null,
       followUpNote: row.followUpNote,
       followUpPriority: row.followUpPriority,

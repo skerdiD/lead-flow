@@ -67,14 +67,14 @@ export function LeadFollowUpBadge({
   if (dateState === "none") {
     return (
       <span className="text-sm text-muted-foreground">
-        No follow-up set
+        No follow-up
       </span>
     );
   }
 
   const label =
     dateState === "overdue"
-      ? "Overdue"
+      ? `Overdue · ${displayDate}`
       : dateState === "today"
         ? "Due today"
         : displayDate;

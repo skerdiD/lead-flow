@@ -14,6 +14,7 @@ const { getCurrentWorkspaceMock, requireUserIdMock, selectResults, leadsTable } 
     phone: "phone",
     status: "status",
     source: "source",
+    assignedOwnerUserId: "assigned_owner_user_id",
     nextFollowUpDate: "next_follow_up_date",
     followUpNote: "follow_up_note",
     followUpPriority: "follow_up_priority",
@@ -57,6 +58,17 @@ vi.mock("@/lib/auth", () => ({
   requireUserId: requireUserIdMock,
 }));
 
+vi.mock("@/lib/workspace-member-profiles.server", () => ({
+  resolveWorkspaceMemberProfiles: vi.fn(async () =>
+    new Map([
+      [
+        "user_123",
+        { name: "Jane Owner", imageUrl: "https://example.com/jane.png" },
+      ],
+    ]),
+  ),
+}));
+
 import { getLeadsList } from "@/app/dashboard/leads/queries";
 
 describe("getLeadsList", () => {
@@ -85,6 +97,7 @@ describe("getLeadsList", () => {
           status: "Closed",
           source: "Referral",
           sourceLabel: "Referral",
+          assignedOwnerUserId: "user_123",
           nextFollowUpDate: new Date("2025-01-03T00:00:00.000Z"),
           followUpNote: "Check in",
           followUpPriority: "high",
@@ -102,6 +115,7 @@ describe("getLeadsList", () => {
           status: "Closed",
           source: null,
           sourceLabel: "Unspecified",
+          assignedOwnerUserId: null,
           nextFollowUpDate: null,
           followUpNote: null,
           followUpPriority: "medium",
@@ -139,6 +153,8 @@ describe("getLeadsList", () => {
     expect(result.page).toBe(2);
     expect(result.leads).toHaveLength(2);
     expect(result.leads[0]?.createdAt).toBe("2025-01-01T10:00:00.000Z");
+    expect(result.leads[0]?.owner?.name).toBe("Jane Owner");
+    expect(result.leads[1]?.owner).toBeNull();
     expect(result.sourceOptions).toEqual([
       { label: "Referral", count: 8 },
       { label: "Unspecified", count: 5 },

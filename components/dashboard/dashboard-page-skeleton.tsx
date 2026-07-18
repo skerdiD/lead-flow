@@ -76,8 +76,8 @@ export function DashboardOverviewSkeleton() {
 
 export function LeadsTableSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border bg-background p-6 shadow-sm">
+    <div className="space-y-4 sm:space-y-6" aria-label="Loading leads" aria-live="polite">
+      <div className="rounded-3xl border bg-background p-5 shadow-sm">
         <Pulse className="h-4 w-32" />
         <Pulse className="mt-4 h-8 w-48" />
         <Pulse className="mt-3 h-4 w-full max-w-xl" />
@@ -95,15 +95,33 @@ export function LeadsTableSkeleton() {
       </div>
 
       <div className="overflow-hidden rounded-3xl border bg-background shadow-sm">
-        <div className="space-y-0">
+        <div className="hidden space-y-0 md:block">
           {Array.from({ length: 7 }).map((_, index) => (
             <div
               key={index}
-              className="grid grid-cols-8 gap-4 border-b px-6 py-4 last:border-b-0"
+              className="grid grid-cols-[2fr_0.8fr_1fr_1fr_3rem] gap-4 border-b px-4 py-4 last:border-b-0 xl:grid-cols-[2fr_0.8fr_0.9fr_1fr_1fr_3rem]"
             >
-              {Array.from({ length: 8 }).map((__, cellIndex) => (
+              {Array.from({ length: 5 }).map((__, cellIndex) => (
                 <Pulse key={cellIndex} className="h-4 w-full" />
               ))}
+            </div>
+          ))}
+        </div>
+        <div className="divide-y md:hidden">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="space-y-4 p-4">
+              <div className="flex items-center gap-3">
+                <Pulse className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Pulse className="h-4 w-2/3" />
+                  <Pulse className="h-3 w-1/2" />
+                </div>
+                <Pulse className="h-8 w-8" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Pulse className="h-7 w-full" />
+                <Pulse className="h-7 w-full" />
+              </div>
             </div>
           ))}
         </div>
