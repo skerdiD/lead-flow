@@ -73,10 +73,10 @@ export function LeadDealPanel({
         id="lead-opportunity"
         className="rounded-3xl border bg-background p-5 shadow-sm"
       >
-        <p className="text-sm font-semibold tracking-tight text-foreground">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">
           Opportunity
-        </p>
-        <div className="mt-4 rounded-2xl border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+        </h2>
+        <div className="mt-4 rounded-2xl border border-dashed bg-muted/20 px-4 py-4 text-sm leading-6 text-muted-foreground">
           No deal is linked yet. Add one from the lead edit form when this becomes a sales opportunity.
         </div>
       </section>
@@ -108,16 +108,16 @@ export function LeadDealPanel({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Opportunity
-          </p>
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">{deal.name}</p>
         </div>
         <Target className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-background p-3">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="col-span-2 rounded-2xl border bg-background p-3 sm:col-span-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Value
           </p>
@@ -147,14 +147,14 @@ export function LeadDealPanel({
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Deal stage
         </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="w-full sm:max-w-[220px]">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="w-full">
             <Select
               value={stage}
               onValueChange={(value) => setStage(value as DealStage)}
               disabled={isPending || readOnly}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Deal stage">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

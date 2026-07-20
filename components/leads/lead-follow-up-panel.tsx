@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, Loader2, Save, Sparkles } from "lucide-react";
+import { Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { updateLeadFollowUpAction } from "@/app/dashboard/leads/actions";
 import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
@@ -114,13 +114,13 @@ export function LeadFollowUpPanel({
   return (
     <section
       id="lead-follow-up"
-      className="rounded-3xl border bg-background p-6 shadow-sm"
+      className="rounded-3xl border bg-background p-5 shadow-sm"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Next follow-up
-          </p>
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Keep the next touchpoint visible so the lead never goes cold.
           </p>
@@ -135,30 +135,8 @@ export function LeadFollowUpPanel({
         />
       </div>
 
-      <div className="mt-5 rounded-2xl border bg-muted/20 p-4">
-        {hasFollowUp ? (
-          <p className="text-sm leading-6 text-foreground">
-            {note.trim()
-              ? note.trim()
-              : "A follow-up is scheduled, but there is no context note yet."}
-          </p>
-        ) : (
-          <div className="flex items-start gap-3 text-sm text-muted-foreground">
-            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl border bg-background">
-              <CalendarClock className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">No follow-up scheduled yet</p>
-              <p className="mt-1 leading-6">
-                Add a date and a short note so the next action is obvious to anyone opening this lead.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_180px_180px]">
-        <div className="space-y-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="lead-follow-up-date">Date</Label>
           <Input
             id="lead-follow-up-date"
@@ -176,7 +154,7 @@ export function LeadFollowUpPanel({
             onValueChange={(value) => setPriority(value as FollowUpPriority)}
             disabled={isPending || readOnly}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Follow-up priority">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -196,7 +174,7 @@ export function LeadFollowUpPanel({
             onValueChange={(value) => setStatus(value as FollowUpStatus)}
             disabled={isPending || readOnly}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Follow-up status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -248,7 +226,7 @@ export function LeadFollowUpPanel({
         <Label htmlFor="lead-follow-up-note">Follow-up note</Label>
         <Textarea
           id="lead-follow-up-note"
-          className="min-h-28 resize-y"
+          className="min-h-20 resize-y"
           placeholder="What should happen next, who needs a reply, and what context matters?"
           value={note}
           onChange={(event) => setNote(event.target.value)}

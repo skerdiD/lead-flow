@@ -57,7 +57,7 @@ export function LeadWorkflowPanel({
     <section id="lead-stage" className="rounded-3xl border bg-background p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">Pipeline status</p>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">Pipeline status</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Update where {fullName} sits in the pipeline without leaving this page.
           </p>
@@ -72,14 +72,14 @@ export function LeadWorkflowPanel({
           Update stage
         </p>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="w-full sm:max-w-[220px]">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="w-full">
             <Select
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value as LeadStatus)}
               disabled={isPending || readOnly}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Lead status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -115,14 +115,14 @@ export function LeadWorkflowPanel({
         ) : null}
       </div>
 
-      <div className="mt-4 rounded-2xl border bg-background p-4">
+      <div className="mt-4 rounded-2xl bg-muted/20 p-3.5">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <Target className="h-4 w-4" />
           Suggested follow-up
         </p>
         <p className="mt-2 text-sm leading-6 text-foreground">{nextStep}</p>
 
-        <Button asChild variant="outline" size="sm" className="mt-4">
+        <Button asChild variant="outline" size="sm" className="mt-3">
           <a href="#lead-notes-input">Add follow-up note</a>
         </Button>
       </div>

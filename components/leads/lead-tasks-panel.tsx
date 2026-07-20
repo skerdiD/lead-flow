@@ -91,12 +91,12 @@ export function LeadTasksPanel({
   };
 
   return (
-    <section id="lead-tasks" className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section id="lead-tasks" className="rounded-3xl border bg-background p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Follow-up tasks
-          </p>
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Plan the next action and close the loop when it is done.
           </p>
@@ -151,7 +151,7 @@ export function LeadTasksPanel({
               onValueChange={(value) => setPriority(value as TaskPriority)}
               disabled={isCreating}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Task priority">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -215,7 +215,7 @@ export function LeadTasksPanel({
             },
           ]}
           showLeadContext={false}
-          showEmptySections={tasks.length > 0}
+          showEmptySections={false}
           globalEmptyTitle="No follow-up tasks yet"
           globalEmptyDescription="Add the next action for this lead so nothing slips through the cracks."
           readOnly={readOnly}

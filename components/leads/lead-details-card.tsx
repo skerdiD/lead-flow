@@ -249,7 +249,10 @@ export function LeadDetailsCard({
     : "No opportunity";
 
   return (
-    <div className="space-y-6">
+    <div
+      className="mx-auto w-full max-w-[1440px] space-y-6"
+      data-testid="lead-details-page"
+    >
       <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/35 p-6 shadow-sm sm:p-7">
         <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
 
@@ -359,14 +362,23 @@ export function LeadDetailsCard({
 
       {readOnly ? <DemoReadOnlyHint /> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.95fr)]">
-        <div className="space-y-4">
-          <section className="rounded-3xl border bg-background p-6 shadow-sm">
+      <section
+        className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,380px)] xl:gap-6"
+        data-testid="lead-details-content-grid"
+      >
+        <div
+          className="order-2 min-w-0 space-y-5 xl:order-1"
+          data-testid="lead-details-main"
+        >
+          <section
+            className="rounded-3xl border bg-background p-5 shadow-sm sm:p-6"
+            data-testid="lead-context-section"
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold tracking-tight text-foreground">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
                   Contact and lead context
-                </p>
+                </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   The practical details your team needs before the next conversation.
                 </p>
@@ -416,11 +428,14 @@ export function LeadDetailsCard({
             </div>
           </section>
 
-          <section className="rounded-3xl border bg-background p-6 shadow-sm">
+          <section
+            className="rounded-3xl border bg-background p-5 shadow-sm sm:p-6"
+            data-testid="lead-profile-context-section"
+          >
             <div>
-              <p className="text-sm font-semibold tracking-tight text-foreground">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
                 Profile context
-              </p>
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Persistent background saved on the lead record itself.
               </p>
@@ -434,9 +449,15 @@ export function LeadDetailsCard({
               </p>
             </div>
           </section>
+
+          <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} readOnly={readOnly} />
         </div>
 
-        <div className="space-y-4">
+        <aside
+          aria-label="Lead actions and opportunity"
+          className="order-1 min-w-0 space-y-5 xl:order-2"
+          data-testid="lead-details-sidebar"
+        >
           <LeadWorkflowPanel
             leadId={lead.id}
             fullName={lead.fullName}
@@ -456,12 +477,13 @@ export function LeadDetailsCard({
             readOnly={readOnly}
           />
           <LeadDealPanel leadId={lead.id} deal={lead.dealEntry} readOnly={readOnly} />
-        </div>
+        </aside>
       </section>
 
-      <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} readOnly={readOnly} />
-
-      <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <section
+        className="grid items-start gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:gap-6"
+        data-testid="lead-details-history-grid"
+      >
         <LeadNotesPanel
           leadId={lead.id}
           notes={lead.noteEntries}
@@ -473,13 +495,13 @@ export function LeadDetailsCard({
 
         <section
           id="lead-activity"
-          className="rounded-3xl border bg-background p-6 shadow-sm"
+          className="rounded-3xl border bg-background p-5 shadow-sm sm:p-6"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold tracking-tight text-foreground">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
                 Activity timeline
-              </p>
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 A readable history of what happened on this lead and when.
               </p>
@@ -500,7 +522,7 @@ export function LeadDetailsCard({
               </p>
             </div>
           ) : (
-            <ol className="mt-5 space-y-4">
+            <ol className="mt-5 space-y-3">
               {lead.activityEntries.map((entry, index) => {
                 const timelineMeta = getTimelineMeta(entry);
 

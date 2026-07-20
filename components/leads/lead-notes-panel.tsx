@@ -125,10 +125,10 @@ export function LeadNotesPanel({
   };
 
   return (
-    <section id="lead-notes" className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section id="lead-notes" className="rounded-3xl border bg-background p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">Lead notes</p>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">Lead notes</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Keep a timeline of follow-ups, context, and decisions.
           </p>
