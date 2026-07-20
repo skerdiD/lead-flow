@@ -32,6 +32,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { WorkspaceTeamMember } from "@/lib/workspace-team";
+import { ClearFiltersButton } from "@/components/filters/clear-filters-button";
+import { SearchInput } from "@/components/filters/search-input";
+import { useDebouncedUrlSearch } from "@/components/filters/use-debounced-url-search";
 
 type TeamMembersSectionProps = {
   workspaceName: string;
@@ -39,6 +42,7 @@ type TeamMembersSectionProps = {
   canTransferOwnership: boolean;
   canDeleteWorkspace: boolean;
   members: WorkspaceTeamMember[];
+  filters: { search: string; role: string };
 };
 
 const roleBadgeClassNames = {
@@ -67,6 +71,7 @@ export function TeamMembersSection({
   canTransferOwnership,
   canDeleteWorkspace,
   members,
+  filters,
 }: TeamMembersSectionProps) {
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -75,6 +80,7 @@ export function TeamMembersSection({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isPending, startTransition] = useTransition();
+  const searchController = useDebouncedUrlSearch({ initialSearch: filters.search });
 
   const run = (operation: () => Promise<{ success: boolean; message: string }>, onSuccess?: () => void) => {
     startTransition(async () => {
@@ -139,8 +145,14 @@ export function TeamMembersSection({
             </form>
           ) : null}
 
+          <div className="mt-5 flex min-w-0 flex-col gap-2 rounded-2xl border bg-muted/20 p-3 sm:flex-row sm:items-center" data-testid="team-filter-toolbar">
+            <SearchInput value={searchController.search} onChange={searchController.setSearch} onCommit={searchController.commitSearch} onClear={searchController.clearSearch} isPending={searchController.isPending} inputRef={searchController.inputRef} placeholder="Search team members" ariaLabel="Search team members" className="min-w-0 flex-1" testId="team-search-input" />
+            <label className="w-full sm:w-auto"><span className="sr-only">Team role</span><select key={filters.role} defaultValue={filters.role} onChange={(event) => searchController.replace({ memberRole: event.target.value || null })} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm sm:w-[10rem]" aria-label="Team role"><option value="">All roles</option><option value="owner">Owner</option><option value="admin">Admin</option><option value="member">Member</option></select></label>
+            {searchController.search || filters.role ? <ClearFiltersButton onClear={() => searchController.clear({ search: null, memberRole: null })} disabled={searchController.isPending} /> : null}
+          </div>
+
           <div className="mt-5 divide-y rounded-2xl border">
-            {members.map((member) => (
+            {members.length ? members.map((member) => (
               <div key={member.id} className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -180,7 +192,7 @@ export function TeamMembersSection({
                   ) : null}
                 </div>
               </div>
-            ))}
+            )) : <div className="p-8 text-center"><p className="font-medium">No results match your search.</p><p className="mt-2 text-sm text-muted-foreground">Try another search or clear your filters.</p></div>}
           </div>
 
           {canDeleteWorkspace ? (

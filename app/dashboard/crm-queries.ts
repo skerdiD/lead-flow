@@ -3,42 +3,59 @@ import { db } from "@/db";
 import { accounts, activityEvents, contacts, crmTasks, deals, leads } from "@/db/schema";
 import { getCurrentWorkspaceAuthorizationContext, getRecordVisibilityConditions, getTaskVisibilityConditions, hasWorkspacePermission } from "@/lib/authorization";
 import { isUuid } from "@/lib/uuid";
+import { getWorkspaceMemberOptions } from "@/lib/workspace-member-profiles.server";
 
-type ListParams = { search?: string; owner?: string; account?: string; archived?: string; page?: string; sort?: string; direction?: string };
+export type CrmListParams = { search?: string; owner?: string; account?: string; archived?: string; page?: string; sort?: string; direction?: string };
 const pageSize = 20;
 const detailRelatedLimit = 50;
 const page = (value?: string) => Math.max(1, Number.parseInt(value ?? "1", 10) || 1);
 const search = (value?: string) => value?.trim().slice(0, 120) ?? "";
 
 export type AccountListItem = { id: string; name: string; website: string | null; industry: string | null; assignedOwnerUserId: string | null; contactCount: number; leadCount: number; dealCount: number; pipelineValueCents: number; updatedAt: Date };
-export async function getAccountsList(params: ListParams = {}) {
-  const context = await getCurrentWorkspaceAuthorizationContext(); const query = search(params.search); const active = params.archived === "archived";
+export async function getAccountsList(params: CrmListParams = {}) {
+  const context = await getCurrentWorkspaceAuthorizationContext(); const query = search(params.search); const active = params.archived === "archived"; const owner = params.owner?.trim().slice(0, 255) ?? ""; const sort: "name" | "updated" = params.sort === "name" ? "name" : "updated"; const direction: "asc" | "desc" = params.direction === "asc" ? "asc" : "desc";
   const conditions = [...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId), eq(accounts.isArchived, active)];
-  if (query) conditions.push(or(ilike(accounts.name, `%${query}%`), ilike(accounts.industry, `%${query}%`))!); if (params.owner) conditions.push(eq(accounts.assignedOwnerUserId, params.owner));
-  const contactCount = sql<number>`(select count(*) from ${contacts} where ${contacts.workspaceId} = ${accounts.workspaceId} and ${contacts.accountId} = ${accounts.id} and ${contacts.isArchived} = false)`;
-  const leadCount = sql<number>`(select count(*) from ${leads} where ${leads.workspaceId} = ${accounts.workspaceId} and ${leads.accountId} = ${accounts.id} and ${leads.isArchived} = false)`;
-  const dealCount = sql<number>`(select count(*) from ${deals} where ${deals.workspaceId} = ${accounts.workspaceId} and ${deals.accountId} = ${accounts.id})`;
-  const pipelineValueCents = sql<number>`coalesce((select sum(${deals.valueCents}) from ${deals} where ${deals.workspaceId} = ${accounts.workspaceId} and ${deals.accountId} = ${accounts.id} and ${deals.stage} not in ('won', 'lost')), 0)`;
-  const order = params.sort === "name" ? (params.direction === "asc" ? asc(accounts.name) : desc(accounts.name)) : desc(accounts.updatedAt);
-  const [total, records] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(accounts).where(and(...conditions)),
-    db.select({ id: accounts.id, name: accounts.name, website: accounts.website, industry: accounts.industry, assignedOwnerUserId: accounts.assignedOwnerUserId, contactCount, leadCount, dealCount, pipelineValueCents, updatedAt: accounts.updatedAt }).from(accounts).where(and(...conditions)).orderBy(order, asc(accounts.name)).limit(pageSize).offset((page(params.page) - 1) * pageSize),
-  ]);
-  return { records, totalCount: Number(total[0]?.count ?? 0), page: page(params.page), pageSize, search: query, archived: active };
+  if (query) conditions.push(or(ilike(accounts.name, `%${query}%`), ilike(accounts.website, `%${query}%`), ilike(accounts.industry, `%${query}%`))!); if (owner) conditions.push(eq(accounts.assignedOwnerUserId, owner));
+  const allRecords = hasWorkspacePermission(context.role, "crm:view_all");
+  const contactAssignment = allRecords ? sql`` : sql`and ${contacts.assignedOwnerUserId} = ${context.userId}`;
+  const leadAssignment = allRecords ? sql`` : sql`and ${leads.assignedOwnerUserId} = ${context.userId}`;
+  const dealAssignment = allRecords ? sql`` : sql`and ${deals.ownerUserId} = ${context.userId}`;
+  const contactCount = sql<number>`(select count(*) from ${contacts} where ${contacts.workspaceId} = ${accounts.workspaceId} and ${contacts.accountId} = ${accounts.id} and ${contacts.isArchived} = false ${contactAssignment})`;
+  const leadCount = sql<number>`(select count(*) from ${leads} where ${leads.workspaceId} = ${accounts.workspaceId} and ${leads.accountId} = ${accounts.id} and ${leads.isArchived} = false ${leadAssignment})`;
+  const dealCount = sql<number>`(select count(*) from ${deals} where ${deals.workspaceId} = ${accounts.workspaceId} and ${deals.accountId} = ${accounts.id} ${dealAssignment})`;
+  const pipelineValueCents = sql<number>`coalesce((select sum(${deals.valueCents}) from ${deals} where ${deals.workspaceId} = ${accounts.workspaceId} and ${deals.accountId} = ${accounts.id} and ${deals.stage} not in ('won', 'lost') ${dealAssignment}), 0)`;
+  const order = sort === "name" ? (direction === "asc" ? asc(accounts.name) : desc(accounts.name)) : desc(accounts.updatedAt);
+  const total = await db.select({ count: sql<number>`count(*)` }).from(accounts).where(and(...conditions));
+  const totalCount = Number(total[0]?.count ?? 0); const resolvedPage = Math.min(page(params.page), Math.max(1, Math.ceil(totalCount / pageSize)));
+  const records = await db.select({ id: accounts.id, name: accounts.name, website: accounts.website, industry: accounts.industry, assignedOwnerUserId: accounts.assignedOwnerUserId, contactCount, leadCount, dealCount, pipelineValueCents, updatedAt: accounts.updatedAt }).from(accounts).where(and(...conditions)).orderBy(order, asc(accounts.name)).limit(pageSize).offset((resolvedPage - 1) * pageSize);
+  return { records, totalCount, page: resolvedPage, pageCount: Math.max(1, Math.ceil(totalCount / pageSize)), pageSize, search: query, owner, archived: active ? "archived" as const : "active" as const, sort, direction };
 }
 
 export type ContactListItem = { id: string; fullName: string; email: string | null; phone: string | null; title: string | null; accountId: string | null; accountName: string | null; isPrimary: boolean; assignedOwnerUserId: string | null; dealCount: number; leadCount: number; updatedAt: Date };
-export async function getContactsList(params: ListParams = {}) {
-  const context = await getCurrentWorkspaceAuthorizationContext(); const query = search(params.search); const active = params.archived === "archived";
-  const conditions = [...getRecordVisibilityConditions(context, contacts.workspaceId, contacts.assignedOwnerUserId), eq(contacts.isArchived, active)]; if (query) conditions.push(or(ilike(contacts.fullName, `%${query}%`), ilike(contacts.email, `%${query}%`), ilike(contacts.phone, `%${query}%`), ilike(contacts.title, `%${query}%`), ilike(accounts.name, `%${query}%`))!); if (params.owner) conditions.push(eq(contacts.assignedOwnerUserId, params.owner)); if (params.account && isUuid(params.account)) conditions.push(eq(contacts.accountId, params.account));
+export async function getContactsList(params: CrmListParams = {}) {
+  const context = await getCurrentWorkspaceAuthorizationContext(); const query = search(params.search); const active = params.archived === "archived"; const owner = params.owner?.trim().slice(0, 255) ?? ""; const account = params.account && isUuid(params.account) ? params.account : ""; const sort: "name" | "updated" = params.sort === "name" ? "name" : "updated"; const direction: "asc" | "desc" = params.direction === "asc" ? "asc" : "desc";
+  const conditions = [...getRecordVisibilityConditions(context, contacts.workspaceId, contacts.assignedOwnerUserId), eq(contacts.isArchived, active)]; if (query) conditions.push(or(ilike(contacts.fullName, `%${query}%`), ilike(contacts.email, `%${query}%`), ilike(contacts.phone, `%${query}%`), ilike(contacts.title, `%${query}%`), ilike(accounts.name, `%${query}%`))!); if (owner) conditions.push(eq(contacts.assignedOwnerUserId, owner)); if (account) conditions.push(eq(contacts.accountId, account));
   const accountJoin = and(eq(contacts.accountId, accounts.id), eq(contacts.workspaceId, accounts.workspaceId), ...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId));
-  const dealCount = sql<number>`(select count(*) from ${deals} where ${deals.workspaceId} = ${contacts.workspaceId} and ${deals.contactId} = ${contacts.id})`; const leadCount = sql<number>`(select count(*) from ${leads} where ${leads.workspaceId} = ${contacts.workspaceId} and ${leads.primaryContactId} = ${contacts.id} and ${leads.isArchived} = false)`;
-  const order = params.sort === "name" ? (params.direction === "asc" ? asc(contacts.fullName) : desc(contacts.fullName)) : desc(contacts.updatedAt);
-  const [total, records] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(contacts).leftJoin(accounts, accountJoin).where(and(...conditions)),
-    db.select({ id: contacts.id, fullName: contacts.fullName, email: contacts.email, phone: contacts.phone, title: contacts.title, accountId: contacts.accountId, accountName: accounts.name, isPrimary: contacts.isPrimary, assignedOwnerUserId: contacts.assignedOwnerUserId, dealCount, leadCount, updatedAt: contacts.updatedAt }).from(contacts).leftJoin(accounts, accountJoin).where(and(...conditions)).orderBy(order, asc(contacts.fullName)).limit(pageSize).offset((page(params.page) - 1) * pageSize),
+  const allRecords = hasWorkspacePermission(context.role, "crm:view_all");
+  const dealAssignment = allRecords ? sql`` : sql`and ${deals.ownerUserId} = ${context.userId}`;
+  const leadAssignment = allRecords ? sql`` : sql`and ${leads.assignedOwnerUserId} = ${context.userId}`;
+  const dealCount = sql<number>`(select count(*) from ${deals} where ${deals.workspaceId} = ${contacts.workspaceId} and ${deals.contactId} = ${contacts.id} ${dealAssignment})`; const leadCount = sql<number>`(select count(*) from ${leads} where ${leads.workspaceId} = ${contacts.workspaceId} and ${leads.primaryContactId} = ${contacts.id} and ${leads.isArchived} = false ${leadAssignment})`;
+  const order = sort === "name" ? (direction === "asc" ? asc(contacts.fullName) : desc(contacts.fullName)) : desc(contacts.updatedAt);
+  const total = await db.select({ count: sql<number>`count(*)` }).from(contacts).leftJoin(accounts, accountJoin).where(and(...conditions));
+  const totalCount = Number(total[0]?.count ?? 0); const resolvedPage = Math.min(page(params.page), Math.max(1, Math.ceil(totalCount / pageSize)));
+  const records = await db.select({ id: contacts.id, fullName: contacts.fullName, email: contacts.email, phone: contacts.phone, title: contacts.title, accountId: contacts.accountId, accountName: accounts.name, isPrimary: contacts.isPrimary, assignedOwnerUserId: contacts.assignedOwnerUserId, dealCount, leadCount, updatedAt: contacts.updatedAt }).from(contacts).leftJoin(accounts, accountJoin).where(and(...conditions)).orderBy(order, asc(contacts.fullName)).limit(pageSize).offset((resolvedPage - 1) * pageSize);
+  return { records, totalCount, page: resolvedPage, pageCount: Math.max(1, Math.ceil(totalCount / pageSize)), pageSize, search: query, owner, account, archived: active ? "archived" as const : "active" as const, sort, direction };
+}
+
+export async function getCrmListFilterOptions() {
+  const context = await getCurrentWorkspaceAuthorizationContext();
+  const canViewAll = hasWorkspacePermission(context.role, "crm:view_all");
+  const accountConditions = [eq(accounts.isArchived, false), ...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId)];
+  const [owners, accountRows] = await Promise.all([
+    getWorkspaceMemberOptions(context.workspaceId, canViewAll ? undefined : [context.userId]),
+    db.select({ id: accounts.id, name: accounts.name }).from(accounts).where(and(...accountConditions)).orderBy(asc(accounts.name)).limit(200),
   ]);
-  return { records, totalCount: Number(total[0]?.count ?? 0), page: page(params.page), pageSize, search: query, archived: active };
+  return { ownerOptions: owners.map((owner) => ({ value: owner.userId, label: owner.name })), accountOptions: accountRows.map((account) => ({ value: account.id, label: account.name })) };
 }
 
 export async function getAccountDetails(id: string) {

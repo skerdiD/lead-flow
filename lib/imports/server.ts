@@ -7,6 +7,7 @@ import {
   asc,
   desc,
   eq,
+  ilike,
   inArray,
   lt,
   or,
@@ -973,9 +974,24 @@ export async function getImportJobDetails(
   };
 }
 
-export async function getImportHistory() {
+export async function getImportHistory(params: { search?: string; status?: string; entityType?: string; page?: string } = {}) {
   const access = await getImportAuthorization();
-  return db
+  const search = params.search?.trim().slice(0, 120) ?? "";
+  const allowedStatuses = ["draft", "reviewed", "processing", "completed", "failed"] as const;
+  const allowedEntityTypes = ["lead", "account", "contact"] as const;
+  const status = allowedStatuses.includes(params.status as (typeof allowedStatuses)[number]) ? params.status! : "";
+  const entityType = allowedEntityTypes.includes(params.entityType as (typeof allowedEntityTypes)[number]) ? params.entityType! : "";
+  const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const pageSize = 20;
+  const conditions = [eq(importJobs.workspaceId, access.workspace.id)];
+  if (search) conditions.push(or(ilike(importJobs.originalFileName, `%${search}%`), ilike(importJobs.actorName, `%${search}%`))!);
+  if (status) conditions.push(eq(importJobs.status, status as typeof importJobs.$inferSelect.status));
+  if (entityType) conditions.push(eq(importJobs.entityType, entityType as typeof importJobs.$inferSelect.entityType));
+  const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(importJobs).where(and(...conditions));
+  const totalCount = Number(countRow?.count ?? 0);
+  const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(requestedPage, pageCount);
+  const jobs = await db
     .select({
       id: importJobs.id,
       originalFileName: importJobs.originalFileName,
@@ -991,9 +1007,11 @@ export async function getImportHistory() {
       createdAt: importJobs.createdAt,
     })
     .from(importJobs)
-    .where(eq(importJobs.workspaceId, access.workspace.id))
+    .where(and(...conditions))
     .orderBy(desc(importJobs.createdAt))
-    .limit(50);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+  return { jobs, totalCount, page, pageCount, pageSize, filters: { search, status, entityType } };
 }
 
 export async function buildRejectedRowsCsv(jobId: string) {

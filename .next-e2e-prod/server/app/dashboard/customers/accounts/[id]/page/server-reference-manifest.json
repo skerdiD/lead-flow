@@ -1,0 +1,101 @@
+{
+  "node": {
+    "00aca699e7136ee4288e3f75502c28375e2c870810": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "invalidateCacheAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js"
+        }
+      },
+      "exportedName": "invalidateCacheAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js"
+    },
+    "001c2d67f847d12754eaa4bde2138a5e377ef1aaae": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "createOrReadKeylessAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "createOrReadKeylessAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "00da107b9c006f759695982a7cfa8a521f34f6bbf3": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "deleteKeylessAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "deleteKeylessAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "40fa54611b7aa65337b4514d47f0837480c89d733d": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "syncKeylessConfigAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "syncKeylessConfigAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "008d2c0a34a0ef259e0720638a315b74cf84c25bda": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "markAllNotificationsAsReadAction",
+          "filename": "app/dashboard/notifications/actions.ts"
+        }
+      },
+      "exportedName": "markAllNotificationsAsReadAction",
+      "filename": "app/dashboard/notifications/actions.ts"
+    },
+    "40d05422ab27e39f29463baae784a1e34d16fc496f": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "markNotificationAsReadAction",
+          "filename": "app/dashboard/notifications/actions.ts"
+        }
+      },
+      "exportedName": "markNotificationAsReadAction",
+      "filename": "app/dashboard/notifications/actions.ts"
+    },
+    "4045f5d7a7ff0a28208de0d2e18e4b8d416578b1ee": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "archiveAccountAction",
+          "filename": "app/dashboard/crm-actions.ts"
+        }
+      },
+      "exportedName": "archiveAccountAction",
+      "filename": "app/dashboard/crm-actions.ts"
+    },
+    "40e2a23fc1de4c56c3654ccc1a14cbbbc188d38f27": {
+      "workers": {
+        "app/dashboard/customers/accounts/[id]/page": {
+          "moduleId": 663661,
+          "async": true,
+          "exportedName": "archiveContactAction",
+          "filename": "app/dashboard/crm-actions.ts"
+        }
+      },
+      "exportedName": "archiveContactAction",
+      "filename": "app/dashboard/crm-actions.ts"
+    }
+  },
+  "edge": {}
+}

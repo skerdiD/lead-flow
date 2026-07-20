@@ -17,6 +17,7 @@ type LeadsPageProps = {
     search?: string;
     status?: string;
     source?: string;
+    owner?: string;
     archived?: string;
     sortBy?: string;
     sortDir?: string;
@@ -39,6 +40,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     search: params.search,
     status: params.status,
     source: params.source,
+    owner: params.owner,
     archived: params.archived,
     sortBy: params.sortBy,
     sortDir: params.sortDir,
@@ -50,6 +52,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     tableData.search.trim() ||
       tableData.status.trim() ||
       tableData.source.trim() ||
+      tableData.owner.trim() ||
       tableData.archived === "archived",
   );
   const isArchiveView = tableData.archived === "archived";
@@ -106,15 +109,16 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           initialSearch={tableData.search}
           initialStatus={tableData.status}
           initialSource={tableData.source}
+          initialOwner={tableData.owner}
           initialArchived={tableData.archived}
           sourceOptions={tableData.sourceOptions}
+          ownerOptions={tableData.ownerOptions}
         />
       </div>
 
       {tableData.totalCount === 0 ? (
         <EmptyLeadsState
-          hasFilters={hasFilters}
-          archiveView={isArchiveView}
+          hasFilters={hasFilters && tableData.hasAnyRecords}
           canCreate={canCreate}
         />
       ) : (

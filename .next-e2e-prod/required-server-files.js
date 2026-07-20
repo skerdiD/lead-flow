@@ -1,0 +1,370 @@
+self.__SERVER_FILES_MANIFEST={
+  "version": 1,
+  "config": {
+    "env": {},
+    "webpack": null,
+    "typescript": {
+      "ignoreBuildErrors": false
+    },
+    "typedRoutes": false,
+    "distDir": ".next-e2e-prod",
+    "cleanDistDir": true,
+    "assetPrefix": "",
+    "cacheMaxMemorySize": 52428800,
+    "configOrigin": "next.config.ts",
+    "useFileSystemPublicRoutes": true,
+    "generateEtags": true,
+    "pageExtensions": [
+      "tsx",
+      "ts",
+      "jsx",
+      "js"
+    ],
+    "poweredByHeader": true,
+    "compress": true,
+    "images": {
+      "deviceSizes": [
+        640,
+        750,
+        828,
+        1080,
+        1200,
+        1920,
+        2048,
+        3840
+      ],
+      "imageSizes": [
+        32,
+        48,
+        64,
+        96,
+        128,
+        256,
+        384
+      ],
+      "path": "/_next/image",
+      "loader": "default",
+      "loaderFile": "",
+      "domains": [],
+      "disableStaticImages": false,
+      "minimumCacheTTL": 14400,
+      "formats": [
+        "image/webp"
+      ],
+      "maximumRedirects": 3,
+      "maximumResponseBody": 50000000,
+      "dangerouslyAllowLocalIP": false,
+      "dangerouslyAllowSVG": false,
+      "contentSecurityPolicy": "script-src 'none'; frame-src 'none'; sandbox;",
+      "contentDispositionType": "attachment",
+      "localPatterns": [
+        {
+          "pathname": "**",
+          "search": ""
+        }
+      ],
+      "remotePatterns": [],
+      "qualities": [
+        75
+      ],
+      "unoptimized": false,
+      "customCacheHandler": false
+    },
+    "devIndicators": {
+      "position": "bottom-left"
+    },
+    "onDemandEntries": {
+      "maxInactiveAge": 60000,
+      "pagesBufferLength": 5
+    },
+    "basePath": "",
+    "sassOptions": {},
+    "trailingSlash": false,
+    "i18n": null,
+    "productionBrowserSourceMaps": false,
+    "excludeDefaultMomentLocales": true,
+    "reactProductionProfiling": false,
+    "reactStrictMode": null,
+    "reactMaxHeadersLength": 6000,
+    "httpAgentOptions": {
+      "keepAlive": true
+    },
+    "logging": {
+      "serverFunctions": true,
+      "browserToTerminal": "warn"
+    },
+    "compiler": {},
+    "expireTime": 31536000,
+    "staticPageGenerationTimeout": 60,
+    "modularizeImports": {
+      "@mui/icons-material": {
+        "transform": "@mui/icons-material/{{member}}"
+      },
+      "lodash": {
+        "transform": "lodash/{{member}}"
+      }
+    },
+    "outputFileTracingRoot": "C:\\PortfolioProjects\\lead-flow",
+    "cacheComponents": false,
+    "cacheLife": {
+      "default": {
+        "stale": 300,
+        "revalidate": 900,
+        "expire": 4294967294
+      },
+      "seconds": {
+        "stale": 30,
+        "revalidate": 1,
+        "expire": 60
+      },
+      "minutes": {
+        "stale": 300,
+        "revalidate": 60,
+        "expire": 3600
+      },
+      "hours": {
+        "stale": 300,
+        "revalidate": 3600,
+        "expire": 86400
+      },
+      "days": {
+        "stale": 300,
+        "revalidate": 86400,
+        "expire": 604800
+      },
+      "weeks": {
+        "stale": 300,
+        "revalidate": 604800,
+        "expire": 2592000
+      },
+      "max": {
+        "stale": 300,
+        "revalidate": 2592000,
+        "expire": 31536000
+      }
+    },
+    "cacheHandlers": {},
+    "experimental": {
+      "appNewScrollHandler": false,
+      "useSkewCookie": false,
+      "cssChunking": true,
+      "multiZoneDraftMode": false,
+      "appNavFailHandling": false,
+      "prerenderEarlyExit": true,
+      "serverMinification": true,
+      "linkNoTouchStart": false,
+      "caseSensitiveRoutes": false,
+      "cachedNavigations": false,
+      "partialFallbacks": false,
+      "dynamicOnHover": false,
+      "varyParams": false,
+      "prefetchInlining": false,
+      "preloadEntriesOnStart": true,
+      "clientRouterFilter": true,
+      "clientRouterFilterRedirects": false,
+      "fetchCacheKeyPrefix": "",
+      "proxyPrefetch": "flexible",
+      "optimisticClientCache": true,
+      "manualClientBasePath": false,
+      "cpus": 11,
+      "memoryBasedWorkersCount": false,
+      "imgOptConcurrency": null,
+      "imgOptTimeoutInSeconds": 7,
+      "imgOptMaxInputPixels": 268402689,
+      "imgOptSequentialRead": null,
+      "imgOptSkipMetadata": null,
+      "isrFlushToDisk": true,
+      "workerThreads": false,
+      "optimizeCss": false,
+      "nextScriptWorkers": false,
+      "scrollRestoration": false,
+      "externalDir": false,
+      "disableOptimizedLoading": false,
+      "gzipSize": true,
+      "craCompat": false,
+      "esmExternals": true,
+      "fullySpecified": false,
+      "swcTraceProfiling": false,
+      "forceSwcTransforms": false,
+      "largePageDataBytes": 128000,
+      "typedEnv": false,
+      "parallelServerCompiles": false,
+      "parallelServerBuildTraces": false,
+      "ppr": false,
+      "authInterrupts": false,
+      "webpackMemoryOptimizations": false,
+      "optimizeServerReact": true,
+      "strictRouteTypes": false,
+      "viewTransition": false,
+      "removeUncaughtErrorAndRejectionListeners": false,
+      "validateRSCRequestHeaders": false,
+      "staleTimes": {
+        "dynamic": 0,
+        "static": 300
+      },
+      "reactDebugChannel": true,
+      "serverComponentsHmrCache": true,
+      "staticGenerationMaxConcurrency": 8,
+      "staticGenerationMinPagesPerWorker": 25,
+      "transitionIndicator": false,
+      "gestureTransition": false,
+      "inlineCss": false,
+      "useCache": false,
+      "globalNotFound": false,
+      "browserDebugInfoInTerminal": "warn",
+      "lockDistDir": true,
+      "proxyClientMaxBodySize": 10485760,
+      "hideLogsAfterAbort": false,
+      "mcpServer": true,
+      "turbopackFileSystemCacheForDev": true,
+      "turbopackFileSystemCacheForBuild": false,
+      "turbopackInferModuleSideEffects": true,
+      "turbopackPluginRuntimeStrategy": "childProcesses",
+      "optimizePackageImports": [
+        "lucide-react",
+        "date-fns",
+        "lodash-es",
+        "ramda",
+        "antd",
+        "react-bootstrap",
+        "ahooks",
+        "@ant-design/icons",
+        "@headlessui/react",
+        "@headlessui-float/react",
+        "@heroicons/react/20/solid",
+        "@heroicons/react/24/solid",
+        "@heroicons/react/24/outline",
+        "@visx/visx",
+        "@tremor/react",
+        "rxjs",
+        "@mui/material",
+        "@mui/icons-material",
+        "recharts",
+        "react-use",
+        "effect",
+        "@effect/schema",
+        "@effect/platform",
+        "@effect/platform-node",
+        "@effect/platform-browser",
+        "@effect/platform-bun",
+        "@effect/sql",
+        "@effect/sql-mssql",
+        "@effect/sql-mysql2",
+        "@effect/sql-pg",
+        "@effect/sql-sqlite-node",
+        "@effect/sql-sqlite-bun",
+        "@effect/sql-sqlite-wasm",
+        "@effect/sql-sqlite-react-native",
+        "@effect/rpc",
+        "@effect/rpc-http",
+        "@effect/typeclass",
+        "@effect/experimental",
+        "@effect/opentelemetry",
+        "@material-ui/core",
+        "@material-ui/icons",
+        "@tabler/icons-react",
+        "mui-core",
+        "react-icons/ai",
+        "react-icons/bi",
+        "react-icons/bs",
+        "react-icons/cg",
+        "react-icons/ci",
+        "react-icons/di",
+        "react-icons/fa",
+        "react-icons/fa6",
+        "react-icons/fc",
+        "react-icons/fi",
+        "react-icons/gi",
+        "react-icons/go",
+        "react-icons/gr",
+        "react-icons/hi",
+        "react-icons/hi2",
+        "react-icons/im",
+        "react-icons/io",
+        "react-icons/io5",
+        "react-icons/lia",
+        "react-icons/lib",
+        "react-icons/lu",
+        "react-icons/md",
+        "react-icons/pi",
+        "react-icons/ri",
+        "react-icons/rx",
+        "react-icons/si",
+        "react-icons/sl",
+        "react-icons/tb",
+        "react-icons/tfi",
+        "react-icons/ti",
+        "react-icons/vsc",
+        "react-icons/wi"
+      ],
+      "trustHostHeader": false,
+      "isExperimentalCompile": false
+    },
+    "htmlLimitedBots": "[\\w-]+-Google|Google-[\\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight",
+    "bundlePagesRouterDependencies": false,
+    "configFileName": "next.config.ts",
+    "turbopack": {
+      "root": "C:\\PortfolioProjects\\lead-flow"
+    },
+    "distDirRoot": ".next-e2e-prod",
+    "_originalRedirects": [
+      {
+        "source": "/dashboard/accounts",
+        "destination": "/dashboard/customers/accounts",
+        "permanent": false
+      },
+      {
+        "source": "/dashboard/accounts/:path*",
+        "destination": "/dashboard/customers/accounts/:path*",
+        "permanent": false
+      },
+      {
+        "source": "/dashboard/contacts",
+        "destination": "/dashboard/customers/contacts",
+        "permanent": false
+      },
+      {
+        "source": "/dashboard/contacts/:path*",
+        "destination": "/dashboard/customers/contacts/:path*",
+        "permanent": false
+      },
+      {
+        "source": "/dashboard/activity",
+        "destination": "/dashboard/settings/activity",
+        "permanent": false
+      },
+      {
+        "source": "/dashboard/import/history",
+        "destination": "/dashboard/settings/imports/history",
+        "permanent": false
+      },
+      {
+        "source": "/dashboard/import/:id",
+        "destination": "/dashboard/settings/imports/:id",
+        "permanent": false
+      }
+    ]
+  },
+  "appDir": "C:\\PortfolioProjects\\lead-flow",
+  "relativeAppDir": "",
+  "files": [
+    ".next-e2e-prod\\package.json",
+    ".next-e2e-prod\\routes-manifest.json",
+    ".next-e2e-prod\\server\\pages-manifest.json",
+    ".next-e2e-prod\\build-manifest.json",
+    ".next-e2e-prod\\prerender-manifest.json",
+    ".next-e2e-prod\\server\\functions-config-manifest.json",
+    ".next-e2e-prod\\server\\middleware-manifest.json",
+    ".next-e2e-prod\\server\\middleware-build-manifest.js",
+    ".next-e2e-prod\\server\\app-paths-manifest.json",
+    ".next-e2e-prod\\app-path-routes-manifest.json",
+    ".next-e2e-prod\\server\\server-reference-manifest.js",
+    ".next-e2e-prod\\server\\server-reference-manifest.json",
+    ".next-e2e-prod\\server\\prefetch-hints.json",
+    ".next-e2e-prod\\BUILD_ID",
+    ".next-e2e-prod\\server\\next-font-manifest.js",
+    ".next-e2e-prod\\server\\next-font-manifest.json",
+    ".next-e2e-prod\\required-server-files.json"
+  ],
+  "ignore": []
+}

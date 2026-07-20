@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, isNull, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { activityEvents, crmTasks, deals, leads } from "@/db/schema";
+import { activityEvents, contacts, crmTasks, deals, leads } from "@/db/schema";
 import {
   getLocalDateKey,
   groupTasksByTimeline,
@@ -58,6 +58,29 @@ export type TasksPageData = {
   };
 };
 
+export type TasksPageFilters = {
+  search?: string;
+  status?: string;
+  priority?: string;
+  due?: string;
+};
+
+export type NormalizedTasksPageFilters = {
+  search: string;
+  status: "pending" | "completed" | "";
+  priority: "low" | "medium" | "high" | "";
+  due: "today" | "overdue" | "upcoming" | "none" | "";
+};
+
+function normalizeTaskFilters(filters: TasksPageFilters): NormalizedTasksPageFilters {
+  return {
+    search: filters.search?.trim().slice(0, 120) ?? "",
+    status: filters.status === "pending" || filters.status === "completed" ? filters.status : "",
+    priority: filters.priority === "low" || filters.priority === "medium" || filters.priority === "high" ? filters.priority : "",
+    due: filters.due === "today" || filters.due === "overdue" || filters.due === "upcoming" || filters.due === "none" ? filters.due : "",
+  };
+}
+
 function mapTaskRow(row: {
   id: string;
   title: string;
@@ -88,8 +111,20 @@ function mapTaskRow(row: {
   };
 }
 
-async function getScopedTasks(context?: WorkspaceAuthorizationContext) {
+async function getScopedTasks(context?: WorkspaceAuthorizationContext, filters: NormalizedTasksPageFilters = normalizeTaskFilters({})) {
   const accessContext = context ?? await getCurrentWorkspaceAuthorizationContext();
+  const conditions = [
+    ...getTaskVisibilityConditions(accessContext, crmTasks.workspaceId, crmTasks.ownerUserId, crmTasks.userId),
+    ...(hasWorkspacePermission(accessContext.role, "crm:view_all") ? [] : [or(isNull(crmTasks.leadId), eq(leads.assignedOwnerUserId, accessContext.userId))!]),
+  ];
+  if (filters.search) conditions.push(or(ilike(crmTasks.title, `%${filters.search}%`), ilike(leads.fullName, `%${filters.search}%`), ilike(deals.name, `%${filters.search}%`), ilike(contacts.fullName, `%${filters.search}%`))!);
+  if (filters.status) conditions.push(eq(crmTasks.status, filters.status));
+  if (filters.priority) conditions.push(eq(crmTasks.priority, filters.priority));
+  const todayKey = getLocalDateKey();
+  if (filters.due === "today") conditions.push(sql`to_char(${crmTasks.dueAt} at time zone 'UTC', 'YYYY-MM-DD') = ${todayKey}`);
+  if (filters.due === "overdue") conditions.push(and(eq(crmTasks.status, "pending"), lt(crmTasks.dueAt, new Date()))!);
+  if (filters.due === "upcoming") conditions.push(and(eq(crmTasks.status, "pending"), sql`${crmTasks.dueAt} > (current_date + interval '1 day')`)!);
+  if (filters.due === "none") conditions.push(isNull(crmTasks.dueAt));
 
   return db
     .select({
@@ -109,35 +144,22 @@ async function getScopedTasks(context?: WorkspaceAuthorizationContext) {
     .from(crmTasks)
     .leftJoin(
       leads,
-      and(eq(crmTasks.leadId, leads.id), eq(leads.workspaceId, accessContext.workspaceId)),
+      and(eq(crmTasks.leadId, leads.id), eq(leads.workspaceId, accessContext.workspaceId), ...getRecordVisibilityConditions(accessContext, leads.workspaceId, leads.assignedOwnerUserId)),
     )
-    .where(
-      and(
-        ...getTaskVisibilityConditions(
-          accessContext,
-          crmTasks.workspaceId,
-          crmTasks.ownerUserId,
-          crmTasks.userId,
-        ),
-        ...(hasWorkspacePermission(accessContext.role, "crm:view_all")
-          ? []
-          : [
-              or(
-                isNull(crmTasks.leadId),
-                eq(leads.assignedOwnerUserId, accessContext.userId),
-              )!,
-            ]),
-      ),
-    )
+    .leftJoin(deals, and(eq(crmTasks.dealId, deals.id), eq(deals.workspaceId, accessContext.workspaceId), ...getRecordVisibilityConditions(accessContext, deals.workspaceId, deals.ownerUserId)))
+    .leftJoin(contacts, and(eq(crmTasks.contactId, contacts.id), eq(contacts.workspaceId, accessContext.workspaceId), ...getRecordVisibilityConditions(accessContext, contacts.workspaceId, contacts.assignedOwnerUserId)))
+    .where(and(...conditions))
     .orderBy(asc(crmTasks.dueAt), desc(crmTasks.createdAt));
 }
 
-export async function getTasksPageData(): Promise<TasksPageData> {
+export async function getTasksPageData(input: TasksPageFilters = {}): Promise<TasksPageData & { filters: NormalizedTasksPageFilters }> {
   const context = await getCurrentWorkspaceAuthorizationContext();
-  const tasks = (await getScopedTasks(context)).map(mapTaskRow);
+  const filters = normalizeTaskFilters(input);
+  const tasks = (await getScopedTasks(context, filters)).map(mapTaskRow);
   const groupedTasks = groupTasksByTimeline(tasks);
 
   return {
+    filters,
     groupedTasks,
     counts: {
       dueToday: groupedTasks.dueToday.length,

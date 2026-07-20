@@ -4,13 +4,11 @@ import { Button } from "@/components/ui/button";
 
 type EmptyLeadsStateProps = {
   hasFilters: boolean;
-  archiveView?: boolean;
   canCreate?: boolean;
 };
 
 export function EmptyLeadsState({
   hasFilters,
-  archiveView = false,
   canCreate = false,
 }: EmptyLeadsStateProps) {
   return (
@@ -28,14 +26,12 @@ export function EmptyLeadsState({
         </div>
 
         <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
-          {hasFilters ? "No matching leads" : "Your pipeline is empty"}
+          {hasFilters ? "No results match your search." : "Your pipeline is empty"}
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {hasFilters
-            ? archiveView
-              ? "No archived leads match your current filters. Active leads stay in the main view until you archive them."
-              : "No leads matched your current search and filters. Try broadening stage or source to surface more results."
+            ? "Try another search or clear your filters."
             : "Start by adding your first lead. Once records are in, you can sort, filter, and manage them from one table."}
         </p>
 

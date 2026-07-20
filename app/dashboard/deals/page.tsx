@@ -40,6 +40,9 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
   const canCreate = hasWorkspacePermission(workspace.role, "crm:create") && !demo;
   const readOnly = !canUpdate || demo;
   const view = data.filters.view;
+  const hasFilters = Boolean(data.filters.search || data.filters.owner || data.filters.account || data.filters.stage || data.filters.state || data.filters.closeFrom || data.filters.closeTo);
+  const hasNoMatches = hasFilters && data.hasAnyDeals;
+  const clearHref = view === "list" ? "/dashboard/deals?view=list" : "/dashboard/deals";
 
   return (
     <div
@@ -105,7 +108,13 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
       />
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={view === "pipeline" ? "Deals pipeline" : "Deals list"}>
-        {view === "pipeline" ? (
+        {data.totalCount === 0 ? (
+          <div className="rounded-2xl border border-dashed bg-background px-6 py-12 text-center shadow-sm">
+            <h2 className="font-semibold">{hasNoMatches ? "No results match your search." : "No deals yet"}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{hasNoMatches ? "Try another search or clear your filters." : "Create a deal to start tracking your revenue pipeline."}</p>
+            {hasNoMatches ? <Button asChild className="mt-5"><Link href={clearHref}>Clear filters</Link></Button> : null}
+          </div>
+        ) : view === "pipeline" ? (
           <DealsPipeline
             initialBoard={data.grouped}
             initialTotals={data.totals}
@@ -113,7 +122,7 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
             isTruncated={data.isTruncated}
             referenceTime={data.referenceTime}
           />
-        ) : data.totalCount > 0 ? (
+        ) : (
           <DealsList
             initialDeals={data.deals}
             totalCount={data.totalCount}
@@ -123,16 +132,6 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
             readOnly={readOnly}
             referenceTime={data.referenceTime}
           />
-        ) : (
-          <div className="rounded-2xl border border-dashed bg-background px-6 py-12 text-center shadow-sm">
-            <h2 className="font-semibold">No matching deals</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Clear or broaden the current filters to review more opportunities.
-            </p>
-            <Button asChild className="mt-5">
-              <Link href="/dashboard/deals?view=list">Clear filters</Link>
-            </Button>
-          </div>
         )}
       </section>
     </div>

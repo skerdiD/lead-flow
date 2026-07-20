@@ -1,0 +1,137 @@
+{
+  "node": {
+    "00aca699e7136ee4288e3f75502c28375e2c870810": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "invalidateCacheAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js"
+        }
+      },
+      "exportedName": "invalidateCacheAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js"
+    },
+    "001c2d67f847d12754eaa4bde2138a5e377ef1aaae": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "createOrReadKeylessAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "createOrReadKeylessAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "00da107b9c006f759695982a7cfa8a521f34f6bbf3": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "deleteKeylessAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "deleteKeylessAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "40fa54611b7aa65337b4514d47f0837480c89d733d": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "syncKeylessConfigAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "syncKeylessConfigAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "008d2c0a34a0ef259e0720638a315b74cf84c25bda": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "markAllNotificationsAsReadAction",
+          "filename": "app/dashboard/notifications/actions.ts"
+        }
+      },
+      "exportedName": "markAllNotificationsAsReadAction",
+      "filename": "app/dashboard/notifications/actions.ts"
+    },
+    "40d05422ab27e39f29463baae784a1e34d16fc496f": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "markNotificationAsReadAction",
+          "filename": "app/dashboard/notifications/actions.ts"
+        }
+      },
+      "exportedName": "markNotificationAsReadAction",
+      "filename": "app/dashboard/notifications/actions.ts"
+    },
+    "40ae3dae3b850ab765c0c2d3c7ba3e3918846d4b8a": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "deleteWorkspaceAction",
+          "filename": "app/dashboard/settings/actions.ts"
+        }
+      },
+      "exportedName": "deleteWorkspaceAction",
+      "filename": "app/dashboard/settings/actions.ts"
+    },
+    "40acf1c3d939c187543d9eb42a270892b87b23f2ee": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "inviteWorkspaceMemberAction",
+          "filename": "app/dashboard/settings/actions.ts"
+        }
+      },
+      "exportedName": "inviteWorkspaceMemberAction",
+      "filename": "app/dashboard/settings/actions.ts"
+    },
+    "40779078c26f1c39c495c002f4c918b390b1026ab9": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "removeWorkspaceMemberAction",
+          "filename": "app/dashboard/settings/actions.ts"
+        }
+      },
+      "exportedName": "removeWorkspaceMemberAction",
+      "filename": "app/dashboard/settings/actions.ts"
+    },
+    "40dbd434772dcd1db8bf7361c7b57ac5c2df11dc0f": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "transferWorkspaceOwnershipAction",
+          "filename": "app/dashboard/settings/actions.ts"
+        }
+      },
+      "exportedName": "transferWorkspaceOwnershipAction",
+      "filename": "app/dashboard/settings/actions.ts"
+    },
+    "40532f867ff22de8527471df8c767c43a188214002": {
+      "workers": {
+        "app/dashboard/settings/page": {
+          "moduleId": 950119,
+          "async": true,
+          "exportedName": "updateWorkspaceMemberRoleAction",
+          "filename": "app/dashboard/settings/actions.ts"
+        }
+      },
+      "exportedName": "updateWorkspaceMemberRoleAction",
+      "filename": "app/dashboard/settings/actions.ts"
+    }
+  },
+  "edge": {}
+}

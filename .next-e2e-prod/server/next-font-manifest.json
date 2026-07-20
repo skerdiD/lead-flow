@@ -1,0 +1,217 @@
+{
+  "app": {
+    "[project]/app/_not-found/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/accounts/[id]/edit/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/accounts/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/accounts/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/accounts/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/activity/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/contacts/[id]/edit/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/contacts/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/contacts/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/contacts/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/accounts/[id]/edit/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/accounts/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/accounts/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/accounts/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/contacts/[id]/edit/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/contacts/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/contacts/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/contacts/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/customers/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/deals/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/deals/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/deals/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/import/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/import/history/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/import/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/leads/[id]/edit/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/leads/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/leads/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/leads/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/settings/activity/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/settings/audit-log/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/settings/imports/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/settings/imports/history/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/settings/imports/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/settings/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/dashboard/tasks/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/demo/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/invite/[token]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/sign-in/[[...sign-in]]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ],
+    "[project]/app/sign-up/[[...sign-up]]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+      "static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

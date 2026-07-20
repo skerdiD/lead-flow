@@ -493,7 +493,10 @@ export function DealsPipeline({
         <DndContext
           sensors={sensors}
           autoScroll
+          onDragStart={() => window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: true }))}
+          onDragCancel={() => window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: false }))}
           onDragEnd={({ active, over }) => {
+            window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: false }));
             const deal = allDeals.find((entry) => entry.id === active.id);
             const stage = String(over?.id ?? "") as DealStage;
             if (deal && DEAL_STAGES.includes(stage)) requestMove(deal, stage);

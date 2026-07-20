@@ -36,7 +36,13 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-e2e-crm/types/**/*.ts",
-    ".next-e2e-crm/dev/types/**/*.ts"
+    ".next-e2e-crm/dev/types/**/*.ts",
+    ".next-e2e-live/types/**/*.ts",
+    ".next-e2e-live/dev/types/**/*.ts",
+    ".next-e2e-live2/types/**/*.ts",
+    ".next-e2e-live2/dev/types/**/*.ts",
+    ".next-e2e-prod/types/**/*.ts",
+    ".next-e2e-prod/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

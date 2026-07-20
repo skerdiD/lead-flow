@@ -59,6 +59,9 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 vi.mock("@/lib/workspace-member-profiles.server", () => ({
+  getWorkspaceMemberOptions: vi.fn(async () => [
+    { userId: "user_123", name: "Jane Owner", imageUrl: null },
+  ]),
   resolveWorkspaceMemberProfiles: vi.fn(async () =>
     new Map([
       [
@@ -125,6 +128,7 @@ describe("getLeadsList", () => {
           createdAt: new Date("2025-01-02T12:00:00.000Z"),
         },
       ],
+      [{ count: 13 }],
       [
         { label: "Referral", count: 8 },
         { label: "Unspecified", count: 5 },

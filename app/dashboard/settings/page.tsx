@@ -70,10 +70,11 @@ function SettingRow({
   );
 }
 
-export default async function SettingsPage() {
-  const [{ userId, user }, workspace] = await Promise.all([
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const [{ userId, user }, workspace, params] = await Promise.all([
     requireCurrentUser(),
     getCurrentWorkspace(),
+    searchParams,
   ]);
   const userRecord = user as Record<string, unknown>;
   const firstName =
@@ -101,7 +102,8 @@ export default async function SettingsPage() {
   const canViewWorkspaceActivity = hasWorkspacePermission(workspace.role, "analytics:view");
   const canManageWorkspace = hasWorkspacePermission(workspace.role, "workspace:manage");
   const canViewAllCrm = hasWorkspacePermission(workspace.role, "crm:view_all");
-  const members = canViewMembers ? await getWorkspaceTeam(workspace) : [];
+  const memberFilters = { search: params.search?.trim().slice(0, 120) ?? "", role: params.memberRole === "owner" || params.memberRole === "admin" || params.memberRole === "member" ? params.memberRole : "" };
+  const members = canViewMembers ? await getWorkspaceTeam(workspace, memberFilters) : [];
   const demoWorkspace = isDemoWorkspace(workspace);
 
   return (
@@ -245,6 +247,7 @@ export default async function SettingsPage() {
           <TeamMembersSection
             workspaceName={workspace.name}
             members={members}
+            filters={memberFilters}
             canInvite={!demoWorkspace && hasWorkspacePermission(workspace.role, "members:manage")}
             canTransferOwnership={!demoWorkspace && hasWorkspacePermission(workspace.role, "ownership:transfer")}
             canDeleteWorkspace={!demoWorkspace && hasWorkspacePermission(workspace.role, "workspace:delete")}

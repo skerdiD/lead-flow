@@ -1,7 +1,7 @@
 import "server-only";
 
 import { clerkClient } from "@clerk/nextjs/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { workspaceMembers } from "@/db/schema";
 import {
@@ -23,11 +23,15 @@ export type WorkspaceTeamMember = {
   canReceiveOwnership: boolean;
 };
 
-export async function getWorkspaceTeam(workspace: CurrentWorkspace) {
+export async function getWorkspaceTeam(workspace: CurrentWorkspace, filters: { search?: string; role?: string } = {}) {
   if (!hasWorkspacePermission(workspace.role, "members:view")) {
     return [] as WorkspaceTeamMember[];
   }
 
+  const search = filters.search?.trim().slice(0, 120) ?? "";
+  const role = filters.role === "owner" || filters.role === "admin" || filters.role === "member" ? filters.role : "";
+  const membershipConditions = [eq(workspaceMembers.workspaceId, workspace.id)];
+  if (role) membershipConditions.push(eq(workspaceMembers.role, role));
   const memberships = await db
     .select({
       id: workspaceMembers.id,
@@ -36,7 +40,7 @@ export async function getWorkspaceTeam(workspace: CurrentWorkspace) {
       createdAt: workspaceMembers.createdAt,
     })
     .from(workspaceMembers)
-    .where(eq(workspaceMembers.workspaceId, workspace.id))
+    .where(and(...membershipConditions))
     .orderBy(asc(workspaceMembers.createdAt));
 
   let usersById = new Map<string, { name: string; email: string }>();
@@ -77,5 +81,5 @@ export async function getWorkspaceTeam(workspace: CurrentWorkspace) {
       canReceiveOwnership:
         workspace.role === "owner" && membership.role !== "owner",
     };
-  });
+  }).filter((member) => !search || [member.name, member.email, member.userId].some((value) => value.toLocaleLowerCase().includes(search.toLocaleLowerCase())));
 }

@@ -1,0 +1,3 @@
+{
+  "/api/imports/templates/[entityType]/route": "app/api/imports/templates/[entityType]/route.js"
+}

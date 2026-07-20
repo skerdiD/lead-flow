@@ -4,13 +4,15 @@ import { DemoReadOnlyHint } from "@/components/demo/demo-read-only-hint";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TaskSections } from "@/components/tasks/task-sections";
+import { TaskFilters } from "@/components/tasks/task-filters";
 import { isDemoWorkspace } from "@/lib/demo";
 import { getTaskCountSummary } from "@/lib/tasks";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
-export default async function TasksPage() {
+export default async function TasksPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
   const [taskData, workspace] = await Promise.all([
-    getTasksPageData(),
+    getTasksPageData(params),
     getCurrentWorkspace(),
   ]);
   const readOnly = isDemoWorkspace(workspace);
@@ -24,6 +26,8 @@ export default async function TasksPage() {
       />
 
       {readOnly ? <DemoReadOnlyHint /> : null}
+
+      <TaskFilters {...taskData.filters} />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -60,7 +64,9 @@ export default async function TasksPage() {
         />
       </section>
 
-      <TaskSections
+      {Object.values(taskData.counts).every((count) => count === 0) && Object.values(taskData.filters).some(Boolean) ? (
+        <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center"><h2 className="font-semibold">No results match your search.</h2><p className="mt-2 text-sm text-muted-foreground">Try another search or clear your filters.</p></div>
+      ) : <TaskSections
         sections={[
           {
             key: "dueToday",
@@ -94,7 +100,7 @@ export default async function TasksPage() {
         globalEmptyTitle="You are caught up"
         globalEmptyDescription="No tasks need your attention right now."
         readOnly={readOnly}
-      />
+      />}
     </div>
   );
 }

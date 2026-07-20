@@ -1,0 +1,209 @@
+{
+  "node": {
+    "00aca699e7136ee4288e3f75502c28375e2c870810": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "invalidateCacheAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js"
+        }
+      },
+      "exportedName": "invalidateCacheAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/server-actions.js"
+    },
+    "001c2d67f847d12754eaa4bde2138a5e377ef1aaae": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "createOrReadKeylessAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "createOrReadKeylessAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "00da107b9c006f759695982a7cfa8a521f34f6bbf3": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "deleteKeylessAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "deleteKeylessAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "40fa54611b7aa65337b4514d47f0837480c89d733d": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "syncKeylessConfigAction",
+          "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+        }
+      },
+      "exportedName": "syncKeylessConfigAction",
+      "filename": "node_modules/@clerk/nextjs/dist/esm/app-router/keyless-actions.js"
+    },
+    "008d2c0a34a0ef259e0720638a315b74cf84c25bda": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "markAllNotificationsAsReadAction",
+          "filename": "app/dashboard/notifications/actions.ts"
+        }
+      },
+      "exportedName": "markAllNotificationsAsReadAction",
+      "filename": "app/dashboard/notifications/actions.ts"
+    },
+    "40d05422ab27e39f29463baae784a1e34d16fc496f": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "markNotificationAsReadAction",
+          "filename": "app/dashboard/notifications/actions.ts"
+        }
+      },
+      "exportedName": "markNotificationAsReadAction",
+      "filename": "app/dashboard/notifications/actions.ts"
+    },
+    "70b847e12856168833f818cbdaf227ecb719125fac": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "updateDealStageAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "updateDealStageAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "609567f2ba2c9611a70c55a19302a7d47d20d30ab2": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "updateLeadFollowUpAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "updateLeadFollowUpAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "606e757960e0665e76649e0f9e66c956832547be20": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "createLeadNoteAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "createLeadNoteAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "60363627dd34d6603a9feab48099b381ee7c4a1bcb": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "deleteLeadNoteAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "deleteLeadNoteAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "701126f48efb215d8dca8e96ead091b8a8ba06367e": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "updateLeadNoteAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "updateLeadNoteAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "60fdf5c8c4c6442558d899ded2a7281085d4922145": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "updateLeadStatusQuickAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "updateLeadStatusQuickAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "40bf878aa3bab122d56d2bb5ba3280e3070c426cab": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "deleteLeadAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "deleteLeadAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "400a6d7b4ba808add03e86ef534f048ef8f7432941": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "restoreLeadAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "restoreLeadAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "60e9d6551e3380de243aa216eb6f3243e453c64ce9": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "createFollowUpTaskAction",
+          "filename": "app/dashboard/leads/actions.ts"
+        }
+      },
+      "exportedName": "createFollowUpTaskAction",
+      "filename": "app/dashboard/leads/actions.ts"
+    },
+    "4038e4ca7fd94997601f1b0c288c45d190be803f13": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "completeTaskAction",
+          "filename": "app/dashboard/tasks/actions.ts"
+        }
+      },
+      "exportedName": "completeTaskAction",
+      "filename": "app/dashboard/tasks/actions.ts"
+    },
+    "407e6051a7898016aa0d3a6026d3fb76a3b85aa3b4": {
+      "workers": {
+        "app/dashboard/leads/[id]/page": {
+          "moduleId": 832099,
+          "async": true,
+          "exportedName": "reopenTaskAction",
+          "filename": "app/dashboard/tasks/actions.ts"
+        }
+      },
+      "exportedName": "reopenTaskAction",
+      "filename": "app/dashboard/tasks/actions.ts"
+    }
+  },
+  "edge": {}
+}

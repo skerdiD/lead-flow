@@ -238,7 +238,7 @@ export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
   );
   accountConditions.push(eq(accounts.isArchived, false));
 
-  const [ownerOptions, accountOptions] = await Promise.all([
+  const [ownerOptions, accountOptions, existingCountRow] = await Promise.all([
     getWorkspaceMemberOptions(
       context.workspaceId,
       hasWorkspacePermission(context.role, "crm:view_all")
@@ -251,6 +251,7 @@ export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
       .where(and(...accountConditions))
       .orderBy(asc(accounts.name))
       .limit(200),
+    db.select({ count: sql<number>`count(*)` }).from(deals).where(and(...getRecordVisibilityConditions(context, deals.workspaceId, deals.ownerUserId))),
   ]);
 
   const allowedOwnerIds = new Set(ownerOptions.map((member) => member.userId));
@@ -373,6 +374,7 @@ export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
     referenceTime,
     isTruncated:
       normalized.view === "pipeline" && totalCount > PIPELINE_CARD_LIMIT,
+    hasAnyDeals: Number(existingCountRow[0]?.count ?? 0) > 0,
   };
 }
 

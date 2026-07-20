@@ -22,6 +22,7 @@ import {
   type LeadStatus,
 } from "@/lib/constants/leads";
 import {
+  getWorkspaceMemberOptions,
   resolveWorkspaceMemberProfiles,
   type WorkspaceMemberProfile,
 } from "@/lib/workspace-member-profiles.server";
@@ -30,6 +31,7 @@ export type LeadsListFilters = {
   search?: string;
   status?: string;
   source?: string;
+  owner?: string;
   archived?: string;
   sortBy?: string;
   sortDir?: string;
@@ -41,6 +43,7 @@ export type NormalizedLeadsFilters = {
   search: string;
   status: string;
   source: string;
+  owner: string;
   archived: "active" | "archived";
   sortBy: LeadsTableSortField;
   sortDir: LeadsTableSortDirection;
@@ -76,10 +79,13 @@ export type LeadsListResult = {
   search: string;
   status: string;
   source: string;
+  owner: string;
   archived: "active" | "archived";
   sortBy: LeadsTableSortField;
   sortDir: LeadsTableSortDirection;
   sourceOptions: Array<{ label: string; count: number }>;
+  ownerOptions: Array<{ userId: string; name: string }>;
+  hasAnyRecords: boolean;
 };
 
 function normalizeSearch(value?: string) {
@@ -131,6 +137,7 @@ export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLead
     search: normalizeSearch(filters.search),
     status: normalizeStatus(filters.status),
     source: normalizeSource(filters.source),
+    owner: filters.owner?.trim().slice(0, 255) ?? "",
     archived: normalizeArchived(filters.archived),
     sortBy: normalizeSortBy(filters.sortBy),
     sortDir: normalizeSortDirection(filters.sortDir),
@@ -141,7 +148,7 @@ export function normalizeLeadsFilters(filters: LeadsListFilters): NormalizedLead
 
 export function buildLeadsWhereConditions(
   workspaceId: string,
-  filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source" | "archived">,
+  filters: Pick<NormalizedLeadsFilters, "search" | "status" | "source" | "owner" | "archived">,
   context?: WorkspaceAuthorizationContext,
 ) {
   const sourceLabel = sql<string>`coalesce(nullif(trim(${leads.source}), ''), 'Unspecified')`;
@@ -174,6 +181,10 @@ export function buildLeadsWhereConditions(
 
   if (filters.source) {
     conditions.push(eq(sourceLabel, filters.source));
+  }
+
+  if (filters.owner) {
+    conditions.push(eq(leads.assignedOwnerUserId, filters.owner));
   }
 
   return { conditions, sourceLabel };
@@ -213,20 +224,30 @@ export function getLeadsSortOrder(
 
 export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsListResult> {
   const context = await getCurrentWorkspaceAuthorizationContext();
+  const normalized = normalizeLeadsFilters(filters);
+  const ownerOptions = await getWorkspaceMemberOptions(
+    context.workspaceId,
+    context.role === "member" ? [context.userId] : undefined,
+  );
+  if (!ownerOptions.some((option) => option.userId === normalized.owner)) {
+    normalized.owner = "";
+  }
   const {
     search,
     status,
     source,
+    owner,
     archived,
     sortBy,
     sortDir,
     requestedPage,
     pageSize,
-  } = normalizeLeadsFilters(filters);
+  } = normalized;
   const { conditions, sourceLabel } = buildLeadsWhereConditions(context.workspaceId, {
     search,
     status,
     source,
+    owner,
     archived,
   }, context);
   const sourceCount = sql<number>`count(*)`;
@@ -277,6 +298,11 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
   );
   sourceConditions.push(eq(leads.isArchived, archived === "archived"));
 
+  const [existingCountRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(leads)
+    .where(and(...sourceConditions));
+
   const [sourceRows, memberProfiles] = await Promise.all([
     db
       .select({
@@ -326,6 +352,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     search,
     status,
     source,
+    owner,
     archived,
     sortBy,
     sortDir,
@@ -333,5 +360,10 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       label: item.label,
       count: Number(item.count ?? 0),
     })),
+    ownerOptions: ownerOptions.map((option) => ({
+      userId: option.userId,
+      name: option.name,
+    })),
+    hasAnyRecords: Number(existingCountRow?.count ?? 0) > 0,
   };
 }

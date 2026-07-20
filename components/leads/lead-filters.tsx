@@ -1,218 +1,98 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
-import { LEAD_STATUSES, type LeadStatus } from "@/lib/constants/leads";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ClearFiltersButton } from "@/components/filters/clear-filters-button";
+import { SearchInput } from "@/components/filters/search-input";
+import { useDebouncedUrlSearch } from "@/components/filters/use-debounced-url-search";
+import { LEAD_STATUSES } from "@/lib/constants/leads";
+import { cn } from "@/lib/utils";
 
-type SourceOption = {
-  label: string;
-  count: number;
-};
+type SourceOption = { label: string; count: number };
 
 type LeadFiltersProps = {
   initialSearch?: string;
   initialStatus?: string;
   initialSource?: string;
+  initialOwner?: string;
   initialArchived?: "active" | "archived";
   sourceOptions?: SourceOption[];
+  ownerOptions?: Array<{ userId: string; name: string }>;
 };
+
+const selectClass =
+  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
 
 export function LeadFilters({
   initialSearch = "",
   initialStatus = "",
   initialSource = "",
+  initialOwner = "",
   initialArchived = "active",
   sourceOptions = [],
+  ownerOptions = [],
 }: LeadFiltersProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
-  const [search, setSearch] = useState(initialSearch);
-  const [status, setStatus] = useState(initialStatus);
-  const [source, setSource] = useState(initialSource);
-  const [archived, setArchived] = useState(initialArchived);
-
-  const pushFilters = useCallback(
-    (nextSearch: string, nextStatus: string, nextSource: string, nextArchived: "active" | "archived") => {
-      const params = new URLSearchParams(searchParams);
-
-      if (nextSearch.trim()) {
-        params.set("search", nextSearch.trim());
-      } else {
-        params.delete("search");
-      }
-
-      if (nextStatus.trim()) {
-        params.set("status", nextStatus);
-      } else {
-        params.delete("status");
-      }
-
-      if (nextSource.trim()) {
-        params.set("source", nextSource);
-      } else {
-        params.delete("source");
-      }
-
-      if (nextArchived === "archived") {
-        params.set("archived", "archived");
-      } else {
-        params.delete("archived");
-      }
-
-      params.delete("page");
-
-      const queryString = params.toString();
-
-      startTransition(() => {
-        router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-          scroll: false,
-        });
-      });
-    },
-    [pathname, router, searchParams],
+  const controller = useDebouncedUrlSearch({ initialSearch });
+  const hasFilters = Boolean(
+    controller.search.trim() || initialStatus || initialSource || initialOwner || initialArchived === "archived",
   );
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    pushFilters(search, status, source, archived);
-  };
-
-  const handleClear = () => {
-    setSearch("");
-    setStatus("");
-    setSource("");
-    setArchived("active");
-
-    const params = new URLSearchParams(searchParams);
-    params.delete("search");
-    params.delete("status");
-    params.delete("source");
-    params.delete("archived");
-    params.delete("page");
-
-    const queryString = params.toString();
-
-    startTransition(() => {
-      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-        scroll: false,
-      });
-    });
+  const apply = (updates: Record<string, string | null>) => controller.replace(updates);
+  const clear = () => {
+    controller.clear(
+      { search: null, status: null, source: null, owner: null, archived: null },
+    );
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+    <div
+      className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center"
+      aria-busy={controller.isPending}
+      data-testid="leads-filter-toolbar"
     >
-      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <div className="relative w-full sm:min-w-[280px] sm:flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name, company, email, or source..."
-            className="pl-9"
-            disabled={isPending}
-          />
-        </div>
+      <SearchInput
+        value={controller.search}
+        onChange={controller.setSearch}
+        onCommit={controller.commitSearch}
+        onClear={controller.clearSearch}
+        isPending={controller.isPending}
+        inputRef={controller.inputRef}
+        placeholder="Search by name, company, email, or source..."
+        ariaLabel="Search leads"
+        className="w-full lg:min-w-[18rem] lg:flex-1"
+        testId="leads-search-input"
+      />
 
-        <div className="w-full sm:w-[220px]">
-          <Select
-            value={status || "all"}
-            onValueChange={(value) => {
-              const nextStatus = value === "all" ? "" : (value as LeadStatus);
-              setStatus(nextStatus);
-              pushFilters(search, nextStatus, source, archived);
-            }}
-            disabled={isPending}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by stage" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All stages</SelectItem>
-              {LEAD_STATUSES.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {item}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <label className="w-full sm:w-auto">
+        <span className="sr-only">Stage</span>
+        <select key={initialStatus} defaultValue={initialStatus} onChange={(event) => apply({ status: event.target.value || null })} className={cn(selectClass, "sm:w-[10rem]")} aria-label="Stage">
+          <option value="">All stages</option>
+          {LEAD_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+        </select>
+      </label>
 
-        <div className="w-full sm:w-[220px]">
-          <Select
-            value={source || "all"}
-            onValueChange={(value) => {
-              const nextSource = value === "all" ? "" : value;
-              setSource(nextSource);
-              pushFilters(search, status, nextSource, archived);
-            }}
-            disabled={isPending}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              {sourceOptions.map((item) => (
-                <SelectItem key={item.label} value={item.label}>
-                  {item.label} ({item.count})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <label className="w-full sm:w-auto">
+        <span className="sr-only">Source</span>
+        <select key={initialSource} defaultValue={initialSource} onChange={(event) => apply({ source: event.target.value || null })} className={cn(selectClass, "sm:w-[11rem]")} aria-label="Source">
+          <option value="">All sources</option>
+          {sourceOptions.map((source) => <option key={source.label} value={source.label}>{source.label} ({source.count})</option>)}
+        </select>
+      </label>
 
-        <div className="w-full sm:w-[220px]">
-          <Select
-            value={archived}
-            onValueChange={(value) => {
-              const nextArchived = value === "archived" ? "archived" : "active";
-              setArchived(nextArchived);
-              pushFilters(search, status, source, nextArchived);
-            }}
-            disabled={isPending}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Lead view" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active leads</SelectItem>
-              <SelectItem value="archived">Archived leads</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <label className="w-full sm:w-auto">
+        <span className="sr-only">Lead view</span>
+        <select key={initialArchived} defaultValue={initialArchived} onChange={(event) => apply({ archived: event.target.value === "archived" ? "archived" : null })} className={cn(selectClass, "sm:w-[10rem]")} aria-label="Lead view">
+          <option value="active">Active leads</option>
+          <option value="archived">Archived leads</option>
+        </select>
+      </label>
 
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Applying..." : "Apply"}
-        </Button>
+      <label className="w-full sm:w-auto">
+        <span className="sr-only">Owner</span>
+        <select key={initialOwner} defaultValue={initialOwner} onChange={(event) => apply({ owner: event.target.value || null })} className={cn(selectClass, "sm:w-[10rem]")} aria-label="Owner">
+          <option value="">All owners</option>
+          {ownerOptions.map((owner) => <option key={owner.userId} value={owner.userId}>{owner.name}</option>)}
+        </select>
+      </label>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleClear}
-          disabled={isPending}
-        >
-          <X className="mr-2 h-4 w-4" />
-          Clear
-        </Button>
-      </div>
-    </form>
+      {hasFilters ? <ClearFiltersButton onClear={clear} disabled={controller.isPending} /> : null}
+    </div>
   );
 }
