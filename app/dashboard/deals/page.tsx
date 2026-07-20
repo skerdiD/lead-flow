@@ -111,6 +111,7 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
             initialTotals={data.totals}
             readOnly={readOnly}
             isTruncated={data.isTruncated}
+            referenceTime={data.referenceTime}
           />
         ) : data.totalCount > 0 ? (
           <DealsList
@@ -120,6 +121,7 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
             pageCount={data.pageCount}
             pageSize={data.pageSize}
             readOnly={readOnly}
+            referenceTime={data.referenceTime}
           />
         ) : (
           <div className="rounded-2xl border border-dashed bg-background px-6 py-12 text-center shadow-sm">

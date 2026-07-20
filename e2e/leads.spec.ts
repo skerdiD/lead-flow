@@ -103,7 +103,8 @@ test.describe("Leads e2e flows", () => {
     await page.getByTestId("bulk-apply-stage-btn").click();
     await expect(leadRow.getByText("Contacted")).toBeVisible();
 
-    await leadRow.getByLabel("Edit lead").click();
+    await leadRow.getByRole("button", { name: `Actions for ${leadName}` }).click();
+    await page.getByRole("menuitem", { name: "Edit lead" }).click();
     await expect(page).toHaveURL(/\/dashboard\/leads\/.+\/edit$/);
     await page.getByTestId("lead-company-input").fill(updatedCompany);
     await page.getByTestId("lead-status-select").click();

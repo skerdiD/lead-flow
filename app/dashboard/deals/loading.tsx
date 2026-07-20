@@ -19,7 +19,7 @@ export default function DealsLoading() {
         <Pulse className="hidden h-9 w-40 sm:block" />
         <Pulse className="h-9 w-28" />
       </div>
-      <div className="hidden min-h-[32rem] flex-1 gap-3 overflow-hidden md:flex">
+      <div className="hidden min-h-[26rem] flex-1 gap-3 overflow-hidden md:flex">
         {Array.from({ length: 5 }).map((_, column) => (
           <div key={column} className="w-[19rem] shrink-0 rounded-2xl border bg-muted/20 p-3">
             <div className="flex items-center justify-between">

@@ -228,6 +228,7 @@ function createEmptyTotals() {
 }
 
 export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
+  const referenceTime = new Date().getTime();
   const context = await getCurrentWorkspaceAuthorizationContext();
   const normalized = normalizeFilters(filters);
   const accountConditions = getRecordVisibilityConditions(
@@ -369,6 +370,7 @@ export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
     ownerOptions: ownerOptions satisfies WorkspaceMemberOption[],
     accountOptions,
     filters: normalized,
+    referenceTime,
     isTruncated:
       normalized.view === "pipeline" && totalCount > PIPELINE_CARD_LIMIT,
   };

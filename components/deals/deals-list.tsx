@@ -103,6 +103,7 @@ export function DealsList({
   pageCount,
   pageSize,
   readOnly,
+  referenceTime,
 }: {
   initialDeals: PipelineDeal[];
   totalCount: number;
@@ -110,6 +111,7 @@ export function DealsList({
   pageCount: number;
   pageSize: number;
   readOnly: boolean;
+  referenceTime: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -248,7 +250,7 @@ export function DealsList({
           <TableBody>
             {deals.map((deal) => {
               const relationship = deal.accountName ?? deal.contactName ?? deal.leadName ?? "No linked account";
-              const overdue = Boolean(deal.expectedCloseAt && !["won", "lost"].includes(deal.stage) && new Date(deal.expectedCloseAt).getTime() < Date.now());
+              const overdue = Boolean(deal.expectedCloseAt && !["won", "lost"].includes(deal.stage) && new Date(deal.expectedCloseAt).getTime() < referenceTime);
               return (
                 <TableRow key={deal.id} className="hover:bg-muted/30 focus-within:bg-muted/30" data-testid={`deal-list-row-${deal.id}`}>
                   <TableCell className="min-w-0 px-3 py-3">

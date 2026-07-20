@@ -98,7 +98,7 @@ export function DealsFilters({
           ) : null}
           <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
         </summary>
-        <div className="absolute right-0 z-30 mt-2 grid w-[min(34rem,calc(100vw-2rem))] grid-cols-1 gap-3 rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg sm:grid-cols-2">
+        <div className="absolute left-0 z-30 mt-2 grid w-[min(34rem,calc(100vw-2rem))] grid-cols-1 gap-3 rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg sm:left-auto sm:right-0 sm:grid-cols-2">
           <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
             <span>Stage</span>
             <select name="stage" defaultValue={filters.stage ?? ""} className={cn(controlClass, "w-full text-foreground")}>

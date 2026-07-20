@@ -3,13 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  getSettingsNavigationForUser,
   isNavigationItemActive,
-  type NavigationItem,
 } from "@/components/dashboard/dashboard-nav";
+import type { WorkspacePermission } from "@/lib/authorization";
 import { cn } from "@/lib/utils";
 
-export function SettingsNavigation({ items }: { items: readonly NavigationItem[] }) {
+export function SettingsNavigation({
+  permissions,
+}: {
+  permissions: readonly WorkspacePermission[];
+}) {
   const pathname = usePathname();
+  const items = getSettingsNavigationForUser({ permissions });
 
   return (
     <nav

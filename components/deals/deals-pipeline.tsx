@@ -82,11 +82,11 @@ function getInitials(name: string) {
     .join("");
 }
 
-function isOverdue(value: string | null, stage: DealStage) {
+function isOverdue(value: string | null, stage: DealStage, referenceTime: number) {
   return Boolean(
     value &&
       !["won", "lost"].includes(stage) &&
-      new Date(value).getTime() < Date.now(),
+      new Date(value).getTime() < referenceTime,
   );
 }
 
@@ -201,19 +201,21 @@ function DealCard({
   readOnly,
   moving,
   draggable = false,
+  referenceTime,
   move,
 }: {
   deal: PipelineDeal;
   readOnly: boolean;
   moving: boolean;
   draggable?: boolean;
+  referenceTime: number;
   move: (deal: PipelineDeal, stage: DealStage) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: draggable ? deal.id : `static-${deal.id}`,
     disabled: readOnly || !draggable || moving,
   });
-  const overdue = isOverdue(deal.expectedCloseAt, deal.stage);
+  const overdue = isOverdue(deal.expectedCloseAt, deal.stage, referenceTime);
   const relationship =
     deal.accountName ?? deal.contactName ?? deal.leadName ?? "No linked account";
 
@@ -297,6 +299,7 @@ function PipelineColumn({
   total,
   readOnly,
   moving,
+  referenceTime,
   move,
 }: {
   stage: DealStage;
@@ -304,6 +307,7 @@ function PipelineColumn({
   total: DealStageTotal;
   readOnly: boolean;
   moving: boolean;
+  referenceTime: number;
   move: (deal: PipelineDeal, stage: DealStage) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
@@ -340,6 +344,7 @@ function PipelineColumn({
               readOnly={readOnly}
               moving={moving}
               draggable
+              referenceTime={referenceTime}
               move={move}
             />
           ))
@@ -391,11 +396,13 @@ export function DealsPipeline({
   initialTotals,
   readOnly,
   isTruncated = false,
+  referenceTime,
 }: {
   initialBoard: Board;
   initialTotals: Totals;
   readOnly: boolean;
   isTruncated?: boolean;
+  referenceTime: number;
 }) {
   const [board, setBoard] = useState(initialBoard);
   const [totals, setTotals] = useState(initialTotals);
@@ -482,7 +489,7 @@ export function DealsPipeline({
         </p>
       ) : null}
 
-      <div className="hidden min-h-[32rem] flex-1 md:block">
+      <div className="hidden min-h-[26rem] flex-1 md:block">
         <DndContext
           sensors={sensors}
           autoScroll
@@ -508,6 +515,7 @@ export function DealsPipeline({
                   total={totals[stage]}
                   readOnly={readOnly}
                   moving={moving}
+                  referenceTime={referenceTime}
                   move={requestMove}
                 />
               ))}
@@ -548,6 +556,7 @@ export function DealsPipeline({
                 deal={deal}
                 readOnly={readOnly}
                 moving={moving}
+                referenceTime={referenceTime}
                 move={requestMove}
               />
             ))
