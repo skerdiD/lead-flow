@@ -266,6 +266,32 @@ describeDatabase("workspace relationship integrity", () => {
     await expect(createTask(workspace)).resolves.toEqual(expect.any(String));
   });
 
+  it("allows only one tenant-scoped deal per lead during concurrent inserts", async () => {
+    const workspace = await createWorkspace("deal-uniqueness-concurrency");
+    const leadId = await createLead(workspace);
+    const insertForLead = () =>
+      pool.query<{ id: string }>(
+        `INSERT INTO deals (workspace_id, user_id, lead_id, name)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (workspace_id, lead_id) DO NOTHING
+         RETURNING id`,
+        [workspace.id, workspace.userId, leadId, `Concurrent deal ${randomUUID()}`],
+      );
+
+    const results = await Promise.all([insertForLead(), insertForLead()]);
+    const createdCount = results.reduce(
+      (count, result) => count + (result.rowCount ?? 0),
+      0,
+    );
+    const persisted = await pool.query<{ count: string }>(
+      "SELECT count(*) FROM deals WHERE workspace_id = $1 AND lead_id = $2",
+      [workspace.id, leadId],
+    );
+
+    expect(createdCount).toBe(1);
+    expect(Number(persisted.rows[0]?.count)).toBe(1);
+  });
+
   it("preserves optional relationship cleanup when a parent is deleted", async () => {
     const workspace = await createWorkspace("delete-cleanup");
     const accountId = await createAccount(workspace);

@@ -11,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -485,6 +486,9 @@ export const deals = pgTable(
   },
   (table) => [
     uniqueIndex("deals_workspace_id_id_unique").on(table.workspaceId, table.id),
+    // A lead's embedded opportunity is singular. Deals without a lead remain
+    // valid because PostgreSQL unique constraints allow multiple NULL values.
+    unique("deals_workspace_lead_unique").on(table.workspaceId, table.leadId),
     foreignKey({
       name: "deals_workspace_lead_tenant_fk",
       columns: [table.workspaceId, table.leadId],
@@ -512,7 +516,6 @@ export const deals = pgTable(
     ),
     index("deals_workspace_id_idx").on(table.workspaceId),
     index("deals_workspace_id_stage_idx").on(table.workspaceId, table.stage),
-    index("deals_workspace_id_lead_id_idx").on(table.workspaceId, table.leadId),
     index("deals_workspace_id_expected_close_idx").on(
       table.workspaceId,
       table.expectedCloseAt,

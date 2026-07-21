@@ -4,6 +4,7 @@ import { deals } from "@/db/schema";
 import {
   canAccessRecord,
   type getWorkspaceAuthorizationContext,
+  hasWorkspacePermission,
 } from "@/lib/authorization";
 import type { DealStage } from "@/lib/constants/crm";
 import { moneyToCents } from "@/lib/revenue";
@@ -107,7 +108,10 @@ export async function saveLeadDeal(params: {
     };
   }
 
-  const [createdDeal] = await client
+  // The unique constraint is the concurrency boundary. This is intentionally
+  // an upsert rather than a check-then-insert so simultaneous lead saves
+  // cannot create two opportunities for the same tenant-scoped lead.
+  const [savedDeal] = await client
     .insert(deals)
     .values({
       workspaceId: params.workspaceId,
@@ -128,11 +132,44 @@ export async function saveLeadDeal(params: {
       }),
       lostReason: params.dealStage === "lost" ? params.lostReason ?? null : null,
     })
+    .onConflictDoUpdate({
+      target: [deals.workspaceId, deals.leadId],
+      set: {
+        accountId: params.accountId ?? null,
+        contactId: params.contactId ?? null,
+        ownerUserId: params.ownerUserId ?? null,
+        name: params.dealName,
+        stage: params.dealStage,
+        valueCents: moneyToCents(params.dealValue),
+        currency: params.dealCurrency,
+        probability: dealProbability,
+        expectedCloseAt: parseDateInput(params.expectedCloseDate),
+        closedAt: resolveClosedAt({
+          stage: params.dealStage,
+          closedDate: params.closedDate,
+        }),
+        lostReason: params.dealStage === "lost" ? params.lostReason ?? null : null,
+        updatedAt: new Date(),
+      },
+      // A concurrent insert must not let an assigned-only member update a
+      // deal they could not update in the normal existing-record path.
+      where:
+        params.authorizationContext &&
+        !hasWorkspacePermission(params.authorizationContext.role, "crm:update_all")
+          ? eq(deals.ownerUserId, params.authorizationContext.userId)
+          : undefined,
+    })
     .returning({ id: deals.id, stage: deals.stage });
 
+  if (!savedDeal) {
+    throw new Error(
+      "This opportunity could not be found or you do not have permission to update it.",
+    );
+  }
+
   return {
-    id: createdDeal?.id ?? null,
+    id: savedDeal.id,
     previousStage: null,
-    stage: createdDeal?.stage ?? params.dealStage,
+    stage: savedDeal.stage,
   };
 }
