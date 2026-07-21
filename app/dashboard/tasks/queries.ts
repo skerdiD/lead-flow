@@ -111,8 +111,10 @@ function mapTaskRow(row: {
   };
 }
 
-async function getScopedTasks(context?: WorkspaceAuthorizationContext, filters: NormalizedTasksPageFilters = normalizeTaskFilters({})) {
-  const accessContext = context ?? await getCurrentWorkspaceAuthorizationContext();
+function buildScopedTasks(
+  accessContext: WorkspaceAuthorizationContext,
+  filters: NormalizedTasksPageFilters = normalizeTaskFilters({}),
+) {
   const conditions = [
     ...getTaskVisibilityConditions(accessContext, crmTasks.workspaceId, crmTasks.ownerUserId, crmTasks.userId),
     ...(hasWorkspacePermission(accessContext.role, "crm:view_all") ? [] : [or(isNull(crmTasks.leadId), eq(leads.assignedOwnerUserId, accessContext.userId))!]),
@@ -140,6 +142,7 @@ async function getScopedTasks(context?: WorkspaceAuthorizationContext, filters: 
       leadId: crmTasks.leadId,
       leadName: leads.fullName,
       leadCompany: leads.company,
+      totalCount: sql<number>`count(*) over()`.as("total_count"),
     })
     .from(crmTasks)
     .leftJoin(
@@ -150,6 +153,16 @@ async function getScopedTasks(context?: WorkspaceAuthorizationContext, filters: 
     .leftJoin(contacts, and(eq(crmTasks.contactId, contacts.id), eq(contacts.workspaceId, accessContext.workspaceId), ...getRecordVisibilityConditions(accessContext, contacts.workspaceId, contacts.assignedOwnerUserId)))
     .where(and(...conditions))
     .orderBy(asc(crmTasks.dueAt), desc(crmTasks.createdAt));
+}
+
+async function getScopedTasks(
+  context?: WorkspaceAuthorizationContext,
+  filters: NormalizedTasksPageFilters = normalizeTaskFilters({}),
+) {
+  return buildScopedTasks(
+    context ?? await getCurrentWorkspaceAuthorizationContext(),
+    filters,
+  );
 }
 
 export async function getTasksPageData(input: TasksPageFilters = {}): Promise<TasksPageData & { filters: NormalizedTasksPageFilters }> {
@@ -174,9 +187,13 @@ export async function getDashboardAttentionData(
   previewLimit = 3,
 ): Promise<DashboardAttentionData> {
   const context = await getCurrentWorkspaceAuthorizationContext();
-  const [tasks, followUpRows, staleLeadRows, proposalRows] =
+  // Each panel shows a short preview. Window counts retain accurate badges
+  // without loading every matching task, lead, and deal into the request.
+  const queryLimit = Math.max(1, previewLimit);
+  const [dueTodayRows, overdueRows, followUpRows, staleLeadRows, proposalRows] =
     await Promise.all([
-      getScopedTasks(context),
+      buildScopedTasks(context, normalizeTaskFilters({ due: "today" })).limit(queryLimit),
+      buildScopedTasks(context, normalizeTaskFilters({ due: "overdue" })).limit(queryLimit),
       (async () => {
         const todayKey = getLocalDateKey();
 
@@ -188,6 +205,7 @@ export async function getDashboardAttentionData(
             status: leads.status,
             dueAt: leads.nextFollowUpDate,
             note: leads.followUpNote,
+            totalCount: sql<number>`count(*) over()`.as("total_count"),
           })
           .from(leads)
           .where(
@@ -202,7 +220,8 @@ export async function getDashboardAttentionData(
               sql`to_char(${leads.nextFollowUpDate} at time zone 'UTC', 'YYYY-MM-DD') = ${todayKey}`,
             ),
           )
-          .orderBy(asc(leads.nextFollowUpDate), asc(leads.fullName));
+          .orderBy(asc(leads.nextFollowUpDate), asc(leads.fullName))
+          .limit(queryLimit);
       })(),
       (async () => {
         const staleCutoff = new Date();
@@ -233,6 +252,7 @@ export async function getDashboardAttentionData(
             status: leads.status,
             dueAt: latestActivityByLead.lastActivityAt,
             note: leads.followUpNote,
+            totalCount: sql<number>`count(*) over()`.as("total_count"),
           })
           .from(leads)
           .leftJoin(latestActivityByLead, eq(leads.id, latestActivityByLead.leadId))
@@ -254,7 +274,8 @@ export async function getDashboardAttentionData(
           .orderBy(
             asc(sql`coalesce(${latestActivityByLead.lastActivityAt}, ${leads.createdAt})`),
             asc(leads.fullName),
-          );
+          )
+          .limit(queryLimit);
       })(),
       (async () => {
         return db
@@ -266,6 +287,7 @@ export async function getDashboardAttentionData(
             dealName: deals.name,
             expectedCloseAt: deals.expectedCloseAt,
             updatedAt: deals.updatedAt,
+            totalCount: sql<number>`count(*) over()`.as("total_count"),
           })
           .from(deals)
           .innerJoin(
@@ -291,29 +313,31 @@ export async function getDashboardAttentionData(
           .orderBy(
             asc(sql`coalesce(${deals.expectedCloseAt}, ${deals.updatedAt})`),
             asc(leads.fullName),
-          );
+          )
+          .limit(queryLimit);
       })(),
     ]);
 
-  const groupedTasks = groupTasksByTimeline(tasks.map(mapTaskRow));
+  const dueToday = dueTodayRows.map(mapTaskRow);
+  const overdue = overdueRows.map(mapTaskRow);
+  const count = (rows: Array<{ totalCount: number }>) =>
+    Number(rows[0]?.totalCount ?? 0);
 
   return {
     groupedTasks: {
-      dueToday: groupedTasks.dueToday.slice(0, previewLimit),
-      overdue: groupedTasks.overdue.slice(0, previewLimit),
+      dueToday,
+      overdue,
     },
     counts: {
-      dueToday: groupedTasks.dueToday.length,
-      overdue: groupedTasks.overdue.length,
-      followUpsDueToday: followUpRows.length,
-      staleLeads: staleLeadRows.length,
-      proposalsWaitingResponse: proposalRows.length,
+      dueToday: count(dueTodayRows),
+      overdue: count(overdueRows),
+      followUpsDueToday: count(followUpRows),
+      staleLeads: count(staleLeadRows),
+      proposalsWaitingResponse: count(proposalRows),
     },
-    followUpsDueToday: followUpRows.slice(0, previewLimit),
-    staleLeads: staleLeadRows.slice(0, previewLimit),
+    followUpsDueToday: followUpRows,
+    staleLeads: staleLeadRows,
     proposalsWaitingResponse: proposalRows
-      .filter((row) => row.leadId)
-      .slice(0, previewLimit)
       .map((row) => ({
         id: row.id,
         leadId: row.leadId,

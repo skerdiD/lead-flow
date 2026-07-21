@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { accounts, activityEvents, contacts, deals, leads, workspaceMembers } from "@/db/schema";
 import {
   canAccessRecord,
+  getRecordVisibilityConditions,
   getRecordUpdateConditions,
   getWorkspaceAuthorizationContext,
   hasWorkspacePermission,
@@ -109,15 +110,45 @@ export async function archiveContactAction(id: string): Promise<MutationResult> 
   await activity({ workspaceId: state.workspace.id, userId: state.userId, eventType: "contact_archived", message: `Contact archived: ${record.fullName}`, contactId: id, accountId: record.accountId }); mutationPaths("/dashboard/contacts", `/dashboard/contacts/${id}`, ...(record.accountId ? [`/dashboard/accounts/${record.accountId}`] : [])); return { success: true, id, message: "Contact archived. Linked CRM history was preserved." };
 }
 
-async function validateDealLinks(workspaceId: string, values: DealFormValues) {
-  const links = [[values.leadId, leads, leads.isArchived], [values.accountId, accounts, accounts.isArchived], [values.contactId, contacts, contacts.isArchived]] as const;
-  for (const [id, table, archived] of links) { if (id && (!isUuid(id) || !(await db.select({ id: table.id }).from(table).where(and(eq(table.id, id), eq(table.workspaceId, workspaceId), eq(archived, false))).limit(1))[0])) return false; }
-  return true;
+async function validateDealLinks(
+  context: ReturnType<typeof getWorkspaceAuthorizationContext>,
+  values: DealFormValues,
+) {
+  const ids = [values.leadId, values.accountId, values.contactId];
+  if (ids.some((id) => id && !isUuid(id))) return false;
+
+  // Selector visibility is a convenience only. Reapply it here so crafted
+  // server-action payloads cannot attach a new deal to another member's CRM record.
+  const [leadRows, accountRows, contactRows] = await Promise.all([
+    values.leadId
+      ? db.select({ id: leads.id }).from(leads).where(and(
+        eq(leads.id, values.leadId),
+        eq(leads.isArchived, false),
+        ...getRecordVisibilityConditions(context, leads.workspaceId, leads.assignedOwnerUserId),
+      )).limit(1)
+      : Promise.resolve([{ id: "" }]),
+    values.accountId
+      ? db.select({ id: accounts.id }).from(accounts).where(and(
+        eq(accounts.id, values.accountId),
+        eq(accounts.isArchived, false),
+        ...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId),
+      )).limit(1)
+      : Promise.resolve([{ id: "" }]),
+    values.contactId
+      ? db.select({ id: contacts.id }).from(contacts).where(and(
+        eq(contacts.id, values.contactId),
+        eq(contacts.isArchived, false),
+        ...getRecordVisibilityConditions(context, contacts.workspaceId, contacts.assignedOwnerUserId),
+      )).limit(1)
+      : Promise.resolve([{ id: "" }]),
+  ]);
+
+  return Boolean(leadRows[0] && accountRows[0] && contactRows[0]);
 }
 
 export async function createDealAction(values: DealFormValues): Promise<MutationResult> {
   const parsed = dealFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the deal details.", fieldErrors: parsed.error.flatten().fieldErrors }; const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
-  if (!(await validateDealLinks(state.workspace.id, parsed.data))) return { success: false, message: "Choose related records from this active workspace." }; const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") ? await validateMember(state.workspace.id, parsed.data.ownerUserId) : state.userId; if (parsed.data.ownerUserId && !owner) return { success: false, message: "Choose a valid workspace member as the owner." }; if (parsed.data.stage === "lost" && !parsed.data.lostReason) return { success: false, message: "A lost reason is required before closing a deal as lost." };
+  if (!(await validateDealLinks(state.context, parsed.data))) return { success: false, message: "Choose related records from this active workspace." }; const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") ? await validateMember(state.workspace.id, parsed.data.ownerUserId) : state.userId; if (parsed.data.ownerUserId && !owner) return { success: false, message: "Choose a valid workspace member as the owner." }; if (parsed.data.stage === "lost" && !parsed.data.lostReason) return { success: false, message: "A lost reason is required before closing a deal as lost." };
   const record = await db.transaction(async (tx) => { const [created] = await tx.insert(deals).values({ workspaceId: state.workspace.id, userId: state.userId, ownerUserId: owner, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null, name: parsed.data.name, stage: parsed.data.stage, valueCents: moneyToCents(parsed.data.value), currency: parsed.data.currency, probability: parsed.data.probability, expectedCloseAt: parsed.data.expectedCloseDate ? new Date(`${parsed.data.expectedCloseDate}T00:00:00Z`) : null, closedAt: ["won", "lost"].includes(parsed.data.stage) ? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null }).onConflictDoNothing({ target: [deals.workspaceId, deals.leadId] }).returning({ id: deals.id }); if (!created) return null; await activity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "deal_updated", message: `Deal created: ${parsed.data.name}`, dealId: created.id, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null }); return created; });
   if (!record) return { success: false, message: "This lead already has a deal." };
   mutationPaths("/dashboard/deals", `/dashboard/deals/${record.id}`); return { success: true, id: record.id, message: "Deal created." };
