@@ -44,12 +44,14 @@ type LeadTasksPanelProps = {
   leadId: string;
   tasks: LeadTask[];
   readOnly?: boolean;
+  canDelete?: boolean;
 };
 
 export function LeadTasksPanel({
   leadId,
   tasks,
   readOnly = false,
+  canDelete = false,
 }: LeadTasksPanelProps) {
   const router = useRouter();
   const [isCreating, startCreateTransition] = useTransition();
@@ -219,6 +221,7 @@ export function LeadTasksPanel({
           globalEmptyTitle="No follow-up tasks yet"
           globalEmptyDescription="Add the next action for this lead so nothing slips through the cracks."
           readOnly={readOnly}
+          canDelete={canDelete}
         />
       </div>
     </section>

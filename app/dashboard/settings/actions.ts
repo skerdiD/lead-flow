@@ -6,7 +6,12 @@ import { and, eq, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
+  accounts,
   activityEvents,
+  contacts,
+  crmTasks,
+  deals,
+  leads,
   workspaceInvitations,
   workspaceMembers,
   workspaces,
@@ -288,7 +293,7 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
 
   try {
     const [target] = await db
-      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
+      .select({ id: workspaceMembers.id, userId: workspaceMembers.userId, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(and(eq(workspaceMembers.id, parsed.data), eq(workspaceMembers.workspaceId, actor.workspace.id)))
       .limit(1);
@@ -310,7 +315,17 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
         ),
       )
       .returning({ id: workspaceMembers.id });
-      if (deleted) await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.removed", entity: { type: "member", id: target.id }, before: { role: target.role }, requestId });
+      if (!deleted) return null;
+      // The former member's CRM work remains in this workspace, explicitly
+      // unassigned rather than silently disappearing behind an inaccessible ID.
+      await Promise.all([
+        tx.update(accounts).set({ assignedOwnerUserId: null, updatedAt: new Date() }).where(and(eq(accounts.workspaceId, actor.workspace.id), eq(accounts.assignedOwnerUserId, target.userId))),
+        tx.update(contacts).set({ assignedOwnerUserId: null, updatedAt: new Date() }).where(and(eq(contacts.workspaceId, actor.workspace.id), eq(contacts.assignedOwnerUserId, target.userId))),
+        tx.update(leads).set({ assignedOwnerUserId: null, updatedAt: new Date() }).where(and(eq(leads.workspaceId, actor.workspace.id), eq(leads.assignedOwnerUserId, target.userId))),
+        tx.update(deals).set({ ownerUserId: null, updatedAt: new Date() }).where(and(eq(deals.workspaceId, actor.workspace.id), eq(deals.ownerUserId, target.userId))),
+        tx.update(crmTasks).set({ ownerUserId: null, updatedAt: new Date() }).where(and(eq(crmTasks.workspaceId, actor.workspace.id), eq(crmTasks.ownerUserId, target.userId))),
+      ]);
+      if (deleted) await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.removed", entity: { type: "member", id: target.id }, before: { role: target.role, assignments: "unassigned" }, requestId });
       return deleted;
     });
 
@@ -327,7 +342,7 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
       message: "A team member was removed from the workspace.",
     });
     revalidateWorkspaceSettings();
-    return { success: true, message: "Team member removed from the workspace." };
+    return { success: true, message: "Team member removed and their CRM assignments were set to Unassigned." };
   } catch {
     return { success: false, message: "We couldn't remove this team member right now. Please try again." };
   }

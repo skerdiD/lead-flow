@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CalendarClock, CircleCheckBig, Clock3 } from "lucide-react";
+import { DeleteTaskButton } from "@/components/tasks/delete-task-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ type TaskSectionsProps = {
   globalEmptyTitle?: string;
   globalEmptyDescription?: string;
   readOnly?: boolean;
+  canDelete?: boolean;
 };
 
 function getPriorityBadgeClass(priority: TaskListItem["priority"]) {
@@ -82,11 +84,13 @@ function TaskRow({
   compact = false,
   showLeadContext = true,
   readOnly = false,
+  canDelete = false,
 }: {
   task: TaskListItem;
   compact?: boolean;
   showLeadContext?: boolean;
   readOnly?: boolean;
+  canDelete?: boolean;
 }) {
   const timelineBucket = getTaskTimelineBucket(task);
   const isCompleted = timelineBucket === "completed";
@@ -157,6 +161,7 @@ function TaskRow({
               <Link href={`/dashboard/leads/${task.leadId}`}>Open lead</Link>
             </Button>
           ) : null}
+          {!readOnly && canDelete ? <DeleteTaskButton taskId={task.id} taskTitle={task.title} /> : null}
         </div>
       </div>
     </article>
@@ -171,6 +176,7 @@ export function TaskSections({
   globalEmptyTitle = "You are caught up",
   globalEmptyDescription = "No tasks need attention right now.",
   readOnly = false,
+  canDelete = false,
 }: TaskSectionsProps) {
   const hasTasks = sections.some((section) => section.tasks.length > 0);
   const visibleSections = showEmptySections
@@ -222,6 +228,7 @@ export function TaskSections({
                   compact={compact}
                   showLeadContext={showLeadContext}
                   readOnly={readOnly}
+                  canDelete={canDelete}
                 />
               ))}
             </div>

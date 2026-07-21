@@ -450,7 +450,7 @@ export function LeadDetailsCard({
             </div>
           </section>
 
-          <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} readOnly={readOnly} />
+          <LeadTasksPanel leadId={lead.id} tasks={lead.taskEntries} readOnly={readOnly} canDelete={canDelete} />
         </div>
 
         <aside

@@ -20,6 +20,8 @@ const {
   deleteReturningMock,
   protectLeadMutationMock,
   createNotificationMock,
+  writeAuditEventMock,
+  getRequestIdMock,
   leadsTable,
   accountsTable,
   activityEventsTable,
@@ -48,6 +50,8 @@ const {
     deleteReturningMock: vi.fn(),
     protectLeadMutationMock: vi.fn(),
     createNotificationMock: vi.fn(),
+    writeAuditEventMock: vi.fn(),
+    getRequestIdMock: vi.fn(),
     leadsTable: {
       id: "id",
       workspaceId: "workspace_id",
@@ -256,6 +260,14 @@ vi.mock("@/lib/notifications", () => ({
   createNotification: createNotificationMock,
 }));
 
+vi.mock("@/lib/audit-log.server", () => ({
+  writeAuditEvent: writeAuditEventMock,
+}));
+
+vi.mock("@/lib/request-context.server", () => ({
+  getRequestId: getRequestIdMock,
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
 }));
@@ -328,6 +340,7 @@ describe("lead actions", () => {
     insertTaskReturningMock.mockResolvedValue([{ id: "task_123" }]);
     insertActivityValuesMock.mockResolvedValue(undefined);
     createNotificationMock.mockResolvedValue({ created: true, id: "notification_123" });
+    getRequestIdMock.mockResolvedValue("00000000-0000-4000-8000-000000000000");
   });
 
   it("createLeadAction saves deal revenue fields when an opportunity is provided", async () => {

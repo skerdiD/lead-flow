@@ -1,0 +1,1 @@
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'task_deleted' BEFORE 'deal_stage_changed';

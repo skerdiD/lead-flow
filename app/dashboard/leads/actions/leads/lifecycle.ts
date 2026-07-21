@@ -14,6 +14,8 @@ import {
 } from "../shared";
 import type { DeleteLeadActionState } from "../types";
 import { isLeadActionId } from "../../validations/action-inputs";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
 
 export async function deleteLeadAction(
   leadId: string,
@@ -47,6 +49,7 @@ export async function deleteLeadAction(
   }
 
   try {
+    const requestId = await getRequestId();
     const archivedLead = await db.transaction(async (tx) => {
       const [lead] = await tx
         .update(leads)
@@ -78,6 +81,7 @@ export async function deleteLeadAction(
         leadId: lead.id,
         leadName: lead.fullName,
       });
+      await writeAuditEvent({ tx, workspaceId: workspace.id, actor: { userId, role: workspace.role }, action: "lead.archived", entity: { type: "lead", id: lead.id }, before: { fullName: lead.fullName, isArchived: false }, after: { isArchived: true }, requestId });
 
       return lead;
     });
@@ -137,6 +141,7 @@ export async function restoreLeadAction(
   }
 
   try {
+    const requestId = await getRequestId();
     const restoredLead = await db.transaction(async (tx) => {
       const [lead] = await tx
         .update(leads)
@@ -168,6 +173,7 @@ export async function restoreLeadAction(
         leadId: lead.id,
         leadName: lead.fullName,
       });
+      await writeAuditEvent({ tx, workspaceId: workspace.id, actor: { userId, role: workspace.role }, action: "lead.updated", entity: { type: "lead", id: lead.id }, before: { isArchived: true }, after: { isArchived: false }, requestId });
 
       return lead;
     });

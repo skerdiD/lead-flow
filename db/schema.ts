@@ -51,6 +51,7 @@ export const activityEventTypes = [
   "lead_note_deleted",
   "task_created",
   "task_completed",
+  "task_deleted",
   "deal_stage_changed",
   "deal_updated",
   "deal_lost",

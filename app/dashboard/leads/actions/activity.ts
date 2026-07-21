@@ -17,6 +17,8 @@ import {
 } from "./shared";
 import type { LeadNoteMutationState } from "./types";
 import { isLeadActionId } from "../validations/action-inputs";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
 
 export async function createLeadNoteAction(
   leadId: string,
@@ -281,6 +283,7 @@ export async function deleteLeadNoteAction(
   }
 
   try {
+    const requestId = await getRequestId();
     const [lead] = await db
       .select({
         id: leads.id,
@@ -320,6 +323,7 @@ export async function deleteLeadNoteAction(
         leadId: lead.id,
         leadName: lead.fullName,
       });
+      await writeAuditEvent({ tx, workspaceId: workspace.id, actor: { userId, role: workspace.role }, action: "note.deleted", entity: { type: "note", id: note.id }, before: { leadId }, requestId });
 
       return note;
     });

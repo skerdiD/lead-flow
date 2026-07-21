@@ -16,6 +16,8 @@ import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { isUuid } from "@/lib/uuid";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
 
 export type TaskMutationState =
   | {
@@ -47,12 +49,13 @@ async function createTaskActivity(params: {
   leadId: string | null;
   leadName: string | null;
   message: string;
+  eventType?: "task_completed" | "task_deleted";
 }) {
   const client = params.client ?? db;
   await client.insert(activityEvents).values({
     workspaceId: params.workspaceId,
     userId: params.userId,
-    eventType: "task_completed",
+    eventType: params.eventType ?? "task_completed",
     message: params.message,
     leadId: params.leadId,
     leadName: params.leadName,
@@ -313,5 +316,32 @@ export async function reopenTaskAction(taskId: string): Promise<TaskMutationStat
       success: false,
       message: "We couldn't reopen this task right now. Please try again.",
     };
+  }
+}
+
+/** Tasks are independently meaningful, so deletion never touches their parent CRM records. */
+export async function deleteTaskAction(taskId: string): Promise<TaskMutationState> {
+  if (!isUuid(taskId)) return { success: false, message: "This task could not be found." };
+  const [userId, workspace, protection] = await Promise.all([requireUserId(), getCurrentWorkspace(), protectLeadMutation()]);
+  if (!protection.ok) return { success: false, message: protection.message };
+  if (!hasWorkspacePermission(workspace.role, "crm:delete")) return { success: false, message: permissionDeniedMessage("crm:delete") };
+  if (isDemoWorkspace(workspace)) return { success: false, message: DEMO_MUTATION_MESSAGE };
+  try {
+    const context = getWorkspaceAuthorizationContext(workspace, userId);
+    const [task] = await db.select({ id: crmTasks.id, workspaceId: crmTasks.workspaceId, ownerUserId: crmTasks.ownerUserId, userId: crmTasks.userId, title: crmTasks.title, leadId: crmTasks.leadId, dealId: crmTasks.dealId, contactId: crmTasks.contactId }).from(crmTasks).where(and(eq(crmTasks.id, taskId), eq(crmTasks.workspaceId, workspace.id))).limit(1);
+    if (!task || !canAccessRecord(context, { workspaceId: task.workspaceId, assignedUserId: task.ownerUserId ?? task.userId }, "delete")) return { success: false, message: "This task could not be found or you do not have permission to delete it." };
+    const requestId = await getRequestId();
+    const deleted = await db.transaction(async (tx) => {
+      const [record] = await tx.delete(crmTasks).where(and(eq(crmTasks.id, task.id), eq(crmTasks.workspaceId, workspace.id))).returning({ id: crmTasks.id });
+      if (!record) return null;
+      await createTaskActivity({ client: tx, workspaceId: workspace.id, userId, leadId: task.leadId, leadName: null, message: `Task deleted: ${task.title}`, eventType: "task_deleted" });
+      await writeAuditEvent({ tx, workspaceId: workspace.id, actor: { userId, role: workspace.role }, action: "task.deleted", entity: { type: "task", id: task.id }, before: { title: task.title, leadId: task.leadId, dealId: task.dealId, contactId: task.contactId }, requestId });
+      return record;
+    });
+    if (!deleted) return { success: false, message: "This task was already deleted." };
+    revalidateTaskPaths(task.leadId);
+    return { success: true, message: "Task deleted." };
+  } catch {
+    return { success: false, message: "We couldn't delete this task right now. Please try again." };
   }
 }

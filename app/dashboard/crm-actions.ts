@@ -19,6 +19,8 @@ import { accountFormSchema, type AccountFormValues } from "@/lib/validations/acc
 import { contactFormSchema, type ContactFormValues } from "@/lib/validations/contact";
 import { dealFormSchema, dealMoveSchema, type DealFormValues } from "@/lib/validations/deal";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
 
 type MutationResult = { success: true; id: string; message: string } | { success: false; message: string; fieldErrors?: Record<string, string[]> };
 type MoveResult = { success: true; stage: string; updatedAt: string; message: string } | { success: false; message: string };
@@ -79,8 +81,15 @@ export async function updateAccountAction(id: string, values: AccountFormValues)
 
 export async function archiveAccountAction(id: string): Promise<MutationResult> {
   if (!isUuid(id)) return { success: false, message: "This account could not be found." }; const state = await prepareMutation("crm:delete"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
-  const [record] = await db.update(accounts).set({ isArchived: true, archivedAt: new Date(), updatedAt: new Date() }).where(and(eq(accounts.id, id), eq(accounts.workspaceId, state.workspace.id), eq(accounts.isArchived, false))).returning({ id: accounts.id, name: accounts.name });
-  if (!record) return { success: false, message: "This account could not be found." }; await activity({ workspaceId: state.workspace.id, userId: state.userId, eventType: "account_archived", message: `Account archived: ${record.name}`, accountId: id }); mutationPaths("/dashboard/accounts", `/dashboard/accounts/${id}`); return { success: true, id, message: "Account archived. Linked CRM history was preserved." };
+  const requestId = await getRequestId();
+  const record = await db.transaction(async (tx) => {
+    const [archived] = await tx.update(accounts).set({ isArchived: true, archivedAt: new Date(), updatedAt: new Date() }).where(and(eq(accounts.id, id), eq(accounts.workspaceId, state.workspace.id), eq(accounts.isArchived, false))).returning({ id: accounts.id, name: accounts.name });
+    if (!archived) return null;
+    await activity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "account_archived", message: `Account archived: ${archived.name}`, accountId: id });
+    await writeAuditEvent({ tx, workspaceId: state.workspace.id, actor: { userId: state.userId, role: state.workspace.role }, action: "account.archived", entity: { type: "account", id }, before: { name: archived.name, isArchived: false }, after: { isArchived: true }, requestId });
+    return archived;
+  });
+  if (!record) return { success: false, message: "This account could not be found." }; mutationPaths("/dashboard/accounts", `/dashboard/accounts/${id}`); return { success: true, id, message: "Account archived. Linked CRM history was preserved." };
 }
 
 export async function createContactAction(values: ContactFormValues): Promise<MutationResult> {
@@ -106,8 +115,14 @@ export async function updateContactAction(id: string, values: ContactFormValues)
 
 export async function archiveContactAction(id: string): Promise<MutationResult> {
   if (!isUuid(id)) return { success: false, message: "This contact could not be found." }; const state = await prepareMutation("crm:delete"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
-  const [record] = await db.update(contacts).set({ isArchived: true, archivedAt: new Date(), isPrimary: false, updatedAt: new Date() }).where(and(eq(contacts.id, id), eq(contacts.workspaceId, state.workspace.id), eq(contacts.isArchived, false))).returning({ id: contacts.id, fullName: contacts.fullName, accountId: contacts.accountId }); if (!record) return { success: false, message: "This contact could not be found." };
-  await activity({ workspaceId: state.workspace.id, userId: state.userId, eventType: "contact_archived", message: `Contact archived: ${record.fullName}`, contactId: id, accountId: record.accountId }); mutationPaths("/dashboard/contacts", `/dashboard/contacts/${id}`, ...(record.accountId ? [`/dashboard/accounts/${record.accountId}`] : [])); return { success: true, id, message: "Contact archived. Linked CRM history was preserved." };
+  const requestId = await getRequestId();
+  const record = await db.transaction(async (tx) => {
+    const [archived] = await tx.update(contacts).set({ isArchived: true, archivedAt: new Date(), isPrimary: false, updatedAt: new Date() }).where(and(eq(contacts.id, id), eq(contacts.workspaceId, state.workspace.id), eq(contacts.isArchived, false))).returning({ id: contacts.id, fullName: contacts.fullName, accountId: contacts.accountId, isPrimary: contacts.isPrimary }); if (!archived) return null;
+    await activity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "contact_archived", message: `Contact archived: ${archived.fullName}`, contactId: id, accountId: archived.accountId });
+    await writeAuditEvent({ tx, workspaceId: state.workspace.id, actor: { userId: state.userId, role: state.workspace.role }, action: "contact.archived", entity: { type: "contact", id }, before: { fullName: archived.fullName, isPrimary: archived.isPrimary }, after: { isArchived: true, isPrimary: false }, requestId });
+    return archived;
+  });
+  if (!record) return { success: false, message: "This contact could not be found." }; mutationPaths("/dashboard/contacts", `/dashboard/contacts/${id}`, ...(record.accountId ? [`/dashboard/accounts/${record.accountId}`] : [])); return { success: true, id, message: "Contact archived. Linked CRM history was preserved." };
 }
 
 async function validateDealLinks(
@@ -161,4 +176,24 @@ export async function moveDealAction(input: { dealId: string; stage: string; upd
   const expectedUpdatedAtEnd = new Date(expectedUpdatedAt.getTime() + 1);
   const reopening = ["won", "lost"].includes(existing.stage) && !["won", "lost"].includes(parsed.data.stage); const updated = await db.transaction(async (tx) => { const [record] = await tx.update(deals).set({ stage: parsed.data.stage, closedAt: reopening ? null : ["won", "lost"].includes(parsed.data.stage) ? existing.closedAt ?? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null, updatedAt: new Date() }).where(and(eq(deals.id, existing.id), eq(deals.workspaceId, state.workspace.id), gte(deals.updatedAt, expectedUpdatedAt), lt(deals.updatedAt, expectedUpdatedAtEnd), ...getRecordUpdateConditions(state.context, deals.workspaceId, deals.ownerUserId))).returning({ updatedAt: deals.updatedAt }); if (!record) return null; await activity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: parsed.data.stage === "lost" ? "deal_lost" : "deal_stage_changed", message: `Deal moved to ${parsed.data.stage}: ${existing.name}`, dealId: existing.id, leadId: existing.leadId }); return record; }); if (!updated) return { success: false, message: "This deal changed elsewhere. Refresh and try again." };
   mutationPaths("/dashboard/deals", `/dashboard/deals/${existing.id}`); return { success: true, stage: parsed.data.stage, updatedAt: updated.updatedAt.toISOString(), message: reopening ? "Deal reopened; the closed date was cleared." : "Deal stage updated." };
+}
+
+/** Permanently removes only the deal. Database FKs retain every related CRM record. */
+export async function deleteDealAction(id: string): Promise<MutationResult> {
+  if (!isUuid(id)) return { success: false, message: "This deal could not be found." };
+  const state = await prepareMutation("crm:delete");
+  if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const [existing] = await db.select({ id: deals.id, workspaceId: deals.workspaceId, assignedUserId: deals.ownerUserId, name: deals.name, accountId: deals.accountId, contactId: deals.contactId, leadId: deals.leadId }).from(deals).where(and(eq(deals.id, id), eq(deals.workspaceId, state.workspace.id))).limit(1);
+  if (!existing || !canAccessRecord(state.context, existing, "delete")) return { success: false, message: "This deal could not be found or you do not have permission to delete it." };
+  const requestId = await getRequestId();
+  const deleted = await db.transaction(async (tx) => {
+    const [record] = await tx.delete(deals).where(and(eq(deals.id, id), eq(deals.workspaceId, state.workspace.id))).returning({ id: deals.id });
+    if (!record) return null;
+    await activity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "deal_updated", message: `Deal deleted: ${existing.name}`, leadId: existing.leadId, accountId: existing.accountId, contactId: existing.contactId });
+    await writeAuditEvent({ tx, workspaceId: state.workspace.id, actor: { userId: state.userId, role: state.workspace.role }, action: "deal.deleted", entity: { type: "deal", id }, before: { name: existing.name, accountId: existing.accountId, contactId: existing.contactId, leadId: existing.leadId }, requestId });
+    return record;
+  });
+  if (!deleted) return { success: false, message: "This deal was already deleted." };
+  mutationPaths("/dashboard/deals", `/dashboard/deals/${id}`);
+  return { success: true, id, message: "Deal deleted. Related CRM records were preserved." };
 }

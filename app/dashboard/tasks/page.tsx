@@ -8,6 +8,7 @@ import { TaskFilters } from "@/components/tasks/task-filters";
 import { isDemoWorkspace } from "@/lib/demo";
 import { getTaskCountSummary } from "@/lib/tasks";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+import { hasWorkspacePermission } from "@/lib/authorization";
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
@@ -100,6 +101,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         globalEmptyTitle="You are caught up"
         globalEmptyDescription="No tasks need your attention right now."
         readOnly={readOnly}
+        canDelete={hasWorkspacePermission(workspace.role, "crm:delete")}
       />}
     </div>
   );
