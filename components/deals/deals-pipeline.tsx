@@ -1,17 +1,21 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
+  closestCenter,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import {
   AlertTriangle,
   Calendar,
@@ -72,6 +76,25 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
 });
+
+const STAGE_ACCENTS: Record<DealStage, string> = {
+  new: "bg-sky-500",
+  contacted: "bg-cyan-500",
+  qualified: "bg-indigo-500",
+  proposal: "bg-amber-500",
+  won: "bg-emerald-500",
+  lost: "bg-slate-400",
+};
+
+const pipelineCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+
+  const intersections = rectIntersection(args);
+  if (intersections.length > 0) return intersections;
+
+  return closestCenter(args);
+};
 
 function getInitials(name: string) {
   return name
@@ -201,6 +224,7 @@ function DealCard({
   readOnly,
   moving,
   draggable = false,
+  overlay = false,
   referenceTime,
   move,
 }: {
@@ -208,12 +232,14 @@ function DealCard({
   readOnly: boolean;
   moving: boolean;
   draggable?: boolean;
+  overlay?: boolean;
   referenceTime: number;
   move: (deal: PipelineDeal, stage: DealStage) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: draggable ? deal.id : `static-${deal.id}`,
     disabled: readOnly || !draggable || moving,
+    data: { deal },
   });
   const overdue = isOverdue(deal.expectedCloseAt, deal.stage, referenceTime);
   const relationship =
@@ -222,20 +248,20 @@ function DealCard({
   return (
     <article
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform) }}
       className={cn(
-        "rounded-2xl border bg-background p-3 shadow-sm transition-shadow focus-within:ring-1 focus-within:ring-ring",
-        isDragging && "z-20 opacity-60 shadow-xl",
+        "min-w-0 rounded-xl border bg-background p-2.5 shadow-sm transition-[border-color,box-shadow,opacity] focus-within:ring-1 focus-within:ring-ring",
+        isDragging && !overlay && "opacity-25",
+        overlay && "w-[17rem] rotate-1 border-primary/40 shadow-2xl",
       )}
       data-testid={`deal-card-${deal.id}`}
       data-owner-name={deal.owner?.name ?? "Unassigned"}
     >
-      <div className="flex min-w-0 items-start gap-1.5">
+      <div className="flex min-w-0 items-start gap-1">
         {draggable && !readOnly ? (
           <button
             type="button"
             aria-label={`Drag ${deal.name}`}
-            className="mt-0.5 inline-flex h-7 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/70 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+            className="mt-0.5 inline-flex h-7 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/70 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
@@ -262,30 +288,30 @@ function DealCard({
         />
       </div>
 
-      <div className={cn("mt-3", draggable && !readOnly && "ml-7")}>
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold">
-              {formatCurrencyFromCents(deal.valueCents, deal.currency)}
-            </p>
-            <p className="text-xs text-muted-foreground">{deal.probability}% probability</p>
-          </div>
-          <div className="text-right">
-            <p
-              className={cn(
-                "inline-flex items-center gap-1 text-xs",
-                overdue ? "font-semibold text-destructive" : "text-muted-foreground",
-              )}
-            >
-              <Calendar className="h-3 w-3" />
-              {formatCloseDate(deal.expectedCloseAt)}
-            </p>
-            {overdue ? (
-              <p className="mt-0.5 text-[0.6875rem] font-medium text-destructive">Overdue</p>
-            ) : null}
-          </div>
+      <div className={cn("mt-2.5", draggable && !readOnly && "ml-6")}>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold">
+            {formatCurrencyFromCents(deal.valueCents, deal.currency)}
+          </p>
+          <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[0.625rem] font-medium text-muted-foreground">
+            {deal.probability}%
+          </Badge>
         </div>
-        <div className="mt-3 border-t pt-2.5">
+        <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">
+          <p
+            className={cn(
+              "inline-flex min-w-0 items-center gap-1 truncate text-[0.6875rem]",
+              overdue ? "font-semibold text-destructive" : "text-muted-foreground",
+            )}
+          >
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span className="truncate">{formatCloseDate(deal.expectedCloseAt)}</span>
+          </p>
+          {overdue ? (
+            <span className="shrink-0 text-[0.625rem] font-medium text-destructive">Overdue</span>
+          ) : null}
+        </div>
+        <div className="mt-2 border-t pt-2">
           <Owner owner={deal.owner} />
         </div>
       </div>
@@ -310,23 +336,26 @@ function PipelineColumn({
   referenceTime: number;
   move: (deal: PipelineDeal, stage: DealStage) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: stage });
+  const { setNodeRef, isOver } = useDroppable({ id: stage, data: { stage } });
 
   return (
     <section
       ref={setNodeRef}
       className={cn(
-        "flex h-full min-h-0 w-[19rem] shrink-0 flex-col overflow-hidden rounded-2xl border bg-muted/20 transition-colors",
-        isOver && "border-primary bg-primary/5",
+        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-muted/25 transition-[border-color,background-color,box-shadow]",
+        isOver && "border-primary bg-primary/5 shadow-[inset_0_0_0_1px_var(--primary)]",
       )}
       aria-labelledby={`deal-stage-${stage}`}
       data-testid={`deal-column-${stage}`}
     >
-      <header className="sticky top-0 z-10 shrink-0 border-b bg-background/95 px-3.5 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 shrink-0 border-b bg-background/90 px-3 py-2.5 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
-          <h2 id={`deal-stage-${stage}`} className="truncate text-sm font-semibold">
-            {DEAL_STAGE_LABELS[stage]}
-          </h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_ACCENTS[stage])} aria-hidden="true" />
+            <h2 id={`deal-stage-${stage}`} className="truncate text-xs font-semibold uppercase tracking-[0.06em]">
+              {DEAL_STAGE_LABELS[stage]}
+            </h2>
+          </div>
           <Badge variant="secondary" className="h-5 min-w-6 justify-center px-1.5 text-xs">
             {total.count}
           </Badge>
@@ -335,7 +364,7 @@ function PipelineColumn({
           <StageValue total={total} />
         </p>
       </header>
-      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5 [scrollbar-gutter:stable]">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2 [scrollbar-gutter:stable]">
         {deals.length > 0 ? (
           deals.map((deal) => (
             <DealCard
@@ -349,8 +378,11 @@ function PipelineColumn({
             />
           ))
         ) : (
-          <p className="rounded-xl border border-dashed bg-background/60 p-4 text-center text-xs text-muted-foreground">
-            No deals in this stage
+          <p className={cn(
+            "rounded-xl border border-dashed bg-background/55 p-3 text-center text-xs text-muted-foreground transition-colors",
+            isOver && "border-primary/50 bg-primary/5 text-primary",
+          )}>
+            {isOver ? "Drop deal here" : "No deals yet"}
           </p>
         )}
       </div>
@@ -412,15 +444,15 @@ export function DealsPipeline({
   const [pendingLost, setPendingLost] = useState<PipelineDeal | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [announcement, setAnnouncement] = useState("");
-  const [moving, startTransition] = useTransition();
+  const [activeDeal, setActiveDeal] = useState<PipelineDeal | null>(null);
+  const [savingDealId, setSavingDealId] = useState<string | null>(null);
+  const moving = savingDealId !== null;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
 
-  const allDeals = useMemo(() => Object.values(board).flat(), [board]);
-
-  function requestMove(deal: PipelineDeal, stage: DealStage, reason?: string) {
+  async function requestMove(deal: PipelineDeal, stage: DealStage, reason?: string) {
     if (moving || stage === deal.stage) return;
     if (stage === "lost" && !reason) {
       setPendingLost(deal);
@@ -443,8 +475,9 @@ export function DealsPipeline({
     setAnnouncement(
       `${deal.name} moved to ${DEAL_STAGE_LABELS[stage]}. Saving change.`,
     );
+    setSavingDealId(deal.id);
 
-    startTransition(async () => {
+    try {
       const result = await moveDealAction({
         dealId: deal.id,
         stage,
@@ -474,7 +507,14 @@ export function DealsPipeline({
       }));
       setAnnouncement(`${deal.name} is now in ${DEAL_STAGE_LABELS[stage]}.`);
       toast.success(result.message);
-    });
+    } catch {
+      setBoard(beforeBoard);
+      setTotals(beforeTotals);
+      setAnnouncement(`${deal.name} was returned to ${DEAL_STAGE_LABELS[deal.stage]}.`);
+      toast.error("The deal could not be moved. Please try again.");
+    } finally {
+      setSavingDealId(null);
+    }
   }
 
   return (
@@ -489,27 +529,35 @@ export function DealsPipeline({
         </p>
       ) : null}
 
-      <div className="hidden min-h-[26rem] flex-1 md:block">
+      <div className="hidden min-h-[32rem] flex-1 md:block">
         <DndContext
+          id="deals-pipeline-dnd"
           sensors={sensors}
-          autoScroll
-          onDragStart={() => window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: true }))}
-          onDragCancel={() => window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: false }))}
-          onDragEnd={({ active, over }) => {
+          autoScroll={false}
+          collisionDetection={pipelineCollisionDetection}
+          onDragStart={({ active }) => {
+            setActiveDeal((active.data.current?.deal as PipelineDeal | undefined) ?? null);
+            window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: true }));
+          }}
+          onDragCancel={() => {
+            setActiveDeal(null);
             window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: false }));
-            const deal = allDeals.find((entry) => entry.id === active.id);
-            const stage = String(over?.id ?? "") as DealStage;
-            if (deal && DEAL_STAGES.includes(stage)) requestMove(deal, stage);
+          }}
+          onDragEnd={({ active, over }) => {
+            setActiveDeal(null);
+            window.dispatchEvent(new CustomEvent("leadflow:deal-drag", { detail: false }));
+            const deal = active.data.current?.deal as PipelineDeal | undefined;
+            const stage = String(over?.data.current?.stage ?? over?.id ?? "") as DealStage;
+            if (deal && DEAL_STAGES.includes(stage)) void requestMove(deal, stage);
           }}
         >
           <div
-            className="h-full min-h-0 max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2"
+            className="h-full min-h-0 max-w-full overflow-hidden rounded-2xl border bg-background/45 p-2 shadow-sm"
             role="region"
             aria-label="Deal pipeline stages"
-            tabIndex={0}
             data-testid="pipeline-scroll-viewport"
           >
-            <div className="flex h-full min-w-max gap-3 pr-5">
+            <div className="grid h-full min-h-0 min-w-0 grid-cols-3 grid-rows-2 gap-2 2xl:grid-cols-6 2xl:grid-rows-1">
               {DEAL_STAGES.map((stage) => (
                 <PipelineColumn
                   key={stage}
@@ -524,6 +572,18 @@ export function DealsPipeline({
               ))}
             </div>
           </div>
+          <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
+            {activeDeal ? (
+              <DealCard
+                deal={activeDeal}
+                readOnly
+                moving={false}
+                overlay
+                referenceTime={referenceTime}
+                move={requestMove}
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       </div>
 
@@ -598,7 +658,7 @@ export function DealsPipeline({
               const reason = lostReason.trim();
               setPendingLost(null);
               setLostReason("");
-              requestMove(deal, "lost", reason);
+              void requestMove(deal, "lost", reason);
             }}
           >
             <Label htmlFor="lostReason">Lost reason *</Label>

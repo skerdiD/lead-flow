@@ -258,7 +258,7 @@ test.describe("CRM responsive layouts", () => {
     await expect(task.getByRole("button", { name: "Reopen" })).toBeVisible();
   });
 
-  test("Deals contains horizontal scrolling inside the pipeline and supports List view", async ({ page }) => {
+  test("Deals fits every desktop stage without horizontal scrolling and supports List view", async ({ page }) => {
     await createDeal(page);
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto("/dashboard/deals");
@@ -271,11 +271,8 @@ test.describe("CRM responsive layouts", () => {
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
     }));
-    expect(boardDimensions.scrollWidth).toBeGreaterThan(boardDimensions.clientWidth);
+    expect(boardDimensions.scrollWidth).toBeLessThanOrEqual(boardDimensions.clientWidth);
 
-    await viewport.evaluate((element) => {
-      element.scrollLeft = element.scrollWidth;
-    });
     const finalColumn = page.getByTestId("deal-column-lost");
     await expect(finalColumn).toBeVisible();
     const finalColumnBox = await finalColumn.boundingBox();
@@ -285,10 +282,6 @@ test.describe("CRM responsive layouts", () => {
     expect(finalColumnBox!.x + finalColumnBox!.width).toBeLessThanOrEqual(
       viewportBox!.x + viewportBox!.width + 1,
     );
-    await viewport.evaluate((element) => {
-      element.scrollLeft = 0;
-    });
-
     const card = page.getByTestId(/deal-card-/).filter({ hasText: "Bluepeak expansion" }).first();
     await expect(card.getByText("Test user")).toBeVisible();
     await expect(page.getByText("e2e-user")).toHaveCount(0);
@@ -300,6 +293,46 @@ test.describe("CRM responsive layouts", () => {
     await expect(page.getByTestId("deals-desktop-table")).toBeVisible();
   });
 
+  test("Deals can be dragged between stages and the move persists", async ({ page }) => {
+    await createDeal(page);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/dashboard/deals");
+
+    const dragHandle = page.getByRole("button", { name: "Drag Bluepeak expansion" });
+    const targetColumn = page.getByTestId("deal-column-qualified");
+    const [handleBox, targetBox] = await Promise.all([
+      dragHandle.boundingBox(),
+      targetColumn.boundingBox(),
+    ]);
+
+    expect(handleBox).not.toBeNull();
+    expect(targetBox).not.toBeNull();
+    await page.mouse.move(
+      handleBox!.x + handleBox!.width / 2,
+      handleBox!.y + handleBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      targetBox!.x + targetBox!.width / 2,
+      targetBox!.y + Math.min(160, targetBox!.height / 2),
+      { steps: 12 },
+    );
+    await page.mouse.up();
+
+    await expect(
+      targetColumn.getByText("Bluepeak expansion", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Deal stage updated.")).toBeVisible();
+
+    await page.reload();
+    await expect(
+      page.getByTestId("deal-column-qualified").getByText("Bluepeak expansion", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("deal-column-new").getByText("Bluepeak expansion", { exact: true }),
+    ).toHaveCount(0);
+  });
+
   test("Deals mobile pipeline shows one accessible stage and keeps movement in the action menu", async ({ page }) => {
     await createDeal(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -307,7 +340,7 @@ test.describe("CRM responsive layouts", () => {
 
     await expect(page.getByTestId("mobile-deals-pipeline")).toBeVisible();
     await expect(page.getByTestId("pipeline-scroll-viewport")).toBeHidden();
-    await expect(page.getByLabel("Pipeline stage")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Pipeline stage" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Create deal", exact: true })).toBeVisible();
     await expectNoDocumentOverflow(page);
 
