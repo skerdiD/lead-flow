@@ -1,6 +1,0 @@
-var R=require("./chunks/[turbopack]_runtime.js")("server/middleware.js")
-R.c("server/chunks/[root-of-the-server]__1t70ute._.js")
-R.c("server/chunks/[root-of-the-server]__0obi7ve._.js")
-R.c("server/chunks/node_modules_next_dist_1-3cdou._.js")
-R.m(62395)
-module.exports=R.m(62395).exports

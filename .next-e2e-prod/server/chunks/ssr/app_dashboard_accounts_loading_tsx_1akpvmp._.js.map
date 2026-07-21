@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../../../app/dashboard/accounts/loading.tsx"],"sourcesContent":["export default function Loading() { return <div className=\"h-96 animate-pulse rounded-3xl bg-muted\" />; }\n"],"names":["Loading","className"],"mappings":"2EAAe,SAASA,EAAY,MAAO,CAAA,EAAA,EAAA,GAAA,EAAC,MAAA,CAAIC,UAAU,2CAA8C"}
