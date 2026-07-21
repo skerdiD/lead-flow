@@ -11,7 +11,9 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
+import { reportUnexpectedError } from "@/lib/error-reporting.server";
 import { createNotification } from "@/lib/notifications";
+import { getRequestId } from "@/lib/request-context.server";
 import {
   leadFormSchema,
   type LeadFormValues,
@@ -68,6 +70,8 @@ export async function createLeadAction(
       fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
+
+  const requestId = await getRequestId();
 
   try {
     const reconciled = reconcileLeadAndDealStage(
@@ -169,7 +173,14 @@ export async function createLeadAction(
       leadId: createdLead.id,
       message: "Lead created successfully.",
     };
-  } catch {
+  } catch (error) {
+    await reportUnexpectedError(error, {
+      event: "lead.create.failed",
+      requestId,
+      workspaceId: workspace.id,
+      userId,
+      operation: "lead.create",
+    });
     return {
       success: false,
       message: "We couldn't create this lead right now. Please try again.",

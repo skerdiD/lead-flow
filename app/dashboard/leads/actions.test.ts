@@ -312,9 +312,13 @@ describe("lead actions", () => {
     insertContactValuesMock.mockImplementation(() => ({
       returning: insertContactReturningMock,
     }));
-    insertDealValuesMock.mockImplementation(() => ({
-      returning: insertDealReturningMock,
-    }));
+    insertDealValuesMock.mockImplementation(() => {
+      const builder = {
+        onConflictDoUpdate: vi.fn(() => builder),
+        returning: insertDealReturningMock,
+      };
+      return builder;
+    });
     insertTaskValuesMock.mockImplementation(() => ({
       returning: insertTaskReturningMock,
     }));

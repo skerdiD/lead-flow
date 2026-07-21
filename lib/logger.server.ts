@@ -5,7 +5,9 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 export type LogContext = {
   requestId?: string;
   workspaceId?: string;
+  userId?: string;
   actorUserId?: string;
+  operation?: string;
   route?: string;
   method?: string;
   statusCode?: number;
@@ -13,6 +15,8 @@ export type LogContext = {
   entityType?: string;
   entityId?: string;
   errorName?: string;
+  errorCode?: string;
+  errorStack?: string;
   [key: string]: unknown;
 };
 
@@ -23,11 +27,20 @@ export type StructuredLog = LogContext & {
   timestamp: string;
 };
 
-const SENSITIVE_KEY = /(password|secret|token|cookie|authorization|api[_-]?key|database[_-]?url|session|invite)/i;
+const SENSITIVE_KEY = /(password|secret|token|cookie|authorization|api[_-]?key|database[_-]?url|session|invite|email|phone|full[_-]?name|address|notes|customer[_-]?(data|email|phone|name))/i;
 const REDACTED = "[REDACTED]";
 
-function redact(value: unknown, depth = 0): unknown {
+function redactString(value: string) {
+  return value
+    .replace(/(bearer\s+)[^\s'"`]+/gi, `$1${REDACTED}`)
+    .replace(/([?&](?:password|secret|token|api[_-]?key|session|cookie)=)[^&\s]+/gi, `$1${REDACTED}`)
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, REDACTED)
+    .replace(/(?<!\w)\+?[0-9][0-9().\s-]{6,}[0-9](?!\w)/g, REDACTED);
+}
+
+export function redact(value: unknown, depth = 0): unknown {
   if (depth > 8) return "[TRUNCATED]";
+  if (typeof value === "string") return redactString(value);
   if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1));
   if (!value || typeof value !== "object") return value;
 
@@ -83,4 +96,4 @@ export function logMetric(name: string, value: number, context: LogContext = {})
   logger.info("metric", "Application metric recorded.", { metric: name, value, ...context });
 }
 
-export { REDACTED, redact };
+export { REDACTED };

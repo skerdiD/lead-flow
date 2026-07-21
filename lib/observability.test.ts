@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRequestId, isSafeRequestId } from "@/lib/request-id";
 import { logger, setLogSinkForTests } from "@/lib/logger.server";
-import { DomainError, reportUnexpectedError, setErrorReporterForTests } from "@/lib/error-reporting.server";
+import { DomainError, normalizeError, reportUnexpectedError, setErrorReporterForTests } from "@/lib/error-reporting.server";
 import { observeDatabaseOperation } from "@/lib/database-observability.server";
 
 afterEach(() => {
@@ -25,8 +25,29 @@ describe("observability foundation", () => {
       requestId: "8a78d32d-5f15-4f32-a7d2-63de995ae181",
       authorization: "Bearer secret",
       nested: { inviteToken: "hidden" },
+      email: "customer@example.com",
+      phone: "+1 202 555 0100",
     });
-    expect(entries[0]).toMatchObject({ requestId: "8a78d32d-5f15-4f32-a7d2-63de995ae181", authorization: "[REDACTED]", nested: { inviteToken: "[REDACTED]" } });
+    expect(entries[0]).toMatchObject({ requestId: "8a78d32d-5f15-4f32-a7d2-63de995ae181", authorization: "[REDACTED]", nested: { inviteToken: "[REDACTED]" }, email: "[REDACTED]", phone: "[REDACTED]" });
+  });
+
+  it("normalizes unknown errors and redacts error messages from stack traces", () => {
+    const databaseError = Object.assign(
+      new Error("Insert failed for customer@example.com with token=secret"),
+      { code: "23505" },
+    );
+
+    expect(normalizeError({ code: 42 })).toEqual({
+      errorName: "UnknownError",
+      errorCode: "42",
+    });
+    expect(normalizeError(databaseError)).toMatchObject({
+      errorName: "Error",
+      errorCode: "23505",
+      errorStack: expect.stringContaining("Error: [REDACTED]"),
+    });
+    expect(JSON.stringify(normalizeError(databaseError))).not.toContain("customer@example.com");
+    expect(JSON.stringify(normalizeError(databaseError))).not.toContain("token=secret");
   });
 
   it("does not allow a failing log transport to break product behavior", () => {
@@ -36,10 +57,18 @@ describe("observability foundation", () => {
 
   it("does not report expected domain errors but reports unexpected failures", async () => {
     const reporter = vi.fn();
+    const entries: Array<{ event: string; errorCode?: string; errorStack?: string }> = [];
     setErrorReporterForTests(reporter);
+    setLogSinkForTests((entry) => entries.push(entry));
     await expect(reportUnexpectedError(new DomainError("Invalid state"))).resolves.toBe(false);
     await expect(reportUnexpectedError(new Error("Database disconnected"), { requestId: "8a78d32d-5f15-4f32-a7d2-63de995ae181" })).resolves.toBe(true);
     expect(reporter).toHaveBeenCalledOnce();
+    expect(entries).toContainEqual(expect.objectContaining({
+      event: "unexpected_error",
+      requestId: "8a78d32d-5f15-4f32-a7d2-63de995ae181",
+      errorCode: "UNKNOWN_ERROR",
+      errorStack: expect.stringContaining("Error: [REDACTED]"),
+    }));
   });
 
   it("warns for slow database operations but not fast operations", async () => {
