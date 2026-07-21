@@ -123,7 +123,19 @@ export async function createFollowUpTaskAction(
       const notificationUserId = hasWorkspacePermission(workspace.role, "crm:assign")
         ? lead.assignedOwnerUserId ?? userId
         : userId;
-      if (!task || notificationUserId === userId) return;
+      if (!task) throw new Error("Task creation did not return a record.");
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "task_created",
+        message: `Task created for ${lead.fullName}: ${parsed.data.title}`,
+        leadId,
+        leadName: lead.fullName,
+      });
+
+      if (notificationUserId === userId) return;
 
       const actionUrl = `/dashboard/leads/${leadId}#lead-tasks`;
       const metadata = { entityType: "task", entityId: task.id };
@@ -167,15 +179,6 @@ export async function createFollowUpTaskAction(
         metadata,
         dedupeKey: `${dueNotificationType}:${task.id}`,
       });
-    });
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "task_created",
-      message: `Task created for ${lead.fullName}: ${parsed.data.title}`,
-      leadId,
-      leadName: lead.fullName,
     });
 
     revalidateLeadPaths(leadId);
@@ -283,24 +286,40 @@ export async function completeFollowUpTaskAction(
       };
     }
 
-    const [completedTask] = await db
-      .update(crmTasks)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(crmTasks.id, taskId),
-          eq(crmTasks.leadId, leadId),
-          eq(crmTasks.workspaceId, workspace.id),
-        ),
-      )
-      .returning({
-        id: crmTasks.id,
-        title: crmTasks.title,
+    const completedTask = await db.transaction(async (tx) => {
+      const [completed] = await tx
+        .update(crmTasks)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(crmTasks.id, taskId),
+            eq(crmTasks.leadId, leadId),
+            eq(crmTasks.workspaceId, workspace.id),
+          ),
+        )
+        .returning({
+          id: crmTasks.id,
+          title: crmTasks.title,
+        });
+
+      if (!completed) return null;
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "task_completed",
+        message: `Task completed for ${lead.fullName}: ${completed.title}`,
+        leadId,
+        leadName: lead.fullName,
       });
+
+      return completed;
+    });
 
     if (!completedTask) {
       return {
@@ -308,15 +327,6 @@ export async function completeFollowUpTaskAction(
         message: "This task could not be found.",
       };
     }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "task_completed",
-      message: `Task completed for ${lead.fullName}: ${completedTask.title}`,
-      leadId,
-      leadName: lead.fullName,
-    });
 
     revalidateLeadPaths(leadId);
 

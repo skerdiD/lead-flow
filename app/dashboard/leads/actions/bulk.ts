@@ -105,29 +105,32 @@ export async function bulkUpdateLeadStatusAction(
       };
     }
 
-    await db
-      .update(leads)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          ...getRecordUpdateConditions(
-            accessContext,
-            leads.workspaceId,
-            leads.assignedOwnerUserId,
+    await db.transaction(async (tx) => {
+      await tx
+        .update(leads)
+        .set({
+          status,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            ...getRecordUpdateConditions(
+              accessContext,
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+            eq(leads.isArchived, false),
+            inArray(leads.id, leadIdsToUpdate),
           ),
-          eq(leads.isArchived, false),
-          inArray(leads.id, leadIdsToUpdate),
-        ),
-      );
+        );
 
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_status_changed",
-      message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} moved to ${status}.`,
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_status_changed",
+        message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} moved to ${status}.`,
+      });
     });
 
     revalidatePath("/dashboard");
@@ -181,23 +184,37 @@ export async function bulkDeleteLeadsAction(
   }
 
   try {
-    const archivedLeads = await db
-      .update(leads)
-      .set({
-        isArchived: true,
-        archivedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(leads.workspaceId, workspace.id),
-          eq(leads.isArchived, false),
-          inArray(leads.id, normalizedIds),
-        ),
-      )
-      .returning({
-        id: leads.id,
-      });
+    const archivedLeads = await db.transaction(async (tx) => {
+      const records = await tx
+        .update(leads)
+        .set({
+          isArchived: true,
+          archivedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.workspaceId, workspace.id),
+            eq(leads.isArchived, false),
+            inArray(leads.id, normalizedIds),
+          ),
+        )
+        .returning({
+          id: leads.id,
+        });
+
+      if (records.length > 0) {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "lead_archived",
+          message: `${records.length} lead${records.length === 1 ? "" : "s"} archived in bulk.`,
+        });
+      }
+
+      return records;
+    });
 
     const affectedCount = archivedLeads.length;
 
@@ -207,13 +224,6 @@ export async function bulkDeleteLeadsAction(
         message: "No matching leads were found.",
       };
     }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_archived",
-      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} archived in bulk.`,
-    });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");

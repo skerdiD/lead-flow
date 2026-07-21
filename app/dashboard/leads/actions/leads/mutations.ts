@@ -74,7 +74,7 @@ export async function createLeadAction(
       parsed.data.status,
       parsed.data.dealStage,
     );
-    const { createdLead, createdDeal } = await db.transaction(async (tx) => {
+    const { createdLead } = await db.transaction(async (tx) => {
       const accountId = await saveLeadAccount({
         client: tx,
         workspaceId: workspace.id,
@@ -135,28 +135,30 @@ export async function createLeadAction(
         authorizationContext: getWorkspaceAuthorizationContext(workspace, userId),
       });
 
-      return { createdLead: lead, createdDeal: deal };
-    });
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_created",
-      message: `Lead created: ${createdLead.fullName}`,
-      leadId: createdLead.id,
-      leadName: createdLead.fullName,
-    });
-
-    if (createdDeal?.id) {
       await createLeadActivity({
+        client: tx,
         workspaceId: workspace.id,
         userId,
-        eventType: "deal_stage_changed",
-        message: `Opportunity opened: ${parsed.data.dealName} (${reconciled.dealStage})`,
-        leadId: createdLead.id,
-        leadName: createdLead.fullName,
+        eventType: "lead_created",
+        message: `Lead created: ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
       });
-    }
+
+      if (deal?.id) {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "deal_stage_changed",
+          message: `Opportunity opened: ${parsed.data.dealName} (${reconciled.dealStage})`,
+          leadId: lead.id,
+          leadName: lead.fullName,
+        });
+      }
+
+      return { createdLead: lead, createdDeal: deal };
+    });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");
@@ -256,7 +258,7 @@ export async function updateLeadAction(
       parsed.data.status,
       parsed.data.dealStage,
     );
-    const { updatedLead, savedDeal } = await db.transaction(async (tx) => {
+    const { updatedLead } = await db.transaction(async (tx) => {
       const accountId = await saveLeadAccount({
         client: tx,
         workspaceId: workspace.id,
@@ -356,6 +358,43 @@ export async function updateLeadAction(
         });
       }
 
+      const statusChanged = existingLead.status !== lead.status;
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: statusChanged ? "lead_status_changed" : "lead_updated",
+        message: statusChanged
+          ? `Lead status changed: ${lead.fullName} (${existingLead.status} -> ${lead.status})`
+          : `Lead updated: ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
+      });
+
+      if (deal?.previousStage && deal.previousStage !== deal.stage) {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "deal_stage_changed",
+          message: `Deal stage changed: ${parsed.data.dealName} (${deal.previousStage} -> ${deal.stage})`,
+          leadId: lead.id,
+          leadName: lead.fullName,
+        });
+      }
+
+      if (lead.status === "Interested" && existingLead.status !== "Interested") {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "lead_qualified",
+          message: `Lead qualified: ${lead.fullName}`,
+          leadId: lead.id,
+          leadName: lead.fullName,
+        });
+      }
+
       return { updatedLead: lead, savedDeal: deal };
     });
 
@@ -366,40 +405,6 @@ export async function updateLeadAction(
       };
     }
 
-    const statusChanged = existingLead.status !== updatedLead.status;
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: statusChanged ? "lead_status_changed" : "lead_updated",
-      message: statusChanged
-        ? `Lead status changed: ${updatedLead.fullName} (${existingLead.status} -> ${updatedLead.status})`
-        : `Lead updated: ${updatedLead.fullName}`,
-      leadId: updatedLead.id,
-      leadName: updatedLead.fullName,
-    });
-
-    if (savedDeal?.previousStage && savedDeal.previousStage !== savedDeal.stage) {
-      await createLeadActivity({
-        workspaceId: workspace.id,
-        userId,
-        eventType: "deal_stage_changed",
-        message: `Deal stage changed: ${parsed.data.dealName} (${savedDeal.previousStage} -> ${savedDeal.stage})`,
-        leadId: updatedLead.id,
-        leadName: updatedLead.fullName,
-      });
-    }
-
-    if (updatedLead.status === "Interested" && existingLead.status !== "Interested") {
-      await createLeadActivity({
-        workspaceId: workspace.id,
-        userId,
-        eventType: "lead_qualified",
-        message: `Lead qualified: ${updatedLead.fullName}`,
-        leadId: updatedLead.id,
-        leadName: updatedLead.fullName,
-      });
-    }
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/leads");
@@ -419,4 +424,3 @@ export async function updateLeadAction(
     };
   }
 }
-

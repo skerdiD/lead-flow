@@ -121,7 +121,7 @@ export async function updateLeadStatusQuickAction(
     const syncedDealStage = hasWorkspacePermission(workspace.role, "crm:update_all")
       ? dealStageForLeadStatus(status)
       : null;
-    const { updatedLead, updatedDeal } = await db.transaction(async (tx) => {
+    const { updatedLead } = await db.transaction(async (tx) => {
       const [lead] = await tx
         .update(leads)
         .set({
@@ -144,8 +144,20 @@ export async function updateLeadStatusQuickAction(
           status: leads.status,
         });
 
-      if (!lead || !syncedDealStage) {
-        return { updatedLead: lead ?? null, updatedDeal: null };
+      if (!lead) return { updatedLead: null, updatedDeal: null };
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_status_changed",
+        message: `Lead status changed: ${lead.fullName} (${existingLead.status} -> ${lead.status})`,
+        leadId: lead.id,
+        leadName: lead.fullName,
+      });
+
+      if (!syncedDealStage) {
+        return { updatedLead: lead, updatedDeal: null };
       }
 
       const [existingDeal] = await tx
@@ -196,6 +208,18 @@ export async function updateLeadStatusQuickAction(
         });
       }
 
+      if (deal) {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "deal_stage_changed",
+          message: `Deal stage changed: ${deal.name} (${existingDeal.stage} -> ${deal.stage})`,
+          leadId: lead.id,
+          leadName: lead.fullName,
+        });
+      }
+
       return {
         updatedLead: lead,
         updatedDeal: deal
@@ -213,26 +237,6 @@ export async function updateLeadStatusQuickAction(
         success: false,
         message: "This lead could not be found.",
       };
-    }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_status_changed",
-      message: `Lead status changed: ${updatedLead.fullName} (${existingLead.status} -> ${updatedLead.status})`,
-      leadId: updatedLead.id,
-      leadName: updatedLead.fullName,
-    });
-
-    if (updatedDeal) {
-      await createLeadActivity({
-        workspaceId: workspace.id,
-        userId,
-        eventType: "deal_stage_changed",
-        message: `Deal stage changed: ${updatedDeal.name} (${updatedDeal.previousStage} -> ${updatedDeal.stage})`,
-        leadId: updatedLead.id,
-        leadName: updatedLead.fullName,
-      });
     }
 
     revalidateLeadPaths(leadId);
@@ -329,26 +333,6 @@ export async function updateLeadFollowUpAction(
     const nextFollowUpDate = parseDateInput(parsed.data.nextFollowUpDate);
     const followUpNote = parsed.data.followUpNote ?? null;
 
-    await db
-      .update(leads)
-      .set({
-        nextFollowUpDate,
-        followUpNote,
-        followUpPriority: parsed.data.followUpPriority,
-        followUpStatus: parsed.data.followUpStatus,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(leads.id, leadId),
-          ...getRecordUpdateConditions(
-            getWorkspaceAuthorizationContext(workspace, userId),
-            leads.workspaceId,
-            leads.assignedOwnerUserId,
-          ),
-        ),
-      );
-
     const hadFollowUp =
       Boolean(existingLead.nextFollowUpDate) ||
       Boolean(existingLead.followUpNote?.trim());
@@ -359,13 +343,36 @@ export async function updateLeadFollowUpAction(
         ? `Follow-up scheduled for ${existingLead.fullName} on ${formatActivityDate(nextFollowUpDate ?? new Date())}`
         : `Follow-up updated for ${existingLead.fullName}${nextFollowUpDate ? ` to ${formatActivityDate(nextFollowUpDate)}` : ""}`;
 
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_updated",
-      message: timelineMessage,
-      leadId,
-      leadName: existingLead.fullName,
+    await db.transaction(async (tx) => {
+      await tx
+        .update(leads)
+        .set({
+          nextFollowUpDate,
+          followUpNote,
+          followUpPriority: parsed.data.followUpPriority,
+          followUpStatus: parsed.data.followUpStatus,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.id, leadId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+          ),
+        );
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_updated",
+        message: timelineMessage,
+        leadId,
+        leadName: existingLead.fullName,
+      });
     });
 
     revalidateLeadPaths(leadId);
@@ -381,4 +388,3 @@ export async function updateLeadFollowUpAction(
     };
   }
 }
-

@@ -40,24 +40,23 @@ function revalidateTaskPaths(leadId: string | null) {
 }
 
 async function createTaskActivity(params: {
+  /** Required task timeline entry; share the task mutation transaction. */
+  client?: Pick<typeof db, "insert">;
   workspaceId: string;
   userId: string;
   leadId: string | null;
   leadName: string | null;
   message: string;
 }) {
-  try {
-    await db.insert(activityEvents).values({
-      workspaceId: params.workspaceId,
-      userId: params.userId,
-      eventType: "task_completed",
-      message: params.message,
-      leadId: params.leadId,
-      leadName: params.leadName,
-    });
-  } catch {
-    // Activity logging should not block task updates.
-  }
+  const client = params.client ?? db;
+  await client.insert(activityEvents).values({
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    eventType: "task_completed",
+    message: params.message,
+    leadId: params.leadId,
+    leadName: params.leadName,
+  });
 }
 
 export async function completeTaskAction(taskId: string): Promise<TaskMutationState> {
@@ -144,27 +143,44 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
       };
     }
 
-    const [completedTask] = await db
-      .update(crmTasks)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(crmTasks.id, taskId),
-          ...getTaskUpdateConditions(
-            authorizationContext,
-            crmTasks.workspaceId,
-            crmTasks.ownerUserId,
-            crmTasks.userId,
+    const completedTask = await db.transaction(async (tx) => {
+      const [completed] = await tx
+        .update(crmTasks)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(crmTasks.id, taskId),
+            ...getTaskUpdateConditions(
+              authorizationContext,
+              crmTasks.workspaceId,
+              crmTasks.ownerUserId,
+              crmTasks.userId,
+            ),
           ),
-        ),
-      )
-      .returning({
-        id: crmTasks.id,
+        )
+        .returning({
+          id: crmTasks.id,
+        });
+
+      if (!completed) return null;
+
+      await createTaskActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        leadId: task.leadId,
+        leadName: task.leadName,
+        message: task.leadName
+          ? `Task completed for ${task.leadName}: ${task.title}`
+          : `Task completed: ${task.title}`,
       });
+
+      return completed;
+    });
 
     if (!completedTask) {
       return {
@@ -172,16 +188,6 @@ export async function completeTaskAction(taskId: string): Promise<TaskMutationSt
         message: "This task could not be found.",
       };
     }
-
-    await createTaskActivity({
-      workspaceId: workspace.id,
-      userId,
-      leadId: task.leadId,
-      leadName: task.leadName,
-      message: task.leadName
-        ? `Task completed for ${task.leadName}: ${task.title}`
-        : `Task completed: ${task.title}`,
-    });
 
     revalidateTaskPaths(task.leadId);
 

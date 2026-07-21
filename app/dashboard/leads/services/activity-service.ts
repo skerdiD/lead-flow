@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { activityEvents } from "@/db/schema";
+import type { LeadDbClient } from "./db-client";
 
 export type LeadActivityEventType =
   | "lead_created"
@@ -17,6 +18,8 @@ export type LeadActivityEventType =
   | "lead_qualified";
 
 export async function createLeadActivity(params: {
+  /** Use the caller's transaction so the domain mutation and timeline entry are atomic. */
+  client?: LeadDbClient;
   workspaceId: string;
   userId: string;
   eventType: LeadActivityEventType;
@@ -24,16 +27,14 @@ export async function createLeadActivity(params: {
   leadId?: string | null;
   leadName?: string | null;
 }) {
-  try {
-    await db.insert(activityEvents).values({
-      workspaceId: params.workspaceId,
-      userId: params.userId,
-      eventType: params.eventType,
-      message: params.message,
-      leadId: params.leadId ?? null,
-      leadName: params.leadName ?? null,
-    });
-  } catch {
-    // Activity logging should not block lead mutations.
-  }
+  const client = params.client ?? db;
+
+  await client.insert(activityEvents).values({
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    eventType: params.eventType,
+    message: params.message,
+    leadId: params.leadId ?? null,
+    leadName: params.leadName ?? null,
+  });
 }

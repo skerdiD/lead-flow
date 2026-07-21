@@ -81,20 +81,23 @@ export async function createLeadNoteAction(
       return { success: false, message: "This lead could not be found or you do not have permission to update it." };
     }
 
-    await db.insert(leadNotes).values({
-      workspaceId: workspace.id,
-      userId,
-      leadId,
-      content: parsed.data.content,
-    });
+    await db.transaction(async (tx) => {
+      await tx.insert(leadNotes).values({
+        workspaceId: workspace.id,
+        userId,
+        leadId,
+        content: parsed.data.content,
+      });
 
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_note_added",
-      message: `Note added to ${lead.fullName}`,
-      leadId: lead.id,
-      leadName: lead.fullName,
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_note_added",
+        message: `Note added to ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
+      });
     });
 
     revalidateLeadPaths(leadId);
@@ -192,20 +195,36 @@ export async function updateLeadNoteAction(
       return { success: false, message: "This note could not be found or you do not have permission to update it." };
     }
 
-    const [updatedNote] = await db
-      .update(leadNotes)
-      .set({
-        content: parsed.data.content,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(leadNotes.id, noteId),
-          eq(leadNotes.leadId, leadId),
-          eq(leadNotes.workspaceId, workspace.id),
-        ),
-      )
-      .returning({ id: leadNotes.id });
+    const updatedNote = await db.transaction(async (tx) => {
+      const [note] = await tx
+        .update(leadNotes)
+        .set({
+          content: parsed.data.content,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leadNotes.id, noteId),
+            eq(leadNotes.leadId, leadId),
+            eq(leadNotes.workspaceId, workspace.id),
+          ),
+        )
+        .returning({ id: leadNotes.id });
+
+      if (!note) return null;
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_note_updated",
+        message: `Note updated for ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
+      });
+
+      return note;
+    });
 
     if (!updatedNote) {
       return {
@@ -213,15 +232,6 @@ export async function updateLeadNoteAction(
         message: "This note could not be found.",
       };
     }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_note_updated",
-      message: `Note updated for ${lead.fullName}`,
-      leadId: lead.id,
-      leadName: lead.fullName,
-    });
 
     revalidateLeadPaths(leadId);
 
@@ -287,16 +297,32 @@ export async function deleteLeadNoteAction(
       };
     }
 
-    const [deletedNote] = await db
-      .delete(leadNotes)
-      .where(
-        and(
-          eq(leadNotes.id, noteId),
-          eq(leadNotes.leadId, leadId),
-          eq(leadNotes.workspaceId, workspace.id),
-        ),
-      )
-      .returning({ id: leadNotes.id });
+    const deletedNote = await db.transaction(async (tx) => {
+      const [note] = await tx
+        .delete(leadNotes)
+        .where(
+          and(
+            eq(leadNotes.id, noteId),
+            eq(leadNotes.leadId, leadId),
+            eq(leadNotes.workspaceId, workspace.id),
+          ),
+        )
+        .returning({ id: leadNotes.id });
+
+      if (!note) return null;
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_note_deleted",
+        message: `Note removed from ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
+      });
+
+      return note;
+    });
 
     if (!deletedNote) {
       return {
@@ -304,15 +330,6 @@ export async function deleteLeadNoteAction(
         message: "This note could not be found.",
       };
     }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_note_deleted",
-      message: `Note removed from ${lead.fullName}`,
-      leadId: lead.id,
-      leadName: lead.fullName,
-    });
 
     revalidateLeadPaths(leadId);
 

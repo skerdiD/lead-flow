@@ -125,7 +125,7 @@ export async function updateDealStageAction(
     )
       ? leadStatusForDealStage(stage)
       : null;
-    const { updatedDeal, updatedLead } = await db.transaction(async (tx) => {
+    const { updatedDeal } = await db.transaction(async (tx) => {
       const [deal] = await tx
         .update(deals)
         .set({
@@ -163,6 +163,18 @@ export async function updateDealStageAction(
         });
       }
 
+      if (deal) {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "deal_stage_changed",
+          message: `Deal stage changed: ${existingDeal.name} (${existingDeal.stage} -> ${deal.stage})`,
+          leadId,
+          leadName: existingDeal.leadName,
+        });
+      }
+
       if (!deal || !syncedLeadStatus || existingDeal.leadStatus === syncedLeadStatus) {
         return { updatedDeal: deal ?? null, updatedLead: null };
       }
@@ -185,6 +197,18 @@ export async function updateDealStageAction(
         )
         .returning({ status: leads.status });
 
+      if (lead) {
+        await createLeadActivity({
+          client: tx,
+          workspaceId: workspace.id,
+          userId,
+          eventType: "lead_status_changed",
+          message: `Lead status changed: ${existingDeal.leadName} (${existingDeal.leadStatus} -> ${lead.status})`,
+          leadId,
+          leadName: existingDeal.leadName,
+        });
+      }
+
       return { updatedDeal: deal, updatedLead: lead ?? null };
     });
 
@@ -193,26 +217,6 @@ export async function updateDealStageAction(
         success: false,
         message: "This opportunity could not be found.",
       };
-    }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "deal_stage_changed",
-      message: `Deal stage changed: ${existingDeal.name} (${existingDeal.stage} -> ${updatedDeal.stage})`,
-      leadId,
-      leadName: existingDeal.leadName,
-    });
-
-    if (updatedLead) {
-      await createLeadActivity({
-        workspaceId: workspace.id,
-        userId,
-        eventType: "lead_status_changed",
-        message: `Lead status changed: ${existingDeal.leadName} (${existingDeal.leadStatus} -> ${updatedLead.status})`,
-        leadId,
-        leadName: existingDeal.leadName,
-      });
     }
 
     revalidateLeadPaths(leadId);

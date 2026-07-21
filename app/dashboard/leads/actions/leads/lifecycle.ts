@@ -47,24 +47,40 @@ export async function deleteLeadAction(
   }
 
   try {
-    const [archivedLead] = await db
-      .update(leads)
-      .set({
-        isArchived: true,
-        archivedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(leads.id, leadId),
-          eq(leads.workspaceId, workspace.id),
-          eq(leads.isArchived, false),
-        ),
-      )
-      .returning({
-        id: leads.id,
-        fullName: leads.fullName,
+    const archivedLead = await db.transaction(async (tx) => {
+      const [lead] = await tx
+        .update(leads)
+        .set({
+          isArchived: true,
+          archivedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.id, leadId),
+            eq(leads.workspaceId, workspace.id),
+            eq(leads.isArchived, false),
+          ),
+        )
+        .returning({
+          id: leads.id,
+          fullName: leads.fullName,
+        });
+
+      if (!lead) return null;
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_archived",
+        message: `Lead archived: ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
       });
+
+      return lead;
+    });
 
     if (!archivedLead) {
       return {
@@ -72,15 +88,6 @@ export async function deleteLeadAction(
         message: "This lead could not be found or you do not have access to it.",
       };
     }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_archived",
-      message: `Lead archived: ${archivedLead.fullName}`,
-      leadId: archivedLead.id,
-      leadName: archivedLead.fullName,
-    });
 
     revalidateLeadPaths(archivedLead.id);
 
@@ -130,24 +137,40 @@ export async function restoreLeadAction(
   }
 
   try {
-    const [restoredLead] = await db
-      .update(leads)
-      .set({
-        isArchived: false,
-        archivedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(leads.id, leadId),
-          eq(leads.workspaceId, workspace.id),
-          eq(leads.isArchived, true),
-        ),
-      )
-      .returning({
-        id: leads.id,
-        fullName: leads.fullName,
+    const restoredLead = await db.transaction(async (tx) => {
+      const [lead] = await tx
+        .update(leads)
+        .set({
+          isArchived: false,
+          archivedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.id, leadId),
+            eq(leads.workspaceId, workspace.id),
+            eq(leads.isArchived, true),
+          ),
+        )
+        .returning({
+          id: leads.id,
+          fullName: leads.fullName,
+        });
+
+      if (!lead) return null;
+
+      await createLeadActivity({
+        client: tx,
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_restored",
+        message: `Lead restored: ${lead.fullName}`,
+        leadId: lead.id,
+        leadName: lead.fullName,
       });
+
+      return lead;
+    });
 
     if (!restoredLead) {
       return {
@@ -155,15 +178,6 @@ export async function restoreLeadAction(
         message: "This lead could not be found or you do not have access to it.",
       };
     }
-
-    await createLeadActivity({
-      workspaceId: workspace.id,
-      userId,
-      eventType: "lead_restored",
-      message: `Lead restored: ${restoredLead.fullName}`,
-      leadId: restoredLead.id,
-      leadName: restoredLead.fullName,
-    });
 
     revalidateLeadPaths(restoredLead.id);
 
