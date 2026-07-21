@@ -1,0 +1,231 @@
+"use server";
+
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { deals, leads } from "@/db/schema";
+import {
+  getRecordUpdateConditions,
+  getWorkspaceAuthorizationContext,
+} from "@/lib/authorization";
+import { requireUserId } from "@/lib/auth";
+import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
+import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
+import { createNotification } from "@/lib/notifications";
+import { getCurrentWorkspace } from "@/lib/workspaces";
+import { createLeadActivity } from "../services/activity-service";
+import {
+  leadStatusForDealStage,
+  normalizeDealProbability,
+} from "../services/lead-workflow-service";
+import {
+  canAccessWorkspaceRecord,
+  crmUpdatePermissionError,
+  ensureLeadMutationAllowed,
+  revalidateLeadPaths,
+} from "./shared";
+import type { DealStageMutationState } from "./types";
+import {
+  isDealStageActionValue as isDealStage,
+  isLeadActionId,
+} from "../validations/action-inputs";
+
+export async function updateDealStageAction(
+  leadId: string,
+  dealId: string,
+  stage: string,
+): Promise<DealStageMutationState> {
+  if (!isLeadActionId(leadId) || !isLeadActionId(dealId)) {
+    return {
+      success: false,
+      message: "This opportunity could not be found.",
+    };
+  }
+
+  const userId = await requireUserId();
+  const workspace = await getCurrentWorkspace();
+  const protection = await ensureLeadMutationAllowed();
+
+  const permissionError = crmUpdatePermissionError(workspace.role);
+  if (permissionError) return { success: false, message: permissionError };
+
+  if (!protection.ok) {
+    return {
+      success: false,
+      message: protection.message,
+    };
+  }
+
+  if (isDemoWorkspace(workspace)) {
+    return {
+      success: false,
+      message: DEMO_MUTATION_MESSAGE,
+    };
+  }
+
+  if (!isDealStage(stage)) {
+    return {
+      success: false,
+      message: "Select a valid deal stage.",
+    };
+  }
+
+  try {
+    const [existingDeal] = await db
+      .select({
+        id: deals.id,
+        name: deals.name,
+        stage: deals.stage,
+        probability: deals.probability,
+        leadStatus: leads.status,
+        leadName: leads.fullName,
+        ownerUserId: deals.ownerUserId,
+        assignedOwnerUserId: leads.assignedOwnerUserId,
+      })
+      .from(deals)
+      .innerJoin(leads, eq(deals.leadId, leads.id))
+      .where(
+        and(
+          eq(deals.id, dealId),
+          eq(deals.leadId, leadId),
+          eq(deals.workspaceId, workspace.id),
+          eq(leads.workspaceId, workspace.id),
+        ),
+      )
+      .limit(1);
+
+    if (!existingDeal) {
+      return {
+        success: false,
+        message: "This opportunity could not be found.",
+      };
+    }
+
+    if (!canAccessWorkspaceRecord(
+      workspace,
+      userId,
+      existingDeal.ownerUserId ?? existingDeal.assignedOwnerUserId,
+      "update",
+    )) {
+      return { success: false, message: "This opportunity could not be found or you do not have permission to update it." };
+    }
+
+    if (existingDeal.stage === stage) {
+      return {
+        success: true,
+        stage,
+        message: `Deal is already in ${stage}.`,
+      };
+    }
+
+    const syncedLeadStatus = canAccessWorkspaceRecord(
+      workspace,
+      userId,
+      existingDeal.assignedOwnerUserId,
+      "update",
+    )
+      ? leadStatusForDealStage(stage)
+      : null;
+    const { updatedDeal, updatedLead } = await db.transaction(async (tx) => {
+      const [deal] = await tx
+        .update(deals)
+        .set({
+          stage,
+          probability: normalizeDealProbability(stage, existingDeal.probability),
+          closedAt: stage === "won" || stage === "lost" ? new Date() : null,
+          lostReason: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(deals.id, dealId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              deals.workspaceId,
+              deals.ownerUserId,
+            ),
+          ),
+        )
+        .returning({ stage: deals.stage });
+
+      const notificationUserId =
+        existingDeal.ownerUserId ?? existingDeal.assignedOwnerUserId;
+      if (deal && notificationUserId && notificationUserId !== userId) {
+        await createNotification({
+          client: tx,
+          workspaceId: workspace.id,
+          userId: notificationUserId,
+          type: "deal_stage_changed",
+          title: "Deal stage updated",
+          message: `${existingDeal.name} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
+          actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
+          metadata: { entityType: "deal", entityId: dealId },
+          dedupeKey: `deal-stage:${dealId}:${deal.stage}`,
+        });
+      }
+
+      if (!deal || !syncedLeadStatus || existingDeal.leadStatus === syncedLeadStatus) {
+        return { updatedDeal: deal ?? null, updatedLead: null };
+      }
+
+      const [lead] = await tx
+        .update(leads)
+        .set({
+          status: syncedLeadStatus,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.id, leadId),
+            ...getRecordUpdateConditions(
+              getWorkspaceAuthorizationContext(workspace, userId),
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+          ),
+        )
+        .returning({ status: leads.status });
+
+      return { updatedDeal: deal, updatedLead: lead ?? null };
+    });
+
+    if (!updatedDeal) {
+      return {
+        success: false,
+        message: "This opportunity could not be found.",
+      };
+    }
+
+    await createLeadActivity({
+      workspaceId: workspace.id,
+      userId,
+      eventType: "deal_stage_changed",
+      message: `Deal stage changed: ${existingDeal.name} (${existingDeal.stage} -> ${updatedDeal.stage})`,
+      leadId,
+      leadName: existingDeal.leadName,
+    });
+
+    if (updatedLead) {
+      await createLeadActivity({
+        workspaceId: workspace.id,
+        userId,
+        eventType: "lead_status_changed",
+        message: `Lead status changed: ${existingDeal.leadName} (${existingDeal.leadStatus} -> ${updatedLead.status})`,
+        leadId,
+        leadName: existingDeal.leadName,
+      });
+    }
+
+    revalidateLeadPaths(leadId);
+
+    return {
+      success: true,
+      stage: updatedDeal.stage,
+      message: `Deal stage updated to ${updatedDeal.stage}.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "We couldn't update this deal right now. Please try again.",
+    };
+  }
+}
