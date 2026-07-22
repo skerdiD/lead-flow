@@ -43,13 +43,30 @@ describeDatabase("activity transaction integrity", () => {
 
   async function createWorkspace(label: string): Promise<WorkspaceFixture> {
     const userId = `activity-transaction-${randomUUID()}`;
-    const result = await pool.query<{ id: string }>(
-      "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
-      [userId, `Activity transaction ${label} ${randomUUID()}`],
-    );
-    const id = result.rows[0]!.id;
-    createdWorkspaceIds.push(id);
-    return { id, userId };
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+      const workspace = await client.query<{ id: string }>(
+        "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
+        [userId, `Activity transaction ${label} ${randomUUID()}`],
+      );
+      const id = workspace.rows[0]!.id;
+
+      await client.query(
+        "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner')",
+        [id, userId],
+      );
+      await client.query("COMMIT");
+      createdWorkspaceIds.push(id);
+
+      return { id, userId };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   it("commits a lead and its required activity event together", async () => {

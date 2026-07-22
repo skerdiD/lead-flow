@@ -31,17 +31,30 @@ describeDatabase("CSV import persistence integrity", () => {
 
   async function workspace() {
     const userId = `import-test-${randomUUID()}`;
-    const created = await pool.query<{ id: string }>(
-      "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
-      [userId, `Import test ${randomUUID()}`],
-    );
-    const id = created.rows[0]!.id;
-    await pool.query(
-      "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner')",
-      [id, userId],
-    );
-    workspaceIds.push(id);
-    return { id, userId };
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+      const created = await client.query<{ id: string }>(
+        "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
+        [userId, `Import test ${randomUUID()}`],
+      );
+      const id = created.rows[0]!.id;
+
+      await client.query(
+        "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner')",
+        [id, userId],
+      );
+      await client.query("COMMIT");
+      workspaceIds.push(id);
+
+      return { id, userId };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async function job(workspaceId: string, userId: string, idempotencyKey: string) {

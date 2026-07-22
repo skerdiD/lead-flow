@@ -115,7 +115,7 @@ describeDatabase("workspace ownership integrity", () => {
       throw new Error("Expected the ownership invariant to reject this mutation.");
     } catch (error) {
       expect(error).toMatchObject({
-        code: expect.stringMatching(/^(23503|23514)$/),
+        code: "P0001",
       });
     }
   }
