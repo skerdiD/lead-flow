@@ -252,12 +252,32 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
   }, context);
   const sourceCount = sql<number>`count(*)`;
 
-  const [countRow] = await db
-    .select({
-      count: sql<number>`count(*)`,
-    })
-    .from(leads)
-    .where(and(...conditions));
+  const sourceConditions = getRecordVisibilityConditions(
+    context,
+    leads.workspaceId,
+    leads.assignedOwnerUserId,
+  );
+  sourceConditions.push(eq(leads.isArchived, archived === "archived"));
+
+  const [[countRow], [existingCountRow], sourceRows] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(leads)
+      .where(and(...conditions)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(leads)
+      .where(and(...sourceConditions)),
+    db
+      .select({
+        label: sourceLabel,
+        count: sourceCount,
+      })
+      .from(leads)
+      .where(and(...sourceConditions))
+      .groupBy(sourceLabel)
+      .orderBy(desc(sourceCount), asc(sourceLabel)),
+  ]);
 
   const totalCount = Number(countRow?.count ?? 0);
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -291,35 +311,12 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     .limit(pageSize)
     .offset(offset);
 
-  const sourceConditions = getRecordVisibilityConditions(
-    context,
-    leads.workspaceId,
-    leads.assignedOwnerUserId,
-  );
-  sourceConditions.push(eq(leads.isArchived, archived === "archived"));
-
-  const [existingCountRow] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(leads)
-    .where(and(...sourceConditions));
-
-  const [sourceRows, memberProfiles] = await Promise.all([
-    db
-      .select({
-        label: sourceLabel,
-        count: sourceCount,
-      })
-      .from(leads)
-      .where(and(...sourceConditions))
-      .groupBy(sourceLabel)
-      .orderBy(desc(sourceCount), asc(sourceLabel)),
-    resolveWorkspaceMemberProfiles(
-      context.workspaceId,
-      rows.flatMap((row) =>
-        row.assignedOwnerUserId ? [row.assignedOwnerUserId] : [],
-      ),
+  const memberProfiles = await resolveWorkspaceMemberProfiles(
+    context.workspaceId,
+    rows.flatMap((row) =>
+      row.assignedOwnerUserId ? [row.assignedOwnerUserId] : [],
     ),
-  ]);
+  );
 
   return {
     leads: rows.map((row) => ({

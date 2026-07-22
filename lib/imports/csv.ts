@@ -128,9 +128,18 @@ export function parseCsvText(text: string): ParsedCsv {
   return { headers, rows };
 }
 
-export async function parseCsvFile(file: File) {
+export async function readCsvFile(file: File) {
   validateCsvFileMetadata(file);
-  return parseCsvText(decodeUtf8(await file.arrayBuffer()));
+  const bytes = await file.arrayBuffer();
+
+  return {
+    bytes,
+    parsed: parseCsvText(decodeUtf8(bytes)),
+  };
+}
+
+export async function parseCsvFile(file: File) {
+  return (await readCsvFile(file)).parsed;
 }
 
 export function neutralizeSpreadsheetFormula(value: unknown) {

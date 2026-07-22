@@ -90,6 +90,11 @@ describe("getLeadsList", () => {
   it("normalizes filters and applies pagination metadata", async () => {
     selectResults.push(
       [{ count: 13 }],
+      [{ count: 13 }],
+      [
+        { label: "Referral", count: 8 },
+        { label: "Unspecified", count: 5 },
+      ],
       [
         {
           id: "lead_1",
@@ -127,11 +132,6 @@ describe("getLeadsList", () => {
           archivedAt: null,
           createdAt: new Date("2025-01-02T12:00:00.000Z"),
         },
-      ],
-      [{ count: 13 }],
-      [
-        { label: "Referral", count: 8 },
-        { label: "Unspecified", count: 5 },
       ],
     );
 

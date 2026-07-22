@@ -37,7 +37,7 @@ import {
   type DuplicateStrategy,
   type ImportEntityType,
 } from "@/lib/imports/config";
-import { buildSafeCsv, parseCsvFile } from "@/lib/imports/csv";
+import { buildSafeCsv, readCsvFile } from "@/lib/imports/csv";
 import {
   duplicateKey,
   normalizeImportRow,
@@ -114,9 +114,9 @@ export async function createImportDraft(
   const started = Date.now();
   const access = await getImportAuthorization();
   await purgeExpiredImportRowData(access.workspace.id);
-  const parsed = await parseCsvFile(file);
+  const { bytes, parsed } = await readCsvFile(file);
   const fileHash = createHash("sha256")
-    .update(Buffer.from(await file.arrayBuffer()))
+    .update(Buffer.from(bytes))
     .digest("hex");
 
   const job = await db.transaction(async (tx) => {
@@ -274,9 +274,12 @@ export async function reviewImportJob(input: {
     };
   });
 
+  const assignedMemberEmails = collectValues(normalizedRows, "assignedUserEmail");
   const [memberDirectory, accountRows, contactRows, duplicateRows] =
     await Promise.all([
-      getWorkspaceMemberDirectory(access.workspace.id),
+      assignedMemberEmails.length > 0
+        ? getWorkspaceMemberDirectory(access.workspace.id)
+        : Promise.resolve(new Map<string, string[]>()),
       (async () => {
         const names = collectValues(normalizedRows, "accountName");
         if (names.length === 0) return [];
@@ -782,14 +785,12 @@ export async function confirmImportJob(jobId: string) {
       try {
         await db.transaction(async (tx) => {
           for (const row of batch) await processImportRow(tx, job, row);
-          await refreshJobCounts(tx, job.id);
         });
       } catch (batchError) {
         for (const row of batch) {
           try {
             await db.transaction(async (tx) => {
               await processImportRow(tx, job, row);
-              await refreshJobCounts(tx, job.id);
             });
           } catch {
             await db.transaction(async (tx) => {
@@ -806,7 +807,6 @@ export async function confirmImportJob(jobId: string) {
                   updatedAt: new Date(),
                 })
                 .where(eq(importRows.id, row.id));
-              await refreshJobCounts(tx, job.id);
             });
           }
         }
@@ -878,6 +878,11 @@ export async function confirmImportJob(jobId: string) {
     });
     return getImportJobDetails(job.id);
   } catch (error) {
+    try {
+      await db.transaction((tx) => refreshJobCounts(tx, job.id));
+    } catch {
+      // Preserve the original import failure even if its diagnostic recount fails.
+    }
     await db
       .update(importJobs)
       .set({
