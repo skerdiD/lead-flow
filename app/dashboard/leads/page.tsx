@@ -98,7 +98,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
 
       <div className="shrink-0 rounded-2xl border bg-background p-3 shadow-sm sm:p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="font-sans text-sm text-muted-foreground">
             {tableData.totalCount === 0
               ? "No leads yet"
               : `Showing ${rangeStart}-${rangeEnd} of ${tableData.totalCount} ${isArchiveView ? "archived " : ""}leads`}

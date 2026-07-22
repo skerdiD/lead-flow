@@ -19,7 +19,7 @@ type LeadFiltersProps = {
 };
 
 const selectClass =
-  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
+  "h-9 w-full rounded-md border border-input bg-background px-3 font-sans text-sm shadow-xs outline-none focus:border-ring focus:ring-2 focus:ring-ring/40";
 
 export function LeadFilters({
   initialSearch = "",
@@ -43,7 +43,7 @@ export function LeadFilters({
 
   return (
     <div
-      className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center"
+      className="flex min-w-0 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center"
       aria-busy={controller.isPending}
       data-testid="leads-filter-toolbar"
     >
@@ -56,7 +56,7 @@ export function LeadFilters({
         inputRef={controller.inputRef}
         placeholder="Search by name, company, email, or source..."
         ariaLabel="Search leads"
-        className="w-full lg:min-w-[18rem] lg:flex-1"
+        className="w-full lg:min-w-[18rem] lg:flex-[1_1_18rem]"
         testId="leads-search-input"
       />
 

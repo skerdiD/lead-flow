@@ -66,6 +66,25 @@ test.describe("Leads e2e flows", () => {
     await expect(page.getByRole("heading", { name: "No leads yet", exact: true })).toBeVisible();
   });
 
+  test("lead filters wrap without horizontal overflow at a compact desktop width", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto("/dashboard/leads");
+
+    const toolbar = page.getByTestId("leads-filter-toolbar");
+    await expect(toolbar.getByRole("combobox", { name: "Owner" })).toBeVisible();
+
+    const dimensions = await toolbar.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+
+    const ownerFont = await toolbar
+      .getByRole("combobox", { name: "Owner" })
+      .evaluate((element) => getComputedStyle(element).fontFamily);
+    expect(ownerFont).not.toMatch(/fraunces/i);
+  });
+
   test("notification bell opens the empty state", async ({ page }) => {
     await page.goto("/dashboard");
 
