@@ -5,7 +5,7 @@ test.describe("demo role selection", () => {
     await page.goto("/demo");
 
     await expect(
-      page.getByRole("heading", { name: "Explore LeadFlow from every perspective." }),
+      page.getByRole("heading", { name: "Explore LeadFlow by role." }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "Owner" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();

@@ -22,7 +22,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     <div className="space-y-4">
       <PageHeader
         title="Tasks"
-        description="Manage your follow-ups and upcoming tasks."
+        description="Plan follow-ups and upcoming work."
         compact
       />
 
@@ -66,7 +66,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       </section>
 
       {Object.values(taskData.counts).every((count) => count === 0) && Object.values(taskData.filters).some(Boolean) ? (
-        <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center"><h2 className="font-semibold">No results match your search.</h2><p className="mt-2 text-sm text-muted-foreground">Try another search or clear your filters.</p></div>
+        <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center"><h2 className="font-semibold">No tasks match your search.</h2><p className="mt-2 text-sm text-muted-foreground">Try another search or clear the filters.</p></div>
       ) : <TaskSections
         sections={[
           {

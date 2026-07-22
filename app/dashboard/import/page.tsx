@@ -20,7 +20,7 @@ export default async function ImportPage() {
       <PageHeader
         eyebrow="Data management"
         title="Import CSV"
-        description="Bring leads, contacts, and accounts into LeadFlow through a reviewed, workspace-safe workflow."
+        description="Upload leads, contacts, or accounts, review the data, then confirm the import."
         action={
           canImport && !demo ? (
             <Button asChild variant="outline">

@@ -28,6 +28,10 @@ function desktopSidebar(page: Page) {
   return page.getByTestId("desktop-sidebar");
 }
 
+function settingsSections(page: Page) {
+  return page.getByRole("navigation", { name: "Settings sections" });
+}
+
 async function expectCompactPrimaryNavigation(page: Page) {
   const sidebar = desktopSidebar(page);
 
@@ -54,10 +58,10 @@ test.describe("role-aware dashboard navigation", () => {
       await expect(page.getByRole("menuitem", { name: new RegExp(action) })).toBeVisible();
     }
 
-    await desktopSidebar(page).getByRole("link", { name: "Settings", exact: true }).click();
-    await expect(page.getByRole("link", { name: "Team & roles" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Data & imports" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Audit log" })).toBeVisible();
+    await page.goto("/dashboard/settings");
+    await expect(settingsSections(page).getByRole("link", { name: "Team & roles", exact: true })).toBeVisible();
+    await expect(settingsSections(page).getByRole("link", { name: "Data & imports", exact: true })).toBeVisible();
+    await expect(settingsSections(page).getByRole("link", { name: "Audit log", exact: true })).toBeVisible();
   });
 
   test("Admin sees operational settings without Owner-only controls", async ({ page }) => {
@@ -65,9 +69,9 @@ test.describe("role-aware dashboard navigation", () => {
     await expectCompactPrimaryNavigation(page);
 
     await page.goto("/dashboard/settings");
-    await expect(page.getByRole("link", { name: "Team & roles" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Data & imports" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Audit log" })).toBeVisible();
+    await expect(settingsSections(page).getByRole("link", { name: "Team & roles", exact: true })).toBeVisible();
+    await expect(settingsSections(page).getByRole("link", { name: "Data & imports", exact: true })).toBeVisible();
+    await expect(settingsSections(page).getByRole("link", { name: "Audit log", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Transfer ownership" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Delete workspace/ })).toHaveCount(0);
   });
@@ -77,15 +81,15 @@ test.describe("role-aware dashboard navigation", () => {
     await expectCompactPrimaryNavigation(page);
 
     await page.goto("/dashboard/settings");
-    await expect(page.getByRole("link", { name: "Team & roles" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Data & imports" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Audit log" })).toHaveCount(0);
+    await expect(settingsSections(page).getByRole("link", { name: "Team & roles", exact: true })).toHaveCount(0);
+    await expect(settingsSections(page).getByRole("link", { name: "Data & imports", exact: true })).toHaveCount(0);
+    await expect(settingsSections(page).getByRole("link", { name: "Audit log", exact: true })).toHaveCount(0);
     await expect(page.getByText("Assigned CRM records")).toBeVisible();
 
-    const importResponse = await page.goto("/dashboard/settings/imports");
-    expect(importResponse?.status()).toBe(404);
-    const auditResponse = await page.goto("/dashboard/settings/audit-log");
-    expect(auditResponse?.status()).toBe(404);
+    await page.goto("/dashboard/settings/imports");
+    await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+    await page.goto("/dashboard/settings/audit-log");
+    await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   });
 });
 
@@ -122,16 +126,16 @@ test.describe("desktop, collapsed, Customers, and mobile navigation", () => {
     await customers.click();
 
     await expect(page).toHaveURL(/\/dashboard\/customers\/accounts$/);
-    await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Accounts" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("main").getByRole("heading", { name: "Customers", exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: "Accounts", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(customers).toHaveAttribute("aria-current", "page");
 
-    await page.getByRole("link", { name: "Contacts", exact: true }).click();
+    await page.getByRole("main").getByRole("link", { name: "Contacts", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/customers\/contacts$/);
     await expect(customers).toHaveAttribute("aria-current", "page");
 
     await page.goto("/dashboard/accounts");
-    await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("heading", { name: "Accounts", exact: true })).toBeVisible();
     await expect(customers).toHaveAttribute("aria-current", "page");
   });
 

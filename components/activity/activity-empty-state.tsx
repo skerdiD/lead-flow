@@ -15,8 +15,7 @@ export function ActivityEmptyState() {
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Recent lead actions will appear here so you can track what changed
-          without opening each record.
+          Changes to leads and deals will appear here. Use the feed to review what changed without opening every record.
         </p>
 
         <div className="mt-6">

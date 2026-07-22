@@ -11,7 +11,7 @@ export function ArchiveRecordButton({ id, kind }: { id: string; kind: "account" 
   return <DestructiveConfirmationDialog
     trigger={<Button variant="outline" size="sm"><Archive className="mr-2 h-4 w-4" />Archive</Button>}
     title={`Archive this ${kind}?`}
-    description={<>This {kind} will be removed from active views. Linked leads, deals, tasks, and history will be preserved.</>}
+    description={<>This {kind} will be removed from active views. Linked records and history will stay available.</>}
     confirmLabel={`Archive ${kind}`}
     pendingLabel="Archiving…"
     onConfirm={() => kind === "account" ? archiveAccountAction(id) : archiveContactAction(id)}

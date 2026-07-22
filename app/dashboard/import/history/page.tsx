@@ -31,13 +31,13 @@ export default async function ImportHistoryPage({ searchParams }: { searchParams
       <PageHeader
         eyebrow="Data management"
         title="Import history"
-        description="Review recent CSV imports, processing outcomes, and rejected rows."
+        description="Check recent CSV imports, their results, and any rejected rows."
         action={<Button asChild variant="outline"><Link href="/dashboard/import"><ArrowLeft className="mr-2 h-4 w-4" />New import</Link></Button>}
       />
       <ImportHistoryFilters {...data.filters} />
       {data.jobs.length === 0 ? (
         <div className="rounded-3xl border border-dashed bg-muted/20 px-6 py-14 text-center">
-          <h2 className="font-semibold">{hasFilters ? "No results match your search." : "No imports yet"}</h2>
+          <h2 className="font-semibold">{hasFilters ? "No imports match your search." : "No imports yet"}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{hasFilters ? "Try another search or clear your filters." : "Your completed and in-progress CSV imports will appear here."}</p>
         </div>
       ) : (<>

@@ -85,7 +85,7 @@ export function StatCard({
           </p>
           <p
             className={cn(
-              "font-semibold tracking-tight text-foreground tabular-nums",
+              "font-display font-medium tracking-tight text-foreground tabular-nums",
               compact ? "text-3xl leading-none" : "text-3xl",
             )}
           >

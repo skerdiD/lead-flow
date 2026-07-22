@@ -14,18 +14,18 @@ export function DashboardEmptyState() {
         </div>
 
         <h2 className="mt-5 text-2xl font-semibold tracking-tight text-foreground">
-          Start building your pipeline
+          No pipeline activity yet
         </h2>
 
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Add your first lead to start tracking conversations, follow-ups, and deal progress.
+          Add a lead to track conversations, follow-ups, and deal progress.
         </p>
 
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button asChild>
             <Link href="/dashboard/leads/new">
               <Plus className="mr-2 h-4 w-4" />
-              Add your first lead
+              Add a lead
             </Link>
           </Button>
 

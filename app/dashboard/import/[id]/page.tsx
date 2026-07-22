@@ -27,7 +27,7 @@ export default async function ImportResultPage({
       <PageHeader
         eyebrow="Import results"
         title={job.originalFileName}
-        description={`Review the ${job.entityType} import outcome and any rejected rows.`}
+        description={`Check the ${job.entityType} import and any rejected rows.`}
         action={<Button asChild variant="outline"><Link href="/dashboard/settings/imports/history"><ArrowLeft className="mr-2 h-4 w-4" />Import history</Link></Button>}
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">

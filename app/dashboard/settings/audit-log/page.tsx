@@ -42,7 +42,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="min-w-0 space-y-6">
-      <PageHeader eyebrow="Workspace security" title="Audit log" description="Immutable, structured records of sensitive workspace and CRM changes. User activity remains separate in the activity feed." />
+      <PageHeader eyebrow="Workspace security" title="Audit log" description="A record of sensitive workspace and CRM changes. General activity appears in the activity feed." />
       <AuditLogFilters search={search} />
       <section className="overflow-hidden rounded-2xl border" aria-label="Audit results">
         <div className="divide-y">
@@ -52,7 +52,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
               <pre className="mt-3 max-h-80 max-w-full overflow-auto rounded-lg bg-muted p-3 text-xs leading-5">{JSON.stringify({ before: record.before, after: record.after, metadata: record.metadata }, null, 2)}</pre>
             </details>
           )) : (
-            <div className="px-4 py-10 text-center"><p className="font-medium">{search ? "No results match your search." : "No audit records exist."}</p>{search ? <p className="mt-2 text-sm text-muted-foreground">Try another search or clear your filters.</p> : null}</div>
+            <div className="px-4 py-10 text-center"><p className="font-medium">{search ? "No audit records match your search." : "No audit records yet."}</p>{search ? <p className="mt-2 text-sm text-muted-foreground">Try another search or clear the filters.</p> : null}</div>
           )}
         </div>
       </section>

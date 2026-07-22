@@ -47,7 +47,7 @@ const crmViewPermissions = ["crm:view_all", "crm:view_assigned"] as const;
 const primaryNavigation: readonly NavigationItem[] = [
   {
     label: "Dashboard",
-    description: "Overview of your leads and pipeline",
+    description: "Pipeline, revenue, and work needing attention",
     href: "/dashboard",
     icon: LayoutDashboard,
     activePatterns: ["/dashboard"],
@@ -56,7 +56,7 @@ const primaryNavigation: readonly NavigationItem[] = [
   },
   {
     label: "Leads",
-    description: "Manage leads and sales opportunities",
+    description: "Review leads and their next steps",
     href: "/dashboard/leads",
     icon: Users,
     activePatterns: ["/dashboard/leads/*"],
@@ -65,7 +65,7 @@ const primaryNavigation: readonly NavigationItem[] = [
   },
   {
     label: "Deals",
-    description: "Manage your revenue pipeline",
+    description: "Track deal value, stage, and expected close dates",
     href: "/dashboard/deals",
     icon: Handshake,
     activePatterns: ["/dashboard/deals/*"],
@@ -74,7 +74,7 @@ const primaryNavigation: readonly NavigationItem[] = [
   },
   {
     label: "Customers",
-    description: "Manage customer companies and contacts",
+    description: "Keep customer companies and contacts connected",
     href: "/dashboard/customers/accounts",
     icon: Building2,
     activePatterns: [
@@ -87,7 +87,7 @@ const primaryNavigation: readonly NavigationItem[] = [
   },
   {
     label: "Tasks",
-    description: "Manage follow-ups and scheduled work",
+    description: "Plan follow-ups and scheduled work",
     href: "/dashboard/tasks",
     icon: ListTodo,
     activePatterns: ["/dashboard/tasks/*"],
@@ -182,7 +182,7 @@ const createActions: readonly CreateAction[] = [
 const secondaryNavigation: readonly NavigationItem[] = [
   {
     label: "Settings",
-    description: "Manage your account and workspace preferences",
+    description: "Account, team, and workspace settings",
     href: "/dashboard/settings",
     icon: Settings,
     activePatterns: [
@@ -258,7 +258,7 @@ export function getDashboardRouteMeta(pathname: string): DashboardRouteMeta {
   }
 
   if (pathname === "/dashboard/leads/new") {
-    return { title: "Create lead", description: "Capture a new sales opportunity" };
+    return { title: "Create lead", description: "Add a lead and its first details" };
   }
 
   if (/^\/dashboard\/leads\/[^/]+$/.test(pathname)) {
@@ -283,7 +283,7 @@ export function getDashboardRouteMeta(pathname: string): DashboardRouteMeta {
 
   return item
     ? { title: item.label, description: item.description }
-    : { title: "Dashboard", description: "Overview of your leads and pipeline" };
+    : { title: "Dashboard", description: "Pipeline, revenue, and work needing attention" };
 }
 
 export const navigationSectionLabels: Partial<

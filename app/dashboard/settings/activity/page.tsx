@@ -11,7 +11,7 @@ export default async function WorkspaceActivityPage() {
       <PageHeader
         eyebrow="Workspace settings"
         title="Workspace activity"
-        description="See the latest CRM changes you are permitted to view."
+        description="Review the CRM changes you have permission to see."
       />
       {activities.length === 0 ? (
         <ActivityEmptyState />

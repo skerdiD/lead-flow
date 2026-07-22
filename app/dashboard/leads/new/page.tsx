@@ -19,7 +19,7 @@ export default async function NewLeadPage() {
       <PageHeader
         eyebrow="Lead management"
         title="Create lead"
-        description="Add a new lead to your workspace and keep your pipeline organized from the first touchpoint."
+        description="Add a lead and record the details you have so far."
       />
 
       <LeadForm mode="create" />

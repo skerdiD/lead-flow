@@ -8,7 +8,7 @@ export function NotificationEmptyState() {
       </div>
       <p className="mt-3 text-sm font-semibold text-foreground">You&apos;re all caught up</p>
       <p className="mt-1 text-sm leading-5 text-muted-foreground">
-        New notifications will appear here.
+        New updates will appear here.
       </p>
     </div>
   );

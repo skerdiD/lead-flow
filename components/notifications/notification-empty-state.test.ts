@@ -8,6 +8,6 @@ describe("NotificationEmptyState", () => {
     const markup = renderToStaticMarkup(createElement(NotificationEmptyState));
 
     expect(markup).toContain("all caught up");
-    expect(markup).toContain("New notifications will appear here.");
+    expect(markup).toContain("New updates will appear here.");
   });
 });

@@ -17,7 +17,7 @@ export function DeleteLeadButton({ leadId }: DeleteLeadButtonProps) {
 
   const handleArchive = () => {
     const confirmed = window.confirm(
-      "Archive this lead? Notes, activity, and history will remain saved.",
+      "Archive this lead? Its notes and history will stay saved.",
     );
 
     if (!confirmed) return;
@@ -25,10 +25,10 @@ export function DeleteLeadButton({ leadId }: DeleteLeadButtonProps) {
     startTransition(async () => {
       try {
         await deleteLeadAction(leadId);
-        toast.success("Lead archived successfully.");
+        toast.success("Lead archived.");
         router.refresh();
       } catch {
-        toast.error("Something went wrong while archiving the lead.");
+        toast.error("We couldn't archive this lead. Try again.");
       }
     });
   };

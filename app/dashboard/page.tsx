@@ -70,11 +70,11 @@ export default async function DashboardPage() {
             <p className="inline-flex items-center rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Overview
             </p>
-            <h1 className="mt-3 font-display text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
-              Your pipeline at a glance.
+            <h1 className="leadflow-page-title mt-3 text-foreground sm:text-4xl">
+              Your sales pipeline.
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              Track deals, follow up on leads, and keep work moving.
+              See what is open, what needs attention, and what is likely to close.
             </p>
 
             <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -114,9 +114,9 @@ export default async function DashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Total Pipeline"
+          title="Open pipeline"
           value={formatCurrencyFromCents(revenueData.totalPipelineValueCents, revenueCurrency)}
-          description="Open deal value excluding won and lost opportunities."
+          description="Value of deals still in progress."
           icon={CircleDollarSign}
           tone="neutral"
           helper={`${stats.openDeals} open deals`}
@@ -124,16 +124,16 @@ export default async function DashboardPage() {
         <StatCard
           title="Weighted Forecast"
           value={formatCurrencyFromCents(revenueData.weightedPipelineValueCents, revenueCurrency)}
-          description="Open pipeline value multiplied by deal probability."
+          description="Open deal value adjusted for probability."
           icon={TrendingUp}
           tone="info"
           badge={`${stats.totalDeals} deals`}
-          helper="probability adjusted"
+          helper="probability-adjusted"
         />
         <StatCard
           title="Expected This Month"
           value={formatCurrencyFromCents(revenueData.expectedRevenueThisMonthCents, revenueCurrency)}
-          description="Weighted forecast for deals expected to close this month."
+          description="Probability-adjusted value expected to close this month."
           icon={BriefcaseBusiness}
           tone="warning"
           helper={`${activePipeline} active leads`}
@@ -142,7 +142,7 @@ export default async function DashboardPage() {
         <StatCard
           title="Won Revenue"
           value={formatCurrencyFromCents(revenueData.wonRevenueCents, revenueCurrency)}
-          description="Value of opportunities marked won."
+          description="Value of deals marked won."
           icon={BadgeCheck}
           tone="positive"
           badge={toPercent(winRate)}

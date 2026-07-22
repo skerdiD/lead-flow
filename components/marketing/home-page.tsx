@@ -31,12 +31,12 @@ const trustProofPoints = [
   {
     title: "Structured status pipeline",
     detail:
-      "Use clear checkpoints from New to Proposal so the team always knows next actions.",
+      "Use clear stages from New to Proposal so the team knows the next step.",
   },
   {
     title: "Timeline-level visibility",
     detail:
-      "Creation, edits, status changes, and notes are captured in one activity history.",
+      "Creation, edits, status changes, and notes are recorded in the activity history.",
   },
   {
     title: "Private workspace boundaries",
@@ -46,7 +46,7 @@ const trustProofPoints = [
   {
     title: "Built for daily execution",
     detail:
-      "Dashboard, leads, and activity views are designed for fast morning and end-of-day reviews.",
+      "Review the dashboard, leads, and activity at the start and end of the day.",
   },
 ];
 
@@ -54,25 +54,25 @@ const whyLeadFlowCards = [
   {
     title: "Pipeline clarity without CRM bloat",
     description:
-      "Keep stages clean, visible, and easy to review so every rep knows what to do next.",
+      "Use clear stages so every rep knows what to do next.",
     icon: Workflow,
   },
   {
     title: "Capture leads in seconds",
     description:
-      "Fast forms and practical defaults help founders log new opportunities before context gets lost.",
+      "Quick forms help founders record new opportunities before the details are lost.",
     icon: Target,
   },
   {
-    title: "See daily momentum in one place",
+    title: "Review the day's progress",
     description:
-      "Track creation, edits, status changes, and notes through a focused activity timeline.",
+      "Track creation, edits, status changes, and notes in the activity timeline.",
     icon: Clock3,
   },
   {
     title: "Secure, account-scoped workspace",
     description:
-      "Every lead record stays private to the signed-in account with clear access boundaries.",
+      "Lead records stay private to the signed-in account, with clear access boundaries.",
     icon: LockKeyhole,
   },
 ];
@@ -81,32 +81,32 @@ const capabilities = [
   {
     title: "Lead and contact profiles",
     description:
-      "Store contact details, source, value, and owner fields in one structured record.",
+      "Store contact details, source, value, and ownership with each lead.",
   },
   {
     title: "Clear status checkpoints",
     description:
-      "Move each opportunity through predictable stages so the pipeline stays reliable.",
+      "Move each opportunity through consistent stages so the pipeline reflects reality.",
   },
   {
     title: "Timeline-first activity feed",
     description:
-      "Review exactly what changed and when to prioritize follow-ups with confidence.",
+      "Review what changed and when before deciding on follow-ups.",
   },
   {
     title: "Focused dashboard insights",
     description:
-      "Use stage and source views to identify bottlenecks and where quality leads come from.",
+      "Use stage and source views to spot bottlenecks and understand where leads come from.",
   },
   {
     title: "Built for founder teams",
     description:
-      "A compact interface that supports daily sales routines without heavy onboarding.",
+      "A compact interface for daily sales work, without a long setup process.",
   },
   {
     title: "Fast action from every view",
     description:
-      "Open lead details, update status, and keep deals moving without context switching.",
+      "Open a lead, update its status, and record the next step without leaving the workflow.",
   },
 ];
 
@@ -114,17 +114,17 @@ const workflowSteps = [
   {
     title: "Capture",
     description:
-      "Add a lead with clean essentials and assign the right status from day one.",
+      "Add a lead with the essentials and give it an initial status.",
   },
   {
     title: "Move",
     description:
-      "Progress opportunities through checkpoints as conversations and qualification evolve.",
+      "Update opportunities as conversations and qualification progress.",
   },
   {
     title: "Act",
     description:
-      "Use the activity timeline and dashboard view to prioritize the deals worth attention now.",
+      "Use the activity timeline and dashboard to focus on deals that need attention now.",
   },
 ];
 
@@ -137,7 +137,7 @@ const previewHighlights = [
   {
     title: "Lead management clarity",
     description:
-      "Open lead records with contact details, status, source, and owner context in one place.",
+      "Open lead records with the contact, status, source, and owner details you need.",
   },
   {
     title: "Activity history confidence",
@@ -199,7 +199,7 @@ function SectionIntro({ eyebrow, title, description }: SectionIntroProps) {
       <p className="text-xs font-semibold tracking-[0.16em] text-cyan-700 uppercase dark:text-cyan-300">
         {eyebrow}
       </p>
-      <h2 className="mt-3 font-[family-name:var(--font-fraunces)] text-3xl tracking-tight text-slate-950 dark:text-slate-100 sm:text-4xl">
+      <h2 className="mt-3 font-display text-3xl font-medium tracking-tight text-slate-950 dark:text-slate-100 sm:text-4xl">
         {title}
       </h2>
       <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
@@ -285,14 +285,14 @@ export function HomePageMarketing() {
               </LoadIn>
 
               <LoadIn delay={160}>
-                <h1 className="mt-5 max-w-3xl font-[family-name:var(--font-fraunces)] text-4xl leading-[1.03] tracking-[-0.04em] text-slate-950 dark:text-slate-100 sm:text-5xl lg:text-6xl">
+                <h1 className="mt-5 max-w-3xl font-display text-4xl font-medium leading-[1.03] tracking-[-0.04em] text-slate-950 dark:text-slate-100 sm:text-5xl lg:text-6xl">
                   Close more deals with a clear pipeline, not CRM clutter.
                 </h1>
               </LoadIn>
 
               <LoadIn delay={260}>
                 <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg">
-                  LeadFlow gives founders and compact teams one private workspace to capture leads quickly, move opportunities through clean status checkpoints, and act on daily activity before momentum drops.
+                  LeadFlow gives founders and small teams a private place to record leads, update stages, and follow up on recent activity.
                 </p>
               </LoadIn>
 
@@ -441,8 +441,8 @@ export function HomePageMarketing() {
             <ScrollReveal>
               <SectionIntro
                 eyebrow="Why LeadFlow"
-                title="Built for daily sales control"
-                description="LeadFlow gives founders and compact teams a focused system to capture leads, move status, and keep momentum visible every day."
+                title="Built for the daily sales routine"
+                description="LeadFlow helps founders and small teams capture leads, update status, and see what needs attention."
               />
             </ScrollReveal>
 
@@ -476,8 +476,8 @@ export function HomePageMarketing() {
             <ScrollReveal>
               <SectionIntro
                 eyebrow="Key capabilities"
-                title="Everything your lead workflow needs"
-                description="A practical set of tools that keeps pipeline visibility high and daily decisions fast."
+                title="The essentials for managing leads"
+                description="Practical tools for reviewing the pipeline and deciding what to do next."
               />
             </ScrollReveal>
 
@@ -508,8 +508,8 @@ export function HomePageMarketing() {
             <ScrollReveal>
               <SectionIntro
                 eyebrow="Workflow"
-                title="A simple 3-step daily rhythm"
-                description="Run the same clean process every day to keep opportunities progressing."
+                title="A practical daily process"
+                description="Capture new work, update the pipeline, and follow up on the right deals."
               />
             </ScrollReveal>
 
@@ -541,8 +541,8 @@ export function HomePageMarketing() {
             <ScrollReveal>
               <SectionIntro
                 eyebrow="Product preview"
-                title="See LeadFlow like an operator, not a spectator"
-                description="One focused workspace for pipeline visibility, lead management, and activity history your team can trust every day."
+                title="See the work behind your pipeline"
+                description="Review the pipeline, lead records, and activity history in a single workspace."
               />
             </ScrollReveal>
 
@@ -682,7 +682,7 @@ export function HomePageMarketing() {
                 <Target className="size-3.5" />
                 Founder-focused positioning
               </p>
-              <h2 className="mt-5 font-[family-name:var(--font-fraunces)] text-3xl tracking-tight text-slate-950 dark:text-slate-100 sm:text-4xl">
+              <h2 className="mt-5 font-display text-3xl font-medium tracking-tight text-slate-950 dark:text-slate-100 sm:text-4xl">
                 A compact CRM workflow for teams that move fast
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
@@ -732,7 +732,7 @@ export function HomePageMarketing() {
             <ScrollReveal>
               <div className="overflow-hidden rounded-[2.2rem] border border-cyan-200/60 bg-[radial-gradient(circle_at_12%_14%,rgba(103,232,249,0.28),transparent_35%),radial-gradient(circle_at_88%_78%,rgba(16,185,129,0.3),transparent_45%),linear-gradient(135deg,#0f172a_0%,#0f3a4d_52%,#115e59_100%)] px-6 py-14 text-center text-white shadow-[0_30px_100px_-42px_rgba(15,23,42,0.65)] sm:px-10">
                 <p className="text-xs font-semibold tracking-[0.16em] text-cyan-100 uppercase">Get started</p>
-                <h2 className="mt-4 font-[family-name:var(--font-fraunces)] text-3xl tracking-tight sm:text-5xl">
+                <h2 className="mt-4 font-display text-3xl font-medium tracking-tight sm:text-5xl">
                   Start free and run a cleaner pipeline today
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-cyan-50/90 sm:text-base">

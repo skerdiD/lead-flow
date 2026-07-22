@@ -57,10 +57,13 @@ test.describe("Leads e2e flows", () => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Leads" }).click();
+    await page
+      .getByTestId("desktop-sidebar")
+      .getByRole("link", { name: "Leads", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/dashboard\/leads$/);
     await expect(page.getByRole("heading", { name: "Leads" })).toBeVisible();
-    await expect(page.getByText("No leads found")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "No leads yet", exact: true })).toBeVisible();
   });
 
   test("notification bell opens the empty state", async ({ page }) => {
@@ -68,7 +71,7 @@ test.describe("Leads e2e flows", () => {
 
     await page.getByRole("button", { name: "Notifications" }).click();
     await expect(page.getByText("all caught up")).toBeVisible();
-    await expect(page.getByText("New notifications will appear here.")).toBeVisible();
+    await expect(page.getByText("New updates will appear here.")).toBeVisible();
   });
 
   test("opening a notification marks it as read and follows its action", async ({ page, request }) => {
@@ -112,8 +115,8 @@ test.describe("Leads e2e flows", () => {
     await page.getByTestId("lead-form-submit-btn").click();
 
     await expect(page).toHaveURL(/\/dashboard\/leads\/.+$/);
-    await expect(page.getByText("Interested")).toBeVisible();
-    await expect(page.getByText(updatedCompany)).toBeVisible();
+    await expect(page.getByTestId("lead-status-select")).toContainText("Interested");
+    await expect(page.getByTestId("lead-context-section").getByText(updatedCompany)).toBeVisible();
 
     await page.getByRole("button", { name: "Archive" }).click();
     await page.getByRole("button", { name: "Archive lead" }).click();

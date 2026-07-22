@@ -66,8 +66,8 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         title="Leads"
         description={
           isArchiveView
-            ? "Review archived leads and restore records when they need to return to active work."
-            : "Search, filter, and manage your leads."
+            ? "Review archived leads and restore records when they return to active work."
+            : "Search, filter, and update your leads."
         }
         className="shrink-0"
         compact
@@ -100,7 +100,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             {tableData.totalCount === 0
-              ? "No leads found"
+              ? "No leads yet"
               : `Showing ${rangeStart}-${rangeEnd} of ${tableData.totalCount} ${isArchiveView ? "archived " : ""}leads`}
           </p>
         </div>

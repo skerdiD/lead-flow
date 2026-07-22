@@ -107,7 +107,7 @@ export function LeadNotesPanel({
   };
 
   const handleDeleteNote = (noteId: string) => {
-    const confirmed = window.confirm("Delete this note? This action cannot be undone.");
+    const confirmed = window.confirm("Delete this note? You cannot undo this action.");
 
     if (!confirmed) return;
 
@@ -130,7 +130,7 @@ export function LeadNotesPanel({
         <div>
           <h2 className="text-sm font-semibold tracking-tight text-foreground">Lead notes</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Keep a timeline of follow-ups, context, and decisions.
+            Record follow-ups, context, and decisions.
           </p>
         </div>
 
@@ -141,12 +141,12 @@ export function LeadNotesPanel({
 
       <div id="lead-note-editor" className="mt-5">
         {readOnly ? (
-          <DemoReadOnlyHint message="Demo workspace notes are read-only so every visitor sees the same clean activity trail." />
+          <DemoReadOnlyHint message="Notes are read-only in this demo so everyone sees the same sample data." />
         ) : (
           <div className="rounded-2xl border bg-muted/20 p-4">
             <Textarea
               id="lead-notes-input"
-              placeholder="Capture what changed, what was said, or what should happen next..."
+              placeholder="What changed, what was discussed, or what happens next?"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               className="min-h-24 resize-y"
@@ -180,7 +180,7 @@ export function LeadNotesPanel({
       <div className="mt-5 space-y-3">
         {sortedNotes.length === 0 ? (
           <div className="rounded-2xl border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-            No notes yet. Add your first note to start a clean activity trail.
+            No notes yet. Add one to record the next step.
           </div>
         ) : (
           sortedNotes.map((note) => {

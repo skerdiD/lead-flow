@@ -39,7 +39,7 @@ export function DashboardTopbar({
 
   return (
     <header className="z-30 shrink-0 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="flex min-h-[4.25rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-7">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -49,7 +49,7 @@ export function DashboardTopbar({
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 font-sans">
           <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {page.title}
           </h1>
@@ -64,7 +64,7 @@ export function DashboardTopbar({
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 font-sans">
           <div className="hidden max-w-[240px] items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm sm:flex">
             <Building2 className="h-4 w-4 shrink-0" />
             <span className="truncate font-medium text-foreground">
@@ -103,7 +103,7 @@ export function DashboardTopbar({
       </div>
 
       {searchSlot ? (
-        <div className="border-t px-4 py-3 md:hidden sm:px-6">
+        <div className="border-t px-4 py-3 font-sans md:hidden sm:px-6">
           {searchSlot}
         </div>
       ) : null}

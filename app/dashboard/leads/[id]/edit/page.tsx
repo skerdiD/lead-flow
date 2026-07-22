@@ -40,7 +40,7 @@ export default async function EditLeadPage({
       <PageHeader
         eyebrow="Lead management"
         title="Edit lead"
-        description={`Update the latest information for ${lead.fullName}.`}
+        description={`Update ${lead.fullName}'s details and status.`}
       />
 
       <LeadForm

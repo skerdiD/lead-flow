@@ -79,7 +79,7 @@ export function ArchiveLeadDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Archive this lead?</AlertDialogTitle>
           <AlertDialogDescription className="leading-6">
-            This will hide <span className="font-medium text-foreground">{leadName}</span> from active views, but all notes, activity, and history will remain saved.
+            <span className="font-medium text-foreground">{leadName}</span> will be removed from active views. Its notes and history will stay saved.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

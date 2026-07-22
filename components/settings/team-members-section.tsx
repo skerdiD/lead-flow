@@ -233,7 +233,7 @@ export function TeamMembersSection({
                   ) : null}
                 </div>
               </div>
-            )) : <div className="p-8 text-center"><p className="font-medium">No results match your search.</p><p className="mt-2 text-sm text-muted-foreground">Try another search or clear your filters.</p></div>}
+            )) : <div className="p-8 text-center"><p className="font-medium">No team members match your search.</p><p className="mt-2 text-sm text-muted-foreground">Try another search or clear the filters.</p></div>}
           </div>
 
           {canDeleteWorkspace ? (

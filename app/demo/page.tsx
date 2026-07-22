@@ -44,11 +44,11 @@ export default async function DemoPage() {
           <p className="text-xs font-semibold tracking-[0.18em] text-cyan-700 uppercase dark:text-cyan-300">
             Interactive product walkthrough
           </p>
-          <h1 className="mx-auto mt-4 max-w-3xl font-[family-name:var(--font-fraunces)] text-4xl tracking-tight text-slate-950 dark:text-slate-50 sm:text-5xl">
-            Explore LeadFlow from every perspective.
+          <h1 className="mx-auto mt-4 max-w-3xl font-display text-4xl font-medium tracking-tight text-slate-950 dark:text-slate-50 sm:text-5xl">
+            Explore LeadFlow by role.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg">
-            Choose a role to enter a realistic CRM workspace and see how permissions shape each team member&apos;s day.
+            Choose a role to see the workspace and permissions available to that team member.
           </p>
         </section>
 

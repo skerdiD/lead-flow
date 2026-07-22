@@ -18,7 +18,7 @@ export default async function DataImportsPage() {
       <PageHeader
         eyebrow="Workspace settings"
         title="Data & imports"
-        description="Import workspace CRM data through a staged review and inspect previous processing results."
+        description="Upload CRM data, review it before import, and check previous results."
       />
 
       {demo ? (

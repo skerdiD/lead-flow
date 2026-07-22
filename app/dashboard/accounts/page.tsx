@@ -19,13 +19,13 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="min-w-0 space-y-5">
-      <PageHeader eyebrow="Relationship management" title="Accounts" description="Keep companies, their contacts, and active opportunities connected in one place." action={<>{canImport ? <Button asChild variant="outline"><Link href="/dashboard/import"><Upload className="mr-2 h-4 w-4" />Import CSV</Link></Button> : null}{canCreate ? <Button asChild><Link href="/dashboard/customers/accounts/new"><Plus className="mr-2 h-4 w-4" />Add account</Link></Button> : null}</>} />
+      <PageHeader eyebrow="Relationship management" title="Accounts" description="See each company alongside its contacts and open deals." action={<>{canImport ? <Button asChild variant="outline"><Link href="/dashboard/import"><Upload className="mr-2 h-4 w-4" />Import CSV</Link></Button> : null}{canCreate ? <Button asChild><Link href="/dashboard/customers/accounts/new"><Plus className="mr-2 h-4 w-4" />Add account</Link></Button> : null}</>} />
       <CrmListFilters kind="accounts" initialSearch={data.search} initialOwner={data.owner} initialArchived={data.archived} initialSort={data.sort} initialDirection={data.direction} ownerOptions={options.ownerOptions} />
 
       {data.records.length === 0 ? (
         <div className="rounded-3xl border border-dashed bg-muted/20 px-6 py-14 text-center">
-          <h2 className="font-semibold">{hasFilters ? "No results match your search." : "No accounts yet"}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{hasFilters ? "Try another search or clear your filters." : "Create an account to connect people, pipeline, and follow-up work."}</p>
+          <h2 className="font-semibold">{hasFilters ? "No accounts match your search." : "No accounts yet"}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{hasFilters ? "Try another search or clear the filters." : "Add an account to connect people, pipeline, and follow-up work."}</p>
         </div>
       ) : (
         <section className="space-y-3" aria-label="Account results">

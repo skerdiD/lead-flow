@@ -217,7 +217,7 @@ export function ImportWizard() {
       );
       setDetails(result);
       setStep(4);
-      toast.success("CSV import completed.");
+      toast.success("CSV import complete.");
     } catch (error) {
       setStep(2);
       toast.error(error instanceof Error ? error.message : "The import could not be completed.");
@@ -355,7 +355,7 @@ export function ImportWizard() {
         <Card className="rounded-3xl">
           <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle>Map CSV columns</CardTitle>
+              <h2 className="text-base leading-snug font-medium">Map CSV columns</h2>
               <CardDescription className="mt-1">
                 Match each source column to a LeadFlow field. Suggestions use exact aliases only.
               </CardDescription>
@@ -412,7 +412,7 @@ export function ImportWizard() {
 
             <fieldset className="mt-6">
               <legend className="font-semibold">Duplicate handling</legend>
-              <p className="mt-1 text-sm text-muted-foreground">The safest option is selected by default. Blank CSV cells never erase existing values.</p>
+              <p className="mt-1 text-sm text-muted-foreground">The default option skips duplicates. Blank CSV cells never erase existing values.</p>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 {([
                   ["skip", "Skip duplicates", "Leave existing records unchanged."],
@@ -459,8 +459,8 @@ export function ImportWizard() {
 
           <Card className="rounded-3xl">
             <CardHeader>
-              <CardTitle>Review rows</CardTitle>
-              <CardDescription>Only validated rows will be processed. Invalid rows remain available as a safe CSV download.</CardDescription>
+              <h2 className="text-base leading-snug font-medium">Review rows</h2>
+              <CardDescription>Only valid rows will be processed. You can download invalid rows to correct them.</CardDescription>
               <div className="flex flex-wrap gap-2 pt-2" aria-label="Preview filters">
                 {filters.map((value) => (
                   <Button key={value} size="sm" variant={filter === value ? "default" : "outline"} onClick={() => loadPreview(value)}>
@@ -538,7 +538,7 @@ export function ImportWizard() {
           <CardContent className="flex min-h-72 flex-col items-center justify-center p-8 text-center" aria-live="polite">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <h2 className="mt-5 text-xl font-semibold">Importing your records</h2>
-            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">LeadFlow is processing validated rows in controlled batches. You can safely retry if the network is interrupted.</p>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">LeadFlow is importing valid rows in batches. If your connection drops, you can try again.</p>
           </CardContent>
         </Card>
       ) : null}
@@ -592,7 +592,7 @@ export function ImportUnavailable({ demo = false }: { demo?: boolean }) {
         {demo ? <FileSpreadsheet className="h-10 w-10 text-muted-foreground" /> : <AlertCircle className="h-10 w-10 text-muted-foreground" />}
         <h2 className="mt-4 text-xl font-semibold">{demo ? "CSV import is unavailable in the public demo" : "You do not have import access"}</h2>
         <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-          {demo ? "The shared demo is read-only to keep sample data stable and prevent resource abuse." : "CSV imports are available to workspace Owners and Admins."}
+          {demo ? "This demo is read-only, so the sample data stays the same for everyone." : "CSV imports are available to workspace Owners and Admins."}
         </p>
         <Button asChild variant="outline" className="mt-5"><Link href="/dashboard">Return to dashboard</Link></Button>
       </CardContent>

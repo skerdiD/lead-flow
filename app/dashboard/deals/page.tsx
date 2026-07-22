@@ -54,11 +54,11 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Revenue pipeline
           </p>
-          <h1 className="mt-1 font-display text-2xl font-medium tracking-tight sm:text-3xl">
+          <h1 className="leadflow-page-title mt-1 text-2xl sm:text-3xl">
             Deals
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage and track your sales opportunities.
+            Track deal value, stage, and the next expected close.
           </p>
         </div>
 
@@ -110,8 +110,8 @@ export default async function DealsPage({ searchParams }: DealsPageProps) {
       <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={view === "pipeline" ? "Deals pipeline" : "Deals list"}>
         {data.totalCount === 0 ? (
           <div className="rounded-2xl border border-dashed bg-background px-6 py-12 text-center shadow-sm">
-            <h2 className="font-semibold">{hasNoMatches ? "No results match your search." : "No deals yet"}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{hasNoMatches ? "Try another search or clear your filters." : "Create a deal to start tracking your revenue pipeline."}</p>
+            <h2 className="font-semibold">{hasNoMatches ? "No deals match your search." : "No deals yet"}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{hasNoMatches ? "Try another search or clear the filters." : "Add a deal to start tracking your revenue pipeline."}</p>
             {hasNoMatches ? <Button asChild className="mt-5"><Link href={clearHref}>Clear filters</Link></Button> : null}
           </div>
         ) : view === "pipeline" ? (

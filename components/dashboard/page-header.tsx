@@ -21,7 +21,7 @@ export function PageHeader({
     <section
       className={cn(
         "relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/25 shadow-sm",
-        compact ? "p-4 sm:p-5" : "p-6 sm:p-7",
+        compact ? "p-4 sm:p-5" : "p-5 sm:p-6",
         className,
       )}
     >
@@ -34,7 +34,7 @@ export function PageHeader({
       <div
         className={cn(
           "flex flex-col lg:flex-row lg:items-end lg:justify-between",
-          compact ? "gap-3" : "gap-5",
+          compact ? "gap-3" : "gap-4",
         )}
       >
         <div className="max-w-2xl">
@@ -46,9 +46,9 @@ export function PageHeader({
 
           <h1
             className={cn(
-              "font-display font-medium tracking-tight text-foreground",
+              "leadflow-page-title text-foreground",
               eyebrow ? "mt-3" : "mt-0",
-              compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl",
+              compact ? "text-2xl sm:text-3xl" : "sm:text-4xl",
             )}
           >
             {title}

@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-interface);
   --font-display: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -49,6 +49,14 @@
 }
 
 :root {
+  --font-interface: var(--font-geist-sans);
+  --font-display: var(--font-fraunces);
+  --type-page-title: 2rem;
+  --type-section-title: 1.25rem;
+  --type-body: 0.9375rem;
+  --type-label: 0.75rem;
+  --leading-body: 1.55;
+  --tracking-label: 0.04em;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -166,13 +174,53 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-interface), sans-serif;
+    font-size: var(--type-body);
+    line-height: var(--leading-body);
   }
   html {
     @apply font-sans;
   }
+
+  :where(
+    button,
+    input,
+    textarea,
+    select,
+    option,
+    table,
+    [role="button"],
+    [role="menu"],
+    [role="dialog"],
+    [role="tooltip"]
+  ) {
+    font-family: var(--font-interface), sans-serif;
+  }
 }
 
 @layer utilities {
+  .leadflow-page-title {
+    font-family: var(--font-display), serif;
+    font-size: var(--type-page-title);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+
+  .leadflow-section-title {
+    font-family: var(--font-display), serif;
+    font-size: var(--type-section-title);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+
+  .leadflow-label {
+    font-size: var(--type-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+  }
+
   .leadflow-load-in {
     opacity: 0;
     transform: translateY(16px);

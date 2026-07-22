@@ -26,13 +26,13 @@ export function EmptyLeadsState({
         </div>
 
         <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
-          {hasFilters ? "No results match your search." : "Your pipeline is empty"}
+          {hasFilters ? "No leads match your search." : "No leads yet"}
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {hasFilters
             ? "Try another search or clear your filters."
-            : "Start by adding your first lead. Once records are in, you can sort, filter, and manage them from one table."}
+            : "Add a lead to start your pipeline. You can update it as the conversation progresses."}
         </p>
 
         <div className="mt-6 flex items-center justify-center">
@@ -54,10 +54,10 @@ export function EmptyLeadsState({
           <div className="mt-8 rounded-2xl border bg-muted/30 px-4 py-3 text-left">
             <p className="flex items-center gap-2 text-sm font-medium text-foreground">
               <ListChecks className="h-4 w-4 text-muted-foreground" />
-              Tips for a clean start
+              A useful first record
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Capture name, stage, and source first. You can enrich details later without slowing intake.
+              Start with a name, stage, and source. Add detail when you have it.
             </p>
           </div>
         ) : null}

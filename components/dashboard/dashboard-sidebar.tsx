@@ -55,8 +55,8 @@ function NavigationLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex min-h-10 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        collapsed ? "justify-center px-0" : "gap-3 px-3",
+        "group flex h-11 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        collapsed ? "justify-center px-0" : "gap-2.5 px-2.5",
         active
           ? "bg-primary/10 text-primary ring-1 ring-primary/15"
           : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
@@ -101,7 +101,7 @@ function SidebarSection({
   return (
     <div className="space-y-1">
       {label && !collapsed ? (
-        <p className="px-3 pb-1 pt-3 text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground/80 uppercase">
+        <p className="leadflow-label px-2.5 pb-1 pt-2.5 text-muted-foreground/80 uppercase">
           {label}
         </p>
       ) : label ? (
@@ -143,8 +143,8 @@ function SidebarContent({
       <div className="flex h-full min-h-0 flex-col">
         <div
           className={cn(
-            "flex h-16 shrink-0 items-center border-b",
-            collapsed ? "justify-center px-2" : "justify-between gap-3 px-4",
+            "flex h-14 shrink-0 items-center border-b",
+            collapsed ? "justify-center px-2" : "justify-between gap-2.5 px-3",
           )}
         >
           <Link
@@ -190,9 +190,9 @@ function SidebarContent({
         <nav
           aria-label="Primary navigation"
           data-testid="sidebar-navigation-scroll-region"
-          className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {sections.map((section) => (
               <SidebarSection
                 key={section}
@@ -208,8 +208,8 @@ function SidebarContent({
 
         <div
           className={cn(
-            "shrink-0 space-y-1 border-t bg-background/95 py-3",
-            collapsed ? "px-3" : "px-3",
+            "shrink-0 space-y-1 border-t bg-background/95 py-2.5",
+            "px-2.5",
           )}
           data-testid="sidebar-bottom-navigation"
         >
@@ -230,8 +230,8 @@ function SidebarContent({
                 onClick={onNavigate}
                 aria-label={collapsed ? `Profile, ${roleLabel}` : undefined}
                 className={cn(
-                  "flex min-h-11 items-center rounded-lg text-sm transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  collapsed ? "justify-center" : "gap-3 px-2",
+                  "flex h-11 items-center rounded-lg text-sm transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  collapsed ? "justify-center" : "gap-2.5 px-2",
                 )}
               >
                 <Avatar size="sm" className={cn(!collapsed && "size-8")}>
@@ -272,7 +272,7 @@ export function DashboardSidebar({
       <aside
         className={cn(
           "relative hidden h-dvh shrink-0 border-r bg-background/95 backdrop-blur transition-[width] duration-300 ease-in-out lg:block",
-          collapsed ? "w-[4.5rem]" : "w-64",
+          collapsed ? "w-[4.5rem]" : "w-[18.5rem]",
         )}
         data-testid="desktop-sidebar"
       >
