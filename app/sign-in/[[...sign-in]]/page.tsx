@@ -6,12 +6,18 @@ import { Button } from "@/components/ui/button";
 type SignInPageProps = {
   searchParams?: Promise<{
     demo?: string;
+    redirectTo?: string;
   }>;
 };
+
+function getSafeRedirectPath(value: string | undefined) {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
+}
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = (await searchParams) ?? {};
   const demoUnavailable = params.demo === "unavailable";
+  const redirectTo = getSafeRedirectPath(params.redirectTo);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
@@ -47,9 +53,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <SignIn
           path="/sign-in"
           routing="path"
-          signUpUrl="/sign-up"
-          fallbackRedirectUrl="/dashboard"
-          forceRedirectUrl="/dashboard"
+          signUpUrl={`/sign-up?redirectTo=${encodeURIComponent(redirectTo)}`}
+          fallbackRedirectUrl={redirectTo}
+          forceRedirectUrl={redirectTo}
         />
       </div>
     </main>

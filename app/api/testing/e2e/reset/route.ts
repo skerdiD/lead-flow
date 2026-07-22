@@ -12,6 +12,7 @@ import {
   leadNotes,
   leads,
   notifications,
+  workspaceInvitations,
 } from "@/db/schema";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
   await db.delete(notifications).where(eq(notifications.userId, userId));
   await db.delete(leadNotes).where(eq(leadNotes.userId, userId));
   await db.delete(activityEvents).where(eq(activityEvents.userId, userId));
+  await db.delete(workspaceInvitations).where(eq(workspaceInvitations.createdByUserId, userId));
   await db.delete(crmTasks).where(eq(crmTasks.userId, userId));
   await db.delete(deals).where(eq(deals.userId, userId));
   await db.delete(leads).where(eq(leads.userId, userId));

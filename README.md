@@ -190,7 +190,17 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 DATABASE_URL=
 ARCJET_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="LeadFlow <team@your-domain.com>"
 ```
+
+Workspace invitations use Resend for transactional email. Add a Resend API key
+and a sender address from a verified domain before deploying. If delivery is
+temporarily unavailable, workspace owners and admins can still create an
+invitation and securely copy its one-time link from **Settings → Team**. The
+recipient can sign in or create an account with the invited email, then accept
+the invitation from that link.
 
 To enable the public role-selection demo, also configure the three dedicated
 Clerk users and explicitly turn the feature on:

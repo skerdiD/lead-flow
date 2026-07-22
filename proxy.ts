@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/demo-login",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/invite(.*)",
 ]);
 
 function e2eMiddleware(req: NextRequest) {

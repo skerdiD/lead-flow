@@ -2,7 +2,18 @@ import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { LeadFlowLogo } from "@/components/brand/lead-flow-logo";
 
-export default function SignUpPage() {
+type SignUpPageProps = {
+  searchParams?: Promise<{ redirectTo?: string }>;
+};
+
+function getSafeRedirectPath(value: string | undefined) {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
+}
+
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const params = (await searchParams) ?? {};
+  const redirectTo = getSafeRedirectPath(params.redirectTo);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <div className="w-full max-w-md">
@@ -15,9 +26,9 @@ export default function SignUpPage() {
         <SignUp
           path="/sign-up"
           routing="path"
-          signInUrl="/sign-in"
-          fallbackRedirectUrl="/dashboard"
-          forceRedirectUrl="/dashboard"
+          signInUrl={`/sign-in?redirectTo=${encodeURIComponent(redirectTo)}`}
+          fallbackRedirectUrl={redirectTo}
+          forceRedirectUrl={redirectTo}
         />
       </div>
     </main>

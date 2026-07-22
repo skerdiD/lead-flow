@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Trash2, UserPlus, UsersRound } from "lucide-react";
+import { Check, Copy, Loader2, Trash2, UserPlus, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteWorkspaceAction,
@@ -75,6 +75,8 @@ export function TeamMembersSection({
 }: TeamMembersSectionProps) {
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<WorkspaceTeamMember | null>(null);
   const [transferTarget, setTransferTarget] = useState<WorkspaceTeamMember | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -94,6 +96,34 @@ export function TeamMembersSection({
     });
   };
 
+  const submitInvitation = () => {
+    setInviteLink(null);
+    setInviteLinkCopied(false);
+    startTransition(async () => {
+      const result = await inviteWorkspaceMemberAction({ email, role: inviteRole });
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      setEmail("");
+      setInviteLink(result.inviteUrl ?? null);
+    });
+  };
+
+  const copyInviteLink = async () => {
+    if (!inviteLink) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteLinkCopied(true);
+      toast.success("Invite link copied.");
+    } catch {
+      toast.error("Copy the invite link manually.");
+    }
+  };
+
   return (
     <section className="rounded-3xl border bg-background p-6 shadow-sm">
       <div className="flex items-start gap-4">
@@ -111,10 +141,7 @@ export function TeamMembersSection({
               className="mt-6 grid gap-3 rounded-2xl border bg-muted/20 p-4 md:grid-cols-[minmax(0,1fr)_150px_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
-                run(
-                  () => inviteWorkspaceMemberAction({ email, role: inviteRole }),
-                  () => setEmail(""),
-                );
+                submitInvitation();
               }}
             >
               <div className="space-y-2">
@@ -143,6 +170,20 @@ export function TeamMembersSection({
                 Invite
               </Button>
             </form>
+          ) : null}
+
+          {inviteLink ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="status">
+              <p className="font-medium">Email delivery is unavailable</p>
+              <p className="mt-1 leading-6">Share this one-time invitation link securely. It expires in seven days and grants the selected workspace role.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Input aria-label="Invite link" value={inviteLink} readOnly className="bg-background font-mono text-xs" />
+                <Button type="button" variant="outline" onClick={copyInviteLink} className="shrink-0">
+                  {inviteLinkCopied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                  {inviteLinkCopied ? "Copied" : "Copy link"}
+                </Button>
+              </div>
+            </div>
           ) : null}
 
           <div className="mt-5 flex min-w-0 flex-col gap-2 rounded-2xl border bg-muted/20 p-3 sm:flex-row sm:items-center" data-testid="team-filter-toolbar">

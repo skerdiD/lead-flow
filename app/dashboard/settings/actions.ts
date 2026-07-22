@@ -31,7 +31,11 @@ import {
   updateWorkspaceMemberRoleSchema,
 } from "@/lib/validations/workspace";
 import { getCurrentWorkspace } from "@/lib/workspaces";
-import { sendWorkspaceInvitationEmail } from "@/lib/workspace-invitations-email";
+import {
+  buildWorkspaceInvitationUrl,
+  sendWorkspaceInvitationEmail,
+  WorkspaceInvitationEmailError,
+} from "@/lib/workspace-invitations-email";
 import {
   WorkspaceOwnershipError,
   transferWorkspaceOwnershipInTransaction,
@@ -40,7 +44,9 @@ import { writeAuditEvent } from "@/lib/audit-log.server";
 import { getRequestId } from "@/lib/request-context.server";
 import { logger } from "@/lib/logger.server";
 
-type WorkspaceActionState = { success: true; message: string } | { success: false; message: string };
+type WorkspaceActionState =
+  | { success: true; message: string; inviteUrl?: string }
+  | { success: false; message: string };
 
 const INVITATION_EXPIRY_DAYS = 7;
 
@@ -136,9 +142,11 @@ export async function inviteWorkspaceMemberAction(input: {
     const now = new Date();
     const token = randomBytes(32).toString("base64url");
     const tokenHash = hashInvitationToken(token);
+    const inviteUrl = buildWorkspaceInvitationUrl(token);
     const expiresAt = new Date(now.getTime() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
     const requestId = await getRequestId();
+    let replacedPendingInvitation = false;
     await db.transaction(async (tx) => {
       await tx
         .update(workspaceInvitations)
@@ -165,7 +173,16 @@ export async function inviteWorkspaceMemberAction(input: {
         .limit(1);
 
       if (pendingInvitation) {
-        throw new Error("A pending invitation already exists for this email address.");
+        replacedPendingInvitation = true;
+        await tx
+          .update(workspaceInvitations)
+          .set({ status: "revoked" })
+          .where(
+            and(
+              eq(workspaceInvitations.id, pendingInvitation.id),
+              eq(workspaceInvitations.status, "pending"),
+            ),
+          );
       }
 
       const [invitation] = await tx.insert(workspaceInvitations).values({
@@ -183,12 +200,15 @@ export async function inviteWorkspaceMemberAction(input: {
       });
     });
 
-    const inviter = await currentUser();
+    // The invitation remains valid even if Clerk's optional profile lookup is
+    // temporarily unavailable; use a neutral sender name in that case.
+    const inviter = await currentUser().catch(() => null);
     const inviterName =
       [inviter?.firstName, inviter?.lastName].filter(Boolean).join(" ") ||
       inviter?.username ||
       "A teammate";
 
+    let emailDelivered = true;
     try {
       await sendWorkspaceInvitationEmail({
         to: parsed.data.email,
@@ -197,15 +217,25 @@ export async function inviteWorkspaceMemberAction(input: {
         role: parsed.data.role,
         token,
       });
-    } catch {
-      await db
-        .update(workspaceInvitations)
-        .set({ status: "revoked" })
-        .where(and(eq(workspaceInvitations.tokenHash, tokenHash), eq(workspaceInvitations.status, "pending")));
-      return {
-        success: false,
-        message: "We couldn't send this invitation. Check the workspace email configuration and try again.",
-      };
+    } catch (error) {
+      emailDelivered = false;
+      logger.warn("workspace_invitation_email_unavailable", "Workspace invitation email could not be delivered; a manual link is available when the application URL is configured.", {
+        workspaceId: actor.workspace.id,
+        actorUserId: actor.userId,
+        entityType: "invitation",
+        errorCode: error instanceof WorkspaceInvitationEmailError ? error.code : "unknown",
+      });
+
+      if (!inviteUrl) {
+        await db
+          .update(workspaceInvitations)
+          .set({ status: "revoked" })
+          .where(and(eq(workspaceInvitations.tokenHash, tokenHash), eq(workspaceInvitations.status, "pending")));
+        return {
+          success: false,
+          message: "Invitation delivery needs configuration. Set NEXT_PUBLIC_APP_URL and the Resend email variables, then try again.",
+        };
+      }
     }
 
     await writeWorkspaceActivity({
@@ -216,13 +246,29 @@ export async function inviteWorkspaceMemberAction(input: {
     });
     revalidateWorkspaceSettings();
 
+    if (!emailDelivered) {
+      return {
+        success: true,
+        message: "Invitation created. Email delivery is unavailable, so share the secure invite link instead.",
+        inviteUrl: inviteUrl!,
+      };
+    }
+
     return {
       success: true,
-      message: `Invitation sent to ${parsed.data.email} as ${workspaceRoleLabels[parsed.data.role]}.`,
+      message: `${replacedPendingInvitation ? "A new invitation was sent" : "Invitation sent"} to ${parsed.data.email} as ${workspaceRoleLabels[parsed.data.role]}.`,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "We couldn't create this invitation right now. Please try again.";
-    return { success: false, message: message === "A pending invitation already exists for this email address." ? message : "We couldn't create this invitation right now. Please try again." };
+    logger.error("workspace_invitation_creation_failed", "Workspace invitation could not be finalized.", {
+      workspaceId: actor.workspace.id,
+      actorUserId: actor.userId,
+      entityType: "invitation",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorCode: typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+        ? error.code
+        : undefined,
+    });
+    return { success: false, message: "We couldn't create this invitation right now. Please try again." };
   }
 }
 
