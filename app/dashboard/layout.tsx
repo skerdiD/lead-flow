@@ -7,7 +7,6 @@ import {
   workspaceRoleLabels,
 } from "@/lib/authorization";
 import { isDemoWorkspace } from "@/lib/demo";
-import { getNotificationDropdownData } from "@/lib/notifications";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
 type DashboardLayoutProps = {
@@ -17,10 +16,7 @@ type DashboardLayoutProps = {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  const [workspace, notificationData] = await Promise.all([
-    getCurrentWorkspace(),
-    getNotificationDropdownData(),
-  ]);
+  const workspace = await getCurrentWorkspace();
 
   return (
     <>
@@ -34,9 +30,6 @@ export default async function DashboardLayout({
           isDemoWorkspace: isDemoWorkspace(workspace),
         }}
         roleLabel={workspaceRoleLabels[workspace.role]}
-        initialNotifications={notificationData.notifications}
-        initialUnreadNotificationCount={notificationData.unreadCount}
-        notificationReferenceTime={notificationData.referenceTime}
       >
         {children}
       </DashboardShell>

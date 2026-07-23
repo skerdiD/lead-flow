@@ -10,7 +10,6 @@ import {
 import { GlobalCreateMenu } from "@/components/dashboard/global-create-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Badge } from "@/components/ui/badge";
-import type { NotificationListItem } from "@/lib/notifications-types";
 
 type DashboardTopbarProps = {
   onOpenSidebar: () => void;
@@ -18,9 +17,6 @@ type DashboardTopbarProps = {
   isDemoWorkspace?: boolean;
   createActions: readonly CreateAction[];
   searchSlot?: React.ReactNode;
-  initialNotifications: NotificationListItem[];
-  initialUnreadNotificationCount: number;
-  notificationReferenceTime: number;
 };
 
 export function DashboardTopbar({
@@ -29,9 +25,6 @@ export function DashboardTopbar({
   isDemoWorkspace = false,
   createActions,
   searchSlot,
-  initialNotifications,
-  initialUnreadNotificationCount,
-  notificationReferenceTime,
 }: DashboardTopbarProps) {
   const isE2ETestMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
   const pathname = usePathname();
@@ -79,11 +72,7 @@ export function DashboardTopbar({
 
           {!isDemoWorkspace ? <GlobalCreateMenu actions={createActions} /> : null}
 
-          <NotificationBell
-            initialNotifications={initialNotifications}
-            initialUnreadCount={initialUnreadNotificationCount}
-            referenceTime={notificationReferenceTime}
-          />
+          <NotificationBell />
 
           {isE2ETestMode ? (
             <div

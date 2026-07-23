@@ -23,7 +23,6 @@ import {
 } from "@/lib/constants/leads";
 import {
   getWorkspaceMemberOptions,
-  resolveWorkspaceMemberProfiles,
   type WorkspaceMemberProfile,
 } from "@/lib/workspace-member-profiles.server";
 
@@ -225,12 +224,15 @@ export function getLeadsSortOrder(
 export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsListResult> {
   const context = await getCurrentWorkspaceAuthorizationContext();
   const normalized = normalizeLeadsFilters(filters);
-  const ownerOptions = await getWorkspaceMemberOptions(
+  const ownerOptionsPromise = getWorkspaceMemberOptions(
     context.workspaceId,
     context.role === "member" ? [context.userId] : undefined,
   );
-  if (!ownerOptions.some((option) => option.userId === normalized.owner)) {
-    normalized.owner = "";
+  if (normalized.owner) {
+    const ownerOptions = await ownerOptionsPromise;
+    if (!ownerOptions.some((option) => option.userId === normalized.owner)) {
+      normalized.owner = "";
+    }
   }
   const {
     search,
@@ -259,7 +261,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
   );
   sourceConditions.push(eq(leads.isArchived, archived === "archived"));
 
-  const [[countRow], [existingCountRow], sourceRows] = await Promise.all([
+  const [[countRow], [existingCountRow], sourceRows, ownerOptions] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)` })
       .from(leads)
@@ -277,6 +279,7 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
       .where(and(...sourceConditions))
       .groupBy(sourceLabel)
       .orderBy(desc(sourceCount), asc(sourceLabel)),
+    ownerOptionsPromise,
   ]);
 
   const totalCount = Number(countRow?.count ?? 0);
@@ -311,11 +314,8 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
     .limit(pageSize)
     .offset(offset);
 
-  const memberProfiles = await resolveWorkspaceMemberProfiles(
-    context.workspaceId,
-    rows.flatMap((row) =>
-      row.assignedOwnerUserId ? [row.assignedOwnerUserId] : [],
-    ),
+  const memberProfiles = new Map<string, WorkspaceMemberProfile>(
+    ownerOptions.map(({ userId, ...profile }) => [userId, profile]),
   );
 
   return {

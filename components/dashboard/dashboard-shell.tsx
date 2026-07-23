@@ -8,7 +8,6 @@ import {
 } from "@/components/dashboard/dashboard-nav";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/dashboard/dashboard-topbar";
-import type { NotificationListItem } from "@/lib/notifications-types";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "leadflow:dashboard-sidebar-collapsed";
 const SIDEBAR_COLLAPSED_CHANGE_EVENT = "leadflow:sidebar-collapsed-change";
@@ -80,9 +79,6 @@ type DashboardShellProps = {
   roleLabel: string;
   isDemoWorkspace?: boolean;
   searchSlot?: React.ReactNode;
-  initialNotifications: NotificationListItem[];
-  initialUnreadNotificationCount: number;
-  notificationReferenceTime: number;
 };
 
 export function DashboardShell({
@@ -92,9 +88,6 @@ export function DashboardShell({
   roleLabel,
   isDemoWorkspace = false,
   searchSlot,
-  initialNotifications,
-  initialUnreadNotificationCount,
-  notificationReferenceTime,
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
@@ -159,9 +152,6 @@ export function DashboardShell({
             isDemoWorkspace={isDemoWorkspace}
             createActions={createActions}
             searchSlot={searchSlot}
-            initialNotifications={initialNotifications}
-            initialUnreadNotificationCount={initialUnreadNotificationCount}
-            notificationReferenceTime={notificationReferenceTime}
           />
 
           <main

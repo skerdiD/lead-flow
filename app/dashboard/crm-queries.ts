@@ -88,3 +88,23 @@ export async function getCrmSelectors() {
     db.select({ id: leads.id, label: leads.fullName }).from(leads).where(and(eq(leads.workspaceId, context.workspaceId), eq(leads.isArchived, false), ...getRecordVisibilityConditions(context, leads.workspaceId, leads.assignedOwnerUserId))).orderBy(asc(leads.fullName)).limit(200),
   ]); return { accounts: accountRows, contacts: contactRows, leads: leadRows };
 }
+
+export async function getCrmAccountSelectors() {
+  const context = await getCurrentWorkspaceAuthorizationContext();
+  const conditions = [
+    eq(accounts.workspaceId, context.workspaceId),
+    eq(accounts.isArchived, false),
+    ...getRecordVisibilityConditions(
+      context,
+      accounts.workspaceId,
+      accounts.assignedOwnerUserId,
+    ),
+  ];
+
+  return db
+    .select({ id: accounts.id, label: accounts.name })
+    .from(accounts)
+    .where(and(...conditions))
+    .orderBy(asc(accounts.name))
+    .limit(200);
+}

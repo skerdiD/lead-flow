@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -12,6 +12,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import {
+  getNotificationDropdownDataAction,
   markAllNotificationsAsReadAction,
   markNotificationAsReadAction,
 } from "@/app/dashboard/notifications/actions";
@@ -32,12 +33,6 @@ import {
 } from "@/lib/notifications-utils";
 import { cn } from "@/lib/utils";
 
-type NotificationBellProps = {
-  initialNotifications: NotificationListItem[];
-  initialUnreadCount: number;
-  referenceTime: number;
-};
-
 function NotificationTypeIcon({ type }: Pick<NotificationListItem, "type">) {
   const className = "h-4 w-4";
 
@@ -54,22 +49,49 @@ function NotificationTypeIcon({ type }: Pick<NotificationListItem, "type">) {
   }
 }
 
-export function NotificationBell({
-  initialNotifications,
-  initialUnreadCount,
-  referenceTime,
-}: NotificationBellProps) {
+export function NotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
-  const [displayTime, setDisplayTime] = useState(referenceTime);
+  const [notifications, setNotifications] = useState<NotificationListItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [displayTime, setDisplayTime] = useState(() => Date.now());
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const badge = formatUnreadNotificationCount(unreadCount);
 
+  const loadNotifications = useCallback(async () => {
+    if (hasLoaded || isLoading) return;
+
+    setIsLoading(true);
+    const result = await getNotificationDropdownDataAction();
+
+    if (result.success) {
+      setNotifications(result.data.notifications);
+      setUnreadCount(result.data.unreadCount);
+      setDisplayTime(result.data.referenceTime);
+    } else {
+      setError(result.message);
+    }
+
+    setHasLoaded(true);
+    setIsLoading(false);
+  }, [hasLoaded, isLoading]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void loadNotifications();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [loadNotifications]);
+
   function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) setDisplayTime(Date.now());
+    if (nextOpen) {
+      setDisplayTime(Date.now());
+      void loadNotifications();
+    }
     setOpen(nextOpen);
   }
 
@@ -169,7 +191,7 @@ export function NotificationBell({
             type="button"
             className="rounded-md text-xs font-semibold text-primary outline-none transition-colors hover:text-primary/80 focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
             onClick={handleMarkAllAsRead}
-            disabled={isPending || unreadCount === 0}
+            disabled={isPending || isLoading || unreadCount === 0}
           >
             Mark all as read
           </button>
@@ -183,14 +205,14 @@ export function NotificationBell({
           </p>
         ) : null}
 
-        {isPending ? (
+        {isPending || (isLoading && !hasLoaded) ? (
           <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground" aria-live="polite">
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
             Updating notifications…
           </div>
         ) : null}
 
-        {notifications.length === 0 ? (
+        {!isLoading && notifications.length === 0 ? (
           <NotificationEmptyState />
         ) : (
           <div className="max-h-[min(31rem,calc(100dvh-7rem))] overflow-y-auto p-1.5">

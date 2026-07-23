@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import type { CreateAction } from "@/components/dashboard/dashboard-nav";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function GlobalCreateMenu({ actions }: { actions: readonly CreateAction[] }) {
+  const router = useRouter();
+
   if (actions.length === 0) return null;
 
   return (
@@ -36,6 +39,8 @@ export function GlobalCreateMenu({ actions }: { actions: readonly CreateAction[]
             <DropdownMenuItem key={action.href} asChild className="p-0">
               <Link
                 href={action.href}
+                onMouseEnter={() => router.prefetch(action.href)}
+                onFocus={() => router.prefetch(action.href)}
                 className="flex w-full items-start gap-3 rounded-md px-2 py-2.5"
               >
                 <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">

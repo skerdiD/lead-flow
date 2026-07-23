@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { LeadFlowLogo } from "@/components/brand/lead-flow-logo";
 import {
@@ -49,10 +49,14 @@ function NavigationLink({
   onNavigate?: () => void;
 }) {
   const Icon = item.icon;
+  const router = useRouter();
+  const prefetchRoute = () => router.prefetch(item.href);
   const link = (
     <Link
       href={item.href}
       onClick={onNavigate}
+      onMouseEnter={prefetchRoute}
+      onFocus={prefetchRoute}
       aria-current={active ? "page" : undefined}
       className={cn(
         "group flex h-11 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
