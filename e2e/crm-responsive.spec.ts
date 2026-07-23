@@ -49,6 +49,11 @@ async function expectNoDocumentOverflow(page: Page) {
   expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
 }
 
+async function openGlobalCreateAction(page: Page, action: string) {
+  await page.getByRole("button", { name: "Create a CRM record" }).click();
+  await page.getByRole("menuitem", { name: action }).click();
+}
+
 test.describe("CRM responsive layouts", () => {
   test.beforeEach(async ({ request }) => {
     await resetWorkspace(request);
@@ -86,6 +91,56 @@ test.describe("CRM responsive layouts", () => {
     await expect(table.getByText("Test user")).toBeVisible();
     await expect(page.getByText("e2e-user")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Actions for Grace Kim" })).toBeVisible();
+  });
+
+  test("global create shortcuts reset the dashboard scroll and retain its chrome", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    for (const action of [
+      { label: "New lead", path: "/dashboard/leads/new" },
+      { label: "New deal", path: "/dashboard/deals/new" },
+      { label: "New account", path: "/dashboard/customers/accounts/new" },
+      { label: "New contact", path: "/dashboard/customers/contacts/new" },
+    ]) {
+      await page.goto("/dashboard/leads");
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.style.overflow))
+        .toBe("hidden");
+      const scrollFixture = await page.addStyleTag({
+        content:
+          '[data-testid="dashboard-scroll-region"] > div { height: 200vh !important; }',
+      });
+      const scrollRegion = page.getByTestId("dashboard-scroll-region");
+      await expect
+        .poll(() =>
+          scrollRegion.evaluate((element) => element.scrollHeight > element.clientHeight),
+        )
+        .toBe(true);
+      await scrollRegion.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      await expect
+        .poll(() =>
+          scrollRegion.evaluate((element) => element.scrollTop > 0),
+        )
+        .toBe(true);
+
+      await openGlobalCreateAction(page, action.label);
+
+      await expect(page).toHaveURL(new RegExp(`${action.path}$`));
+      await scrollFixture.evaluate((element) =>
+        element.parentNode?.removeChild(element),
+      );
+      await expect(page.locator("header").first()).toBeVisible();
+      await expect(page.getByTestId("desktop-sidebar")).toBeVisible();
+      await expect
+        .poll(() =>
+          scrollRegion.evaluate((element) => element.scrollTop),
+        )
+        .toBe(0);
+    }
   });
 
   test("Leads uses navigable cards without mobile page overflow", async ({ page }) => {

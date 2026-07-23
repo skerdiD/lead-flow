@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import {
   getCreateActionsForUser,
   type NavigationContext,
@@ -96,6 +97,8 @@ export function DashboardShell({
   notificationReferenceTime,
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+  const pathname = usePathname();
   const sidebarCollapsed = useSyncExternalStore(
     subscribeToSidebarCollapsedPreference,
     getSidebarCollapsedSnapshot,
@@ -107,6 +110,35 @@ export function DashboardShell({
   }
 
   const createActions = getCreateActionsForUser(navigationContext);
+
+  // The dashboard has a fixed app shell, so the document scroll position is
+  // unrelated to the content users see. Next resets document scroll for links,
+  // but keeps this nested scroll region when the shared layout is preserved.
+  // Reset both synchronously before paint so a short route never opens at the
+  // previous page's scroll offset.
+  useLayoutEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0 });
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+
+  // Keep scrolling inside the dashboard content region. This prevents a
+  // restored document position, browser back/forward navigation, or a full
+  // refresh from moving the fixed dashboard chrome out of view.
+  useLayoutEffect(() => {
+    const { documentElement, body } = document;
+    const previousDocumentOverflow = documentElement.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+
+    documentElement.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
+    return () => {
+      documentElement.style.overflow = previousDocumentOverflow;
+      body.style.overflow = previousBodyOverflow;
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 h-dvh overflow-hidden bg-gradient-to-b from-muted/35 via-muted/20 to-background">
@@ -132,7 +164,11 @@ export function DashboardShell({
             notificationReferenceTime={notificationReferenceTime}
           />
 
-          <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 sm:px-6 sm:py-7 lg:px-7 [scrollbar-gutter:stable]">
+          <main
+            ref={mainRef}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 sm:px-6 sm:py-7 lg:px-7 [scrollbar-gutter:stable]"
+            data-testid="dashboard-scroll-region"
+          >
             <div className="mx-auto w-full max-w-[1600px]">
               {children}
             </div>
