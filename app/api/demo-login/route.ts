@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { protectDemoLogin } from "@/lib/arcjet";
 import { createDemoSignInUrl, DemoLoginError } from "@/lib/demo-auth.server";
 import { isDemoRole } from "@/lib/demo";
+import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 import { logger } from "@/lib/logger.server";
 import { createRequestId, requestIdHeaders, REQUEST_ID_HEADER } from "@/lib/request-id";
+import { E2E_WORKSPACE_ROLE_COOKIE } from "@/lib/workspaces";
 
 const INVALID_DEMO_REQUEST_MESSAGE =
   "Choose one of the available demo roles to continue.";
@@ -51,6 +53,23 @@ export async function POST(request: Request) {
       { error: INVALID_DEMO_REQUEST_MESSAGE, requestId },
       { status: 400, headers: responseHeaders },
     );
+  }
+
+  // E2E mode already supplies an authenticated local test user. Avoid making
+  // the external Clerk request with the intentionally inert CI credentials;
+  // the role cookie gives tests the same authorization perspective instead.
+  if (isSafeE2ETestMode()) {
+    const response = NextResponse.json(
+      { signInUrl: "/dashboard" },
+      { headers: responseHeaders },
+    );
+    response.cookies.set(E2E_WORKSPACE_ROLE_COOKIE, role, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      path: "/",
+    });
+    return response;
   }
 
   try {

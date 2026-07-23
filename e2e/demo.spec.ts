@@ -80,6 +80,22 @@ test.describe("demo role selection", () => {
     await expect(page).toHaveURL(/\/dashboard$/);
   });
 
+  test("uses the local E2E role switch without contacting the auth provider", async ({
+    page,
+  }) => {
+    await page.goto("/demo");
+    await page.getByRole("button", { name: "Continue as Admin" }).click();
+
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect
+      .poll(async () =>
+        (await page.context().cookies()).find(
+          (cookie) => cookie.name === "leadflow_e2e_workspace_role",
+        )?.value,
+      )
+      .toBe("admin");
+  });
+
   test("stacks the role cards without horizontal overflow on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/demo");

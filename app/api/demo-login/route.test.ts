@@ -25,6 +25,7 @@ function demoRequest(payload: unknown) {
 }
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   vi.clearAllMocks();
   mocks.protectDemoLogin.mockResolvedValue({ ok: true });
   mocks.createDemoSignInUrl.mockResolvedValue(
@@ -33,6 +34,21 @@ beforeEach(() => {
 });
 
 describe("POST /api/demo-login", () => {
+  it("uses the local role override instead of Clerk in safe E2E mode", async () => {
+    vi.stubEnv("E2E_TEST_MODE", "1");
+    vi.stubEnv("E2E_TEST_SECRET", "test-secret");
+    vi.stubEnv("NODE_ENV", "test");
+
+    const response = await POST(demoRequest({ role: "admin" }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ signInUrl: "/dashboard" });
+    expect(response.headers.get("set-cookie")).toContain(
+      "leadflow_e2e_workspace_role=admin",
+    );
+    expect(mocks.createDemoSignInUrl).not.toHaveBeenCalled();
+  });
+
   it("accepts only a single allowlisted role and returns the server-created sign-in URL", async () => {
     const response = await POST(demoRequest({ role: "admin" }));
 
