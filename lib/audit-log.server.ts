@@ -1,8 +1,8 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import type { db } from "@/db";
 import { auditLogs, type workspaceRoles } from "@/db/schema";
+import type { InsertDatabaseClient } from "@/lib/db-client";
 import { redact } from "@/lib/logger.server";
 import { getRequestId } from "@/lib/request-context.server";
 
@@ -14,7 +14,6 @@ export type AuditAction = (typeof auditActions)[number];
 export type AuditEntityType = "workspace" | "member" | "invitation" | "lead" | "deal" | "account" | "contact" | "task" | "note" | "import" | "export" | "authorization";
 export type AuditActorRole = (typeof workspaceRoles)[number] | "system";
 
-type AuditTransaction = Pick<typeof db, "insert">;
 type AuditState = Record<string, unknown> | undefined;
 
 export function auditDiff(before: AuditState, after: AuditState) {
@@ -40,7 +39,7 @@ export function safeNetworkContext(request?: Request) {
 }
 
 export async function writeAuditEvent(input: {
-  tx: AuditTransaction;
+  tx: InsertDatabaseClient;
   workspaceId: string;
   actor: { userId: string; role: AuditActorRole };
   action: AuditAction;

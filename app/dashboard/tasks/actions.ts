@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
 import { db } from "@/db";
 import { activityEvents, crmTasks, leads } from "@/db/schema";
 import { protectLeadMutation } from "@/lib/arcjet";

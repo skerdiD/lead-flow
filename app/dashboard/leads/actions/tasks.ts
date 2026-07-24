@@ -6,7 +6,7 @@ import { crmTasks, deals, leads } from "@/db/schema";
 import { hasWorkspacePermission } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
-import { createNotification } from "@/lib/notifications";
+import { createNotificationBestEffort } from "@/lib/notifications";
 import { getLocalDateKey, getTaskTimelineBucket } from "@/lib/tasks";
 import {
   crmTaskFormSchema,
@@ -100,7 +100,7 @@ export async function createFollowUpTaskAction(
 
     const dueAt = parseTaskDueAt(parsed.data.dueDate);
 
-    await db.transaction(async (tx) => {
+    const notificationPlan = await db.transaction(async (tx) => {
       const [task] = await tx
         .insert(crmTasks)
         .values({
@@ -135,51 +135,43 @@ export async function createFollowUpTaskAction(
         leadName: lead.fullName,
       });
 
-      if (notificationUserId === userId) return;
+      return notificationUserId === userId
+        ? null
+        : { notificationUserId, taskId: task.id, leadName: lead.fullName, dueAt };
+    });
 
+    if (notificationPlan) {
       const actionUrl = `/dashboard/leads/${leadId}#lead-tasks`;
-      const metadata = { entityType: "task", entityId: task.id };
-
-      await createNotification({
-        client: tx,
+      const metadata = { entityType: "task", entityId: notificationPlan.taskId };
+      await createNotificationBestEffort({
         workspaceId: workspace.id,
-        userId: notificationUserId,
+        userId: notificationPlan.notificationUserId,
         type: "task_assigned",
         title: "Task assigned",
-        message: `${parsed.data.title} was assigned to you for ${lead.fullName}.`,
+        message: `${parsed.data.title} was assigned to you for ${notificationPlan.leadName}.`,
         actionUrl,
         metadata,
-        dedupeKey: `task-assigned:${task.id}`,
-      });
+        dedupeKey: `task-assigned:${notificationPlan.taskId}`,
+      }, { operation: "task.assignment.notification", entityType: "task", entityId: notificationPlan.taskId });
 
       const taskBucket = getTaskTimelineBucket(
-        { dueAt, status: "pending", completedAt: null },
+        { dueAt: notificationPlan.dueAt, status: "pending", completedAt: null },
         getLocalDateKey(),
       );
-      const dueNotificationType =
-        taskBucket === "overdue"
-          ? "task_overdue"
-          : taskBucket === "dueToday"
-            ? "task_due"
-            : null;
-
-      if (!dueNotificationType) return;
-
-      await createNotification({
-        client: tx,
-        workspaceId: workspace.id,
-        userId: notificationUserId,
-        type: dueNotificationType,
-        title: dueNotificationType === "task_overdue" ? "Task overdue" : "Task due today",
-        message:
-          dueNotificationType === "task_overdue"
-            ? `${parsed.data.title} is already past its due date.`
-            : `${parsed.data.title} is due today.`,
-        actionUrl,
-        metadata,
-        dedupeKey: `${dueNotificationType}:${task.id}`,
-      });
-    });
+      const dueNotificationType = taskBucket === "overdue" ? "task_overdue" : taskBucket === "dueToday" ? "task_due" : null;
+      if (dueNotificationType) {
+        await createNotificationBestEffort({
+          workspaceId: workspace.id,
+          userId: notificationPlan.notificationUserId,
+          type: dueNotificationType,
+          title: dueNotificationType === "task_overdue" ? "Task overdue" : "Task due today",
+          message: dueNotificationType === "task_overdue" ? `${parsed.data.title} is already past its due date.` : `${parsed.data.title} is due today.`,
+          actionUrl,
+          metadata,
+          dedupeKey: `${dueNotificationType}:${notificationPlan.taskId}`,
+        }, { operation: "task.due.notification", entityType: "task", entityId: notificationPlan.taskId });
+      }
+    }
 
     revalidateLeadPaths(leadId);
 

@@ -1,6 +1,4 @@
-import { db } from "@/db";
+import type { DatabaseClient } from "@/lib/db-client";
 
-export type LeadDbClient = Pick<
-  typeof db,
-  "delete" | "insert" | "select" | "update"
->;
+/** @deprecated Prefer the shared DatabaseClient name in new services. */
+export type LeadDbClient = DatabaseClient;

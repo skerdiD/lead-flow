@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq, inArray } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 import {

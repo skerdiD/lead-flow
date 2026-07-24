@@ -109,6 +109,7 @@ vi.mock("@/lib/workspaces", () => ({
 
 import {
   createNotification,
+  createNotificationBestEffort,
   getNotificationDropdownData,
   getUnreadNotificationCount,
   markAllNotificationsAsReadForCurrentUser,
@@ -238,5 +239,26 @@ describe("notifications", () => {
         "notifications.dedupe_key",
       ],
     });
+  });
+
+  it("does not report a completed domain mutation as failed when notification storage fails", async () => {
+    selectResults.push([{ id: "membership_123" }]);
+    insertReturningMock.mockRejectedValueOnce(new Error("notification storage unavailable"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(createNotificationBestEffort({
+      workspaceId: "11111111-1111-4111-8111-111111111111",
+      userId: "user_current",
+      type: "task_due",
+      title: "Task due today",
+      message: "Call Acme is due today.",
+      dedupeKey: `task_due:${notificationId}`,
+    }, {
+      operation: "task.due.notification",
+      entityType: "task",
+      entityId: notificationId,
+    })).resolves.toEqual({ created: false, id: null });
+
+    consoleError.mockRestore();
   });
 });

@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 import {
@@ -12,7 +12,7 @@ import { requireUserId } from "@/lib/auth";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { reportUnexpectedError } from "@/lib/error-reporting.server";
-import { createNotification } from "@/lib/notifications";
+import { createNotificationBestEffort } from "@/lib/notifications";
 import { getRequestId } from "@/lib/request-context.server";
 import {
   leadFormSchema,
@@ -269,7 +269,7 @@ export async function updateLeadAction(
       parsed.data.status,
       parsed.data.dealStage,
     );
-    const { updatedLead } = await db.transaction(async (tx) => {
+    const { updatedLead, notification } = await db.transaction(async (tx) => {
       const accountId = await saveLeadAccount({
         client: tx,
         workspaceId: workspace.id,
@@ -327,6 +327,7 @@ export async function updateLeadAction(
         return {
           updatedLead: null,
           savedDeal: null,
+          notification: null,
         };
       }
 
@@ -350,24 +351,23 @@ export async function updateLeadAction(
       });
 
       const notificationUserId = existingLead.assignedOwnerUserId ?? userId;
-      if (
+      const notification = (
         deal?.id &&
         deal.previousStage &&
         deal.previousStage !== deal.stage &&
         notificationUserId !== userId
-      ) {
-        await createNotification({
-          client: tx,
+      )
+        ? {
           workspaceId: workspace.id,
           userId: notificationUserId,
-          type: "deal_stage_changed",
+          type: "deal_stage_changed" as const,
           title: "Deal stage updated",
           message: `${parsed.data.dealName} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
           actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
           metadata: { entityType: "deal", entityId: deal.id },
           dedupeKey: `deal-stage:${deal.id}:${deal.stage}`,
-        });
-      }
+        }
+        : null;
 
       const statusChanged = existingLead.status !== lead.status;
       await createLeadActivity({
@@ -406,7 +406,7 @@ export async function updateLeadAction(
         });
       }
 
-      return { updatedLead: lead, savedDeal: deal };
+      return { updatedLead: lead, savedDeal: deal, notification };
     });
 
     if (!updatedLead) {
@@ -414,6 +414,14 @@ export async function updateLeadAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (notification) {
+      await createNotificationBestEffort(notification, {
+        operation: "lead.update.notification",
+        entityType: "lead",
+        entityId: leadId,
+      });
     }
 
 

@@ -14,15 +14,17 @@ import type {
   NotificationDropdownData,
   NotificationListItem,
 } from "@/lib/notifications-types";
+import type { DatabaseClient } from "@/lib/db-client";
+import { reportUnexpectedError } from "@/lib/error-reporting.server";
 import { isUuid } from "@/lib/uuid";
 import { requireUserId } from "@/lib/auth";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 
-type NotificationDbClient = Pick<typeof db, "insert" | "select">;
+type NotificationDbClient = Pick<DatabaseClient, "insert" | "select">;
 
 type NotificationMetadata = Record<string, string>;
 
-type CreateNotificationInput = {
+export type CreateNotificationInput = {
   workspaceId: string;
   userId: string;
   type: NotificationType;
@@ -83,11 +85,7 @@ function isValidNotificationInput(input: CreateNotificationInput) {
   );
 }
 
-/**
- * Creates a workspace-member notification from an authorized server workflow.
- * Callers may supply their current database transaction so the business event
- * and its notification commit or roll back together.
- */
+/** Low-level notification insert with recipient validation and deduplication. */
 export async function createNotification(input: CreateNotificationInput) {
   if (!isValidNotificationInput(input)) {
     throw new Error("Invalid notification input.");
@@ -134,6 +132,37 @@ export async function createNotification(input: CreateNotificationInput) {
     created: Boolean(createdNotification),
     id: createdNotification?.id ?? null,
   };
+}
+
+/**
+ * Attempts a non-critical in-app notification after the domain transaction
+ * commits. Failure is observable but never changes the completed mutation's
+ * user-visible result. The call is awaited; this is not fire-and-forget work.
+ */
+export async function createNotificationBestEffort(
+  input: Omit<CreateNotificationInput, "client">,
+  context: {
+    requestId?: string;
+    operation: string;
+    entityType: string;
+    entityId?: string;
+  },
+) {
+  try {
+    return await createNotification(input);
+  } catch (error) {
+    await reportUnexpectedError(error, {
+      event: "notification.create.failed",
+      requestId: context.requestId,
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      operation: context.operation,
+      entityType: context.entityType,
+      entityId: context.entityId,
+      errorCategory: "secondary_async_failure",
+    });
+    return { created: false, id: null } as const;
+  }
 }
 
 async function getNotificationContext() {

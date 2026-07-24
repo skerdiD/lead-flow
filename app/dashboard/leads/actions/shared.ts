@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
 import { protectLeadMutation } from "@/lib/arcjet";
 import {
   canAccessRecord,

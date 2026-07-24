@@ -11,7 +11,7 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
-import { createNotification } from "@/lib/notifications";
+import { createNotificationBestEffort } from "@/lib/notifications";
 import {
   leadFollowUpSchema,
   type LeadFollowUpValues,
@@ -121,7 +121,7 @@ export async function updateLeadStatusQuickAction(
     const syncedDealStage = hasWorkspacePermission(workspace.role, "crm:update_all")
       ? dealStageForLeadStatus(status)
       : null;
-    const { updatedLead } = await db.transaction(async (tx) => {
+    const { updatedLead, notification } = await db.transaction(async (tx) => {
       const [lead] = await tx
         .update(leads)
         .set({
@@ -144,7 +144,7 @@ export async function updateLeadStatusQuickAction(
           status: leads.status,
         });
 
-      if (!lead) return { updatedLead: null, updatedDeal: null };
+      if (!lead) return { updatedLead: null, updatedDeal: null, notification: null };
 
       await createLeadActivity({
         client: tx,
@@ -157,7 +157,7 @@ export async function updateLeadStatusQuickAction(
       });
 
       if (!syncedDealStage) {
-        return { updatedLead: lead, updatedDeal: null };
+        return { updatedLead: lead, updatedDeal: null, notification: null };
       }
 
       const [existingDeal] = await tx
@@ -173,7 +173,7 @@ export async function updateLeadStatusQuickAction(
         .limit(1);
 
       if (!existingDeal || existingDeal.stage === syncedDealStage) {
-        return { updatedLead: lead, updatedDeal: null };
+        return { updatedLead: lead, updatedDeal: null, notification: null };
       }
 
       const [deal] = await tx
@@ -194,19 +194,18 @@ export async function updateLeadStatusQuickAction(
 
       const notificationUserId =
         existingDeal.ownerUserId ?? existingLead.assignedOwnerUserId;
-      if (deal && notificationUserId && notificationUserId !== userId) {
-        await createNotification({
-          client: tx,
+      const notification = deal && notificationUserId && notificationUserId !== userId
+        ? {
           workspaceId: workspace.id,
           userId: notificationUserId,
-          type: "deal_stage_changed",
+          type: "deal_stage_changed" as const,
           title: "Deal stage updated",
           message: `${deal.name} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
           actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
           metadata: { entityType: "deal", entityId: deal.id },
           dedupeKey: `deal-stage:${deal.id}:${deal.stage}`,
-        });
-      }
+        }
+        : null;
 
       if (deal) {
         await createLeadActivity({
@@ -229,6 +228,7 @@ export async function updateLeadStatusQuickAction(
               stage: deal.stage,
             }
           : null,
+        notification,
       };
     });
 
@@ -237,6 +237,14 @@ export async function updateLeadStatusQuickAction(
         success: false,
         message: "This lead could not be found.",
       };
+    }
+
+    if (notification) {
+      await createNotificationBestEffort(notification, {
+        operation: "lead.status.notification",
+        entityType: "lead",
+        entityId: leadId,
+      });
     }
 
     revalidateLeadPaths(leadId);

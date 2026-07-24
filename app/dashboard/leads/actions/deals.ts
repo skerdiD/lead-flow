@@ -10,7 +10,7 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
-import { createNotification } from "@/lib/notifications";
+import { createNotificationBestEffort } from "@/lib/notifications";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { createLeadActivity } from "../services/activity-service";
 import {
@@ -125,7 +125,7 @@ export async function updateDealStageAction(
     )
       ? leadStatusForDealStage(stage)
       : null;
-    const { updatedDeal } = await db.transaction(async (tx) => {
+    const { updatedDeal, notification } = await db.transaction(async (tx) => {
       const [deal] = await tx
         .update(deals)
         .set({
@@ -149,19 +149,18 @@ export async function updateDealStageAction(
 
       const notificationUserId =
         existingDeal.ownerUserId ?? existingDeal.assignedOwnerUserId;
-      if (deal && notificationUserId && notificationUserId !== userId) {
-        await createNotification({
-          client: tx,
+      const notification = deal && notificationUserId && notificationUserId !== userId
+        ? {
           workspaceId: workspace.id,
           userId: notificationUserId,
-          type: "deal_stage_changed",
+          type: "deal_stage_changed" as const,
           title: "Deal stage updated",
           message: `${existingDeal.name} moved to ${DEAL_STAGE_LABELS[deal.stage]}.`,
           actionUrl: `/dashboard/leads/${leadId}#lead-deal`,
           metadata: { entityType: "deal", entityId: dealId },
           dedupeKey: `deal-stage:${dealId}:${deal.stage}`,
-        });
-      }
+        }
+        : null;
 
       if (deal) {
         await createLeadActivity({
@@ -176,7 +175,7 @@ export async function updateDealStageAction(
       }
 
       if (!deal || !syncedLeadStatus || existingDeal.leadStatus === syncedLeadStatus) {
-        return { updatedDeal: deal ?? null, updatedLead: null };
+        return { updatedDeal: deal ?? null, updatedLead: null, notification };
       }
 
       const [lead] = await tx
@@ -209,7 +208,7 @@ export async function updateDealStageAction(
         });
       }
 
-      return { updatedDeal: deal, updatedLead: lead ?? null };
+      return { updatedDeal: deal, updatedLead: lead ?? null, notification };
     });
 
     if (!updatedDeal) {
@@ -217,6 +216,14 @@ export async function updateDealStageAction(
         success: false,
         message: "This opportunity could not be found.",
       };
+    }
+
+    if (notification) {
+      await createNotificationBestEffort(notification, {
+        operation: "deal.stage.notification",
+        entityType: "deal",
+        entityId: dealId,
+      });
     }
 
     revalidateLeadPaths(leadId);

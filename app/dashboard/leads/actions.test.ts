@@ -258,6 +258,7 @@ vi.mock("@/lib/arcjet", () => ({
 
 vi.mock("@/lib/notifications", () => ({
   createNotification: createNotificationMock,
+  createNotificationBestEffort: createNotificationMock,
 }));
 
 vi.mock("@/lib/audit-log.server", () => ({
@@ -546,6 +547,7 @@ describe("lead actions", () => {
         type: "task_assigned",
         dedupeKey: "task-assigned:task_123",
       }),
+      expect.objectContaining({ operation: "task.assignment.notification" }),
     );
     expect(createNotificationMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -553,6 +555,7 @@ describe("lead actions", () => {
         type: "task_overdue",
         dedupeKey: "task_overdue:task_123",
       }),
+      expect.objectContaining({ operation: "task.due.notification" }),
     );
   });
 
@@ -580,6 +583,7 @@ describe("lead actions", () => {
         type: "deal_stage_changed",
         dedupeKey: "deal-stage:22222222-2222-4222-8222-222222222222:proposal",
       }),
+      expect.objectContaining({ operation: "deal.stage.notification" }),
     );
   });
 

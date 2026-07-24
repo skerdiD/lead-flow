@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from "crypto";
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { and, eq, lt } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
 import { db } from "@/db";
 import {
   accounts,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
+import type { InsertDatabaseClient } from "@/lib/db-client";
 import {
   deleteWorkspaceSchema,
   inviteWorkspaceMemberSchema,
@@ -60,6 +61,7 @@ function revalidateWorkspaceSettings() {
 }
 
 async function writeWorkspaceActivity(params: {
+  client: InsertDatabaseClient;
   workspaceId: string;
   userId: string;
   eventType:
@@ -69,7 +71,7 @@ async function writeWorkspaceActivity(params: {
     | "ownership_transferred";
   message: string;
 }) {
-  await db.insert(activityEvents).values({
+  await params.client.insert(activityEvents).values({
     workspaceId: params.workspaceId,
     userId: params.userId,
     eventType: params.eventType,
@@ -198,6 +200,13 @@ export async function inviteWorkspaceMemberAction(input: {
         action: "member.invited", entity: { type: "invitation", id: invitation!.id },
         after: { role: parsed.data.role }, metadata: { invitedEmail: parsed.data.email }, requestId,
       });
+      await writeWorkspaceActivity({
+        client: tx,
+        workspaceId: actor.workspace.id,
+        userId: actor.userId,
+        eventType: "member_invited",
+        message: `Invited ${parsed.data.email} as ${workspaceRoleLabels[parsed.data.role]}.`,
+      });
     });
 
     // The invitation remains valid even if Clerk's optional profile lookup is
@@ -238,12 +247,6 @@ export async function inviteWorkspaceMemberAction(input: {
       }
     }
 
-    await writeWorkspaceActivity({
-      workspaceId: actor.workspace.id,
-      userId: actor.userId,
-      eventType: "member_invited",
-      message: `Invited ${parsed.data.email} as ${workspaceRoleLabels[parsed.data.role]}.`,
-    });
     revalidateWorkspaceSettings();
 
     if (!emailDelivered) {
@@ -311,18 +314,15 @@ export async function updateWorkspaceMemberRoleAction(input: {
         ),
       )
       .returning({ id: workspaceMembers.id });
-      if (changed) await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.role_changed", entity: { type: "member", id: target.id }, before: { role: target.role }, after: { role: parsed.data.role }, requestId });
+      if (changed) {
+        await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.role_changed", entity: { type: "member", id: target.id }, before: { role: target.role }, after: { role: parsed.data.role }, requestId });
+        await writeWorkspaceActivity({ client: tx, workspaceId: actor.workspace.id, userId: actor.userId, eventType: "member_role_changed", message: `A team member was changed from ${workspaceRoleLabels[target.role]} to ${workspaceRoleLabels[parsed.data.role]}.` });
+      }
       return changed;
     });
 
     if (!updated) return { success: false, message: "This team member could not be found." };
 
-    await writeWorkspaceActivity({
-      workspaceId: actor.workspace.id,
-      userId: actor.userId,
-      eventType: "member_role_changed",
-      message: `A team member was changed from ${workspaceRoleLabels[target.role]} to ${workspaceRoleLabels[parsed.data.role]}.`,
-    });
     revalidateWorkspaceSettings();
     return { success: true, message: "Team member role updated." };
   } catch {
@@ -371,7 +371,10 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
         tx.update(deals).set({ ownerUserId: null, updatedAt: new Date() }).where(and(eq(deals.workspaceId, actor.workspace.id), eq(deals.ownerUserId, target.userId))),
         tx.update(crmTasks).set({ ownerUserId: null, updatedAt: new Date() }).where(and(eq(crmTasks.workspaceId, actor.workspace.id), eq(crmTasks.ownerUserId, target.userId))),
       ]);
-      if (deleted) await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.removed", entity: { type: "member", id: target.id }, before: { role: target.role, assignments: "unassigned" }, requestId });
+      if (deleted) {
+        await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "member.removed", entity: { type: "member", id: target.id }, before: { role: target.role, assignments: "unassigned" }, requestId });
+        await writeWorkspaceActivity({ client: tx, workspaceId: actor.workspace.id, userId: actor.userId, eventType: "member_removed", message: "A team member was removed from the workspace." });
+      }
       return deleted;
     });
 
@@ -381,12 +384,6 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
         message: "This team member changed before they could be removed.",
       };
     }
-    await writeWorkspaceActivity({
-      workspaceId: actor.workspace.id,
-      userId: actor.userId,
-      eventType: "member_removed",
-      message: "A team member was removed from the workspace.",
-    });
     revalidateWorkspaceSettings();
     return { success: true, message: "Team member removed and their CRM assignments were set to Unassigned." };
   } catch {
@@ -552,7 +549,20 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
     });
 
     const { setActiveWorkspace } = await import("@/lib/workspaces");
-    await setActiveWorkspace(accepted.workspaceId);
+    try {
+      await setActiveWorkspace(accepted.workspaceId);
+    } catch (error) {
+      logger.warn("workspace_activation_failed", "The accepted workspace could not be activated automatically.", {
+        workspaceId: accepted.workspaceId,
+        actorUserId: userId,
+        entityType: "workspace",
+        operation: "workspace.activate_after_invitation",
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorCategory: "secondary_async_failure",
+      });
+      revalidateWorkspaceSettings();
+      return { success: true, message: "You joined the workspace. Refresh and select it to continue." };
+    }
     revalidateWorkspaceSettings();
     return { success: true, message: "You joined the workspace." };
   } catch (error) {
