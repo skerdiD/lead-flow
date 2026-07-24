@@ -440,9 +440,31 @@ export async function deleteWorkspaceAction(input: { confirmationName: string })
   try {
     const requestId = await getRequestId();
     const deleted = await db.transaction(async (tx) => {
+      const [lockedWorkspace] = await tx
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(eq(workspaces.id, actor.workspace.id))
+        .for("update")
+        .limit(1);
+      if (!lockedWorkspace) return null;
+
+      const [owner] = await tx
+        .select({ id: workspaceMembers.id })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, actor.workspace.id),
+            eq(workspaceMembers.userId, actor.userId),
+            eq(workspaceMembers.role, "owner"),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      if (!owner) return null;
+
       await writeAuditEvent({ tx, workspaceId: actor.workspace.id, actor: { userId: actor.userId, role: actor.workspace.role }, action: "workspace.deleted", entity: { type: "workspace", id: actor.workspace.id }, before: { name: actor.workspace.name }, requestId });
       const [removed] = await tx.delete(workspaces)
-      .where(and(eq(workspaces.id, actor.workspace.id), eq(workspaces.ownerUserId, actor.userId)))
+      .where(eq(workspaces.id, actor.workspace.id))
       .returning({ id: workspaces.id });
       return removed;
     });

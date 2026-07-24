@@ -49,8 +49,8 @@ describeDatabase("workspace relationship integrity", () => {
     try {
       await client.query("BEGIN");
       const workspaceResult = await client.query<{ id: string }>(
-        "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
-        [userId, `Tenant integrity ${label} ${randomUUID()}`],
+        "INSERT INTO workspaces (name) VALUES ($1) RETURNING id",
+        [`Tenant integrity ${label} ${randomUUID()}`],
       );
       const workspaceId = workspaceResult.rows[0]!.id;
 

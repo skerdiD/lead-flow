@@ -20,10 +20,7 @@ export async function transferWorkspaceOwnershipInTransaction(
   },
 ) {
   const [workspace] = await tx
-    .select({
-      id: workspaces.id,
-      ownerUserId: workspaces.ownerUserId,
-    })
+    .select({ id: workspaces.id })
     .from(workspaces)
     .where(eq(workspaces.id, input.workspaceId))
     .for("update")
@@ -31,12 +28,6 @@ export async function transferWorkspaceOwnershipInTransaction(
 
   if (!workspace) {
     throw new WorkspaceOwnershipError("This workspace could not be found.");
-  }
-
-  if (workspace.ownerUserId !== input.actorUserId) {
-    throw new WorkspaceOwnershipError(
-      "You are no longer the owner of this workspace.",
-    );
   }
 
   const ownerMemberships = await tx
@@ -58,7 +49,7 @@ export async function transferWorkspaceOwnershipInTransaction(
   if (
     ownerMemberships.length !== 1 ||
     !currentOwner ||
-    currentOwner.userId !== workspace.ownerUserId ||
+    currentOwner.userId !== input.actorUserId ||
     currentOwner.role !== "owner"
   ) {
     throw new WorkspaceOwnershipError(
@@ -88,7 +79,7 @@ export async function transferWorkspaceOwnershipInTransaction(
     );
   }
 
-  if (target.userId === workspace.ownerUserId || target.role === "owner") {
+  if (target.userId === currentOwner.userId || target.role === "owner") {
     throw new WorkspaceOwnershipError("This person is already the workspace owner.");
   }
 
@@ -135,13 +126,8 @@ export async function transferWorkspaceOwnershipInTransaction(
 
   const [updatedWorkspace] = await tx
     .update(workspaces)
-    .set({ ownerUserId: target.userId, updatedAt: new Date() })
-    .where(
-      and(
-        eq(workspaces.id, input.workspaceId),
-        eq(workspaces.ownerUserId, input.actorUserId),
-      ),
-    )
+    .set({ updatedAt: new Date() })
+    .where(eq(workspaces.id, input.workspaceId))
     .returning({ id: workspaces.id });
 
   if (!updatedWorkspace) {

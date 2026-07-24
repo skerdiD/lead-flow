@@ -7,6 +7,10 @@ import {
   WorkspaceOwnershipError,
   transferWorkspaceOwnershipInTransaction,
 } from "@/lib/workspace-ownership";
+import {
+  createWorkspaceWithOwnerInTransaction,
+  ensureWorkspaceForOwnerInTransaction,
+} from "@/lib/workspace-creation";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -53,33 +57,19 @@ describeDatabase("workspace ownership integrity", () => {
 
   async function createWorkspace(label: string): Promise<WorkspaceFixture> {
     const ownerUserId = `ownership-owner-${randomUUID()}`;
-    const client = await pool.connect();
-
-    try {
-      await client.query("BEGIN");
-      const workspace = await client.query<{ id: string }>(
-        "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
-        [ownerUserId, `Ownership ${label} ${randomUUID()}`],
-      );
-      const workspaceId = workspace.rows[0]!.id;
-      const member = await client.query<{ id: string }>(
-        "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner') RETURNING id",
-        [workspaceId, ownerUserId],
-      );
-      await client.query("COMMIT");
-      createdWorkspaceIds.push(workspaceId);
-
-      return {
-        id: workspaceId,
+    const workspace = await database.transaction((tx) =>
+      createWorkspaceWithOwnerInTransaction(tx, {
+        name: `Ownership ${label} ${randomUUID()}`,
         ownerUserId,
-        ownerMemberId: member.rows[0]!.id,
-      };
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+      }),
+    );
+    createdWorkspaceIds.push(workspace.id);
+
+    return {
+      id: workspace.id,
+      ownerUserId,
+      ownerMemberId: workspace.owner.memberId,
+    };
   }
 
   async function addMember(
@@ -111,7 +101,7 @@ describeDatabase("workspace ownership integrity", () => {
 
   async function expectOwnerProtection(
     query: Promise<unknown>,
-    expectedCode: "P0001" | "23503",
+    expectedCode: "P0001",
   ) {
     try {
       await query;
@@ -123,6 +113,90 @@ describeDatabase("workspace ownership integrity", () => {
     }
   }
 
+  it("creates a workspace and its owner membership atomically", async () => {
+    const ownerUserId = `personal-owner-${randomUUID()}`;
+    const name = `Personal Workspace ${randomUUID()}`;
+    const workspace = await database.transaction((tx) =>
+      createWorkspaceWithOwnerInTransaction(tx, { name, ownerUserId }),
+    );
+    createdWorkspaceIds.push(workspace.id);
+
+    const state = await pool.query<{
+      workspace_id: string;
+      name: string;
+      user_id: string;
+      role: string;
+    }>(
+      `SELECT workspace.id AS workspace_id, workspace.name, member.user_id, member.role
+       FROM workspaces workspace
+       INNER JOIN workspace_members member ON member.workspace_id = workspace.id
+       WHERE workspace.id = $1`,
+      [workspace.id],
+    );
+
+    expect(state.rows).toEqual([
+      {
+        workspace_id: workspace.id,
+        name,
+        user_id: ownerUserId,
+        role: "owner",
+      },
+    ]);
+  });
+
+  it("rolls back workspace creation when the owner membership fails", async () => {
+    const name = `Rollback workspace ${randomUUID()}`;
+
+    await expect(
+      database.transaction((tx) =>
+        createWorkspaceWithOwnerInTransaction(tx, {
+          name,
+          ownerUserId: "x".repeat(256),
+        }),
+      ),
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "22001" }),
+    });
+
+    const workspace = await pool.query("SELECT id FROM workspaces WHERE name = $1", [name]);
+    expect(workspace.rows).toHaveLength(0);
+  });
+
+  it("serializes concurrent personal workspace creation", async () => {
+    const ownerUserId = `concurrent-personal-owner-${randomUUID()}`;
+    const name = `Personal Workspace ${randomUUID()}`;
+    const create = () =>
+      database.transaction((tx) =>
+        ensureWorkspaceForOwnerInTransaction(tx, { name, ownerUserId }),
+      );
+
+    const [first, second] = await Promise.all([create(), create()]);
+    createdWorkspaceIds.push(first.id);
+
+    expect(second.id).toBe(first.id);
+    const workspacesForOwner = await pool.query(
+      `SELECT workspace.id
+       FROM workspaces workspace
+       INNER JOIN workspace_members owner
+         ON owner.workspace_id = workspace.id
+        AND owner.role = 'owner'
+       WHERE workspace.name = $1 AND owner.user_id = $2`,
+      [name, ownerUserId],
+    );
+    expect(workspacesForOwner.rows).toHaveLength(1);
+  });
+
+  it("rejects a workspace committed without an owner", async () => {
+    const name = `Ownerless workspace ${randomUUID()}`;
+
+    await expect(
+      pool.query("INSERT INTO workspaces (name) VALUES ($1)", [name]),
+    ).rejects.toMatchObject({ code: "P0001" });
+
+    const workspace = await pool.query("SELECT id FROM workspaces WHERE name = $1", [name]);
+    expect(workspace.rows).toHaveLength(0);
+  });
+
   it("transfers ownership atomically and records an audit event", async () => {
     const workspace = await createWorkspace("success");
     const target = await addMember(workspace.id, "admin");
@@ -132,26 +206,19 @@ describeDatabase("workspace ownership integrity", () => {
       newOwnerUserId: target.userId,
     });
 
-    const [state, audit] = await Promise.all([
-      pool.query<{ owner_user_id: string }>(
-        "SELECT owner_user_id FROM workspaces WHERE id = $1",
-        [workspace.id],
-      ),
-      pool.query<{ user_id: string; role: string }>(
-        "SELECT user_id, role FROM workspace_members WHERE workspace_id = $1 ORDER BY user_id",
-        [workspace.id],
-      ),
-    ]);
-    const ownerCount = audit.rows.filter((member) => member.role === "owner");
+    const memberships = await pool.query<{ user_id: string; role: string }>(
+      "SELECT user_id, role FROM workspace_members WHERE workspace_id = $1 ORDER BY user_id",
+      [workspace.id],
+    );
+    const owners = memberships.rows.filter((member) => member.role === "owner");
     const event = await pool.query<{ event_type: string }>(
       "SELECT event_type FROM activity_events WHERE workspace_id = $1 AND event_type = 'ownership_transferred'",
       [workspace.id],
     );
 
-    expect(state.rows[0]?.owner_user_id).toBe(target.userId);
-    expect(audit.rows.find((member) => member.user_id === workspace.ownerUserId)?.role).toBe("admin");
-    expect(audit.rows.find((member) => member.user_id === target.userId)?.role).toBe("owner");
-    expect(ownerCount).toHaveLength(1);
+    expect(memberships.rows.find((member) => member.user_id === workspace.ownerUserId)?.role).toBe("admin");
+    expect(memberships.rows.find((member) => member.user_id === target.userId)?.role).toBe("owner");
+    expect(owners).toHaveLength(1);
     expect(event.rows).toHaveLength(1);
   });
 
@@ -194,7 +261,7 @@ describeDatabase("workspace ownership integrity", () => {
       pool.query("DELETE FROM workspace_members WHERE id = $1", [
         workspace.ownerMemberId,
       ]),
-      "23503",
+      "P0001",
     );
 
     await expect(
@@ -240,16 +307,11 @@ describeDatabase("workspace ownership integrity", () => {
       "SELECT user_id, role FROM workspace_members WHERE workspace_id = $1",
       [workspace.id],
     );
-    const workspaceState = await pool.query<{ owner_user_id: string }>(
-      "SELECT owner_user_id FROM workspaces WHERE id = $1",
-      [workspace.id],
-    );
     const events = await pool.query(
       "SELECT id FROM activity_events WHERE workspace_id = $1 AND event_type = 'ownership_transferred'",
       [workspace.id],
     );
 
-    expect(workspaceState.rows[0]?.owner_user_id).toBe(workspace.ownerUserId);
     expect(memberships.rows.find((member) => member.user_id === workspace.ownerUserId)?.role).toBe("owner");
     expect(memberships.rows.find((member) => member.user_id === target.userId)?.role).toBe("member");
     expect(events.rows).toHaveLength(0);
@@ -268,20 +330,13 @@ describeDatabase("workspace ownership integrity", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
 
-    const [workspaceState, memberships] = await Promise.all([
-      pool.query<{ owner_user_id: string }>(
-        "SELECT owner_user_id FROM workspaces WHERE id = $1",
-        [workspace.id],
-      ),
-      pool.query<{ user_id: string; role: string }>(
-        "SELECT user_id, role FROM workspace_members WHERE workspace_id = $1",
-        [workspace.id],
-      ),
-    ]);
+    const memberships = await pool.query<{ user_id: string; role: string }>(
+      "SELECT user_id, role FROM workspace_members WHERE workspace_id = $1",
+      [workspace.id],
+    );
     const owners = memberships.rows.filter((member) => member.role === "owner");
 
     expect(owners).toHaveLength(1);
-    expect(workspaceState.rows[0]?.owner_user_id).toBe(owners[0]?.user_id);
     expect(memberships.rows.find((member) => member.user_id === workspace.ownerUserId)?.role).toBe("admin");
   });
 });

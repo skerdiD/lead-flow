@@ -103,20 +103,20 @@ export async function createDemoSignInUrl(role: DemoRole) {
     ]);
 
     const [workspace] = await db
-      .select({
-        id: workspaces.id,
-        ownerUserId: workspaces.ownerUserId,
-      })
+      .select({ id: workspaces.id })
       .from(workspaces)
-      .where(
+      .innerJoin(
+        workspaceMembers,
         and(
-          eq(workspaces.name, DEMO_WORKSPACE_NAME),
-          eq(workspaces.ownerUserId, owner.id),
+          eq(workspaceMembers.workspaceId, workspaces.id),
+          eq(workspaceMembers.userId, owner.id),
+          eq(workspaceMembers.role, "owner"),
         ),
       )
+      .where(eq(workspaces.name, DEMO_WORKSPACE_NAME))
       .limit(1);
 
-    if (!workspace || workspace.ownerUserId !== owner.id) {
+    if (!workspace) {
       throw new DemoLoginError(503, "Configured demo workspace is missing.");
     }
 

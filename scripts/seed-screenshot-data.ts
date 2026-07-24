@@ -11,7 +11,6 @@ import {
   leadNotes,
   leads,
   notifications,
-  workspaceMembers,
   workspaces,
   type dealStages,
   type leadStatuses,
@@ -19,6 +18,7 @@ import {
   type taskStatuses,
 } from "../db/schema";
 import { DEAL_STAGE_LABELS } from "../lib/constants/crm";
+import { ensureWorkspaceForOwnerInTransaction } from "../lib/workspace-creation";
 
 loadEnvConfig(process.cwd());
 
@@ -624,31 +624,10 @@ async function main() {
 
   try {
     const result = await db.transaction(async (tx) => {
-      await tx
-        .insert(workspaces)
-        .values({
-          ownerUserId: userId,
-          name: DEMO_WORKSPACE_NAME,
-        })
-        .onConflictDoNothing({ target: [workspaces.ownerUserId, workspaces.name] });
-
-      const [workspace] = await tx
-        .select({
-          id: workspaces.id,
-          name: workspaces.name,
-        })
-        .from(workspaces)
-        .where(
-          and(
-            eq(workspaces.ownerUserId, userId),
-            eq(workspaces.name, DEMO_WORKSPACE_NAME),
-          ),
-        )
-        .limit(1);
-
-      if (!workspace) {
-        throw new Error(`Unable to resolve workspace for Clerk user ${userId}.`);
-      }
+      const workspace = await ensureWorkspaceForOwnerInTransaction(tx, {
+        name: DEMO_WORKSPACE_NAME,
+        ownerUserId: userId,
+      });
 
       const seedEmails = seedLeads.map((lead) => lead.email);
       const seedCompanies = seedLeads.map((lead) => lead.company);
@@ -686,17 +665,6 @@ async function main() {
           .where(eq(workspaces.id, workspace.id));
         workspaceName = DEMO_WORKSPACE_NAME;
       }
-
-      await tx
-        .insert(workspaceMembers)
-        .values({
-          workspaceId: workspace.id,
-          userId,
-          role: "owner",
-        })
-        .onConflictDoNothing({
-          target: [workspaceMembers.workspaceId, workspaceMembers.userId],
-        });
 
       const existingSeedLeads = await tx
         .select({

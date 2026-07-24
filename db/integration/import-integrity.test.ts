@@ -36,8 +36,8 @@ describeDatabase("CSV import persistence integrity", () => {
     try {
       await client.query("BEGIN");
       const created = await client.query<{ id: string }>(
-        "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
-        [userId, `Import test ${randomUUID()}`],
+        "INSERT INTO workspaces (name) VALUES ($1) RETURNING id",
+        [`Import test ${randomUUID()}`],
       );
       const id = created.rows[0]!.id;
 

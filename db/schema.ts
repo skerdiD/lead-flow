@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
-  ForeignKeyBuilder,
   foreignKey,
   index,
   integer,
@@ -143,18 +142,10 @@ export const importRowStatusEnum = pgEnum(
   importRowStatuses,
 );
 
-function getWorkspaceMemberReferenceColumns(): {
-  workspaceId: import("drizzle-orm/pg-core").AnyPgColumn;
-  userId: import("drizzle-orm/pg-core").AnyPgColumn;
-} {
-  return workspaceMembers;
-}
-
 export const workspaces = pgTable(
   "workspaces",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    ownerUserId: varchar("owner_user_id", { length: 255 }).notNull(),
     name: varchar("name", { length: 160 }).notNull(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
@@ -167,20 +158,7 @@ export const workspaces = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    new ForeignKeyBuilder(() => ({
-      name: "workspaces_owner_member_fk",
-      columns: [table.id, table.ownerUserId],
-      foreignColumns: [
-        getWorkspaceMemberReferenceColumns().workspaceId,
-        getWorkspaceMemberReferenceColumns().userId,
-      ],
-    })),
-    uniqueIndex("workspaces_owner_name_unique").on(
-      table.ownerUserId,
-      table.name,
-    ),
-  ],
+  (table) => [index("workspaces_name_idx").on(table.name)],
 );
 
 export const workspaceMembers = pgTable(

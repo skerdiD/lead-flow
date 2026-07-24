@@ -41,7 +41,6 @@ beforeEach(() => {
   mocks.getCurrentWorkspace.mockResolvedValue({
     id: "demo-workspace",
     name: DEMO_WORKSPACE_NAME,
-    ownerUserId: "clerk-owner",
     role: "owner",
   });
 });

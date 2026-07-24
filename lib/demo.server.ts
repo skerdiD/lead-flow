@@ -26,6 +26,7 @@ import {
 } from "@/lib/demo";
 import { getDemoUserConfigs, type DemoUserConfig } from "@/lib/demo-config.server";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
+import { ensureWorkspaceForOwnerInTransaction } from "@/lib/workspace-creation";
 
 type LeadStatus = (typeof leadStatuses)[number];
 type DealStage = (typeof dealStages)[number];
@@ -1015,43 +1016,10 @@ export async function ensureDemoWorkspaceSeeded(options?: { forceReset?: boolean
   ]);
 
   const workspace = await demoDb.transaction(async (tx) => {
-    await tx
-      .insert(workspaces)
-      .values({
-        ownerUserId: userId,
-        name: DEMO_WORKSPACE_NAME,
-      })
-      .onConflictDoNothing({ target: [workspaces.ownerUserId, workspaces.name] });
-
-    const [resolvedWorkspace] = await tx
-      .select({
-        id: workspaces.id,
-        name: workspaces.name,
-      })
-      .from(workspaces)
-      .where(
-        and(
-          eq(workspaces.ownerUserId, userId),
-          eq(workspaces.name, DEMO_WORKSPACE_NAME),
-        ),
-      )
-      .limit(1);
-
-    if (!resolvedWorkspace) {
-      throw new Error("Unable to resolve the LeadFlow demo workspace.");
-    }
-
-    await tx
-      .insert(workspaceMembers)
-      .values({
-        workspaceId: resolvedWorkspace.id,
-        userId,
-        role: "owner",
-      })
-      .onConflictDoUpdate({
-        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
-        set: { role: "owner" },
-      });
+    const resolvedWorkspace = await ensureWorkspaceForOwnerInTransaction(tx, {
+      name: DEMO_WORKSPACE_NAME,
+      ownerUserId: userId,
+    });
 
     await tx
       .insert(workspaceMembers)

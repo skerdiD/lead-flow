@@ -7,13 +7,13 @@ import { db } from "@/db";
 import { workspaceMembers, workspaces, workspaceRoles } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
+import { ensureWorkspaceForOwnerInTransaction } from "@/lib/workspace-creation";
 
 export type WorkspaceRole = (typeof workspaceRoles)[number];
 
 export type CurrentWorkspace = {
   id: string;
   name: string;
-  ownerUserId: string;
   role: WorkspaceRole;
 };
 
@@ -47,7 +47,6 @@ async function getWorkspaceForUser(userId: string, workspaceId?: string) {
     .select({
       id: workspaces.id,
       name: workspaces.name,
-      ownerUserId: workspaces.ownerUserId,
       role: workspaceMembers.role,
     })
     .from(workspaceMembers)
@@ -59,57 +58,16 @@ async function getWorkspaceForUser(userId: string, workspaceId?: string) {
   return membership ?? null;
 }
 
-async function createPersonalWorkspace(userId: string) {
+export async function createPersonalWorkspace(userId: string) {
   return db.transaction(async (tx) => {
-    const [createdWorkspace] = await tx
-      .insert(workspaces)
-      .values({
-        ownerUserId: userId,
-        name: PERSONAL_WORKSPACE_NAME,
-      })
-      .onConflictDoNothing({ target: [workspaces.ownerUserId, workspaces.name] })
-      .returning({
-        id: workspaces.id,
-        name: workspaces.name,
-        ownerUserId: workspaces.ownerUserId,
-      });
-
-    const workspace =
-      createdWorkspace ??
-      (
-        await tx
-          .select({
-            id: workspaces.id,
-            name: workspaces.name,
-            ownerUserId: workspaces.ownerUserId,
-          })
-          .from(workspaces)
-          .where(
-            and(
-              eq(workspaces.ownerUserId, userId),
-              eq(workspaces.name, PERSONAL_WORKSPACE_NAME),
-            ),
-          )
-          .limit(1)
-      )[0];
-
-    if (!workspace) {
-      throw new Error("Unable to create personal workspace.");
-    }
-
-    await tx
-      .insert(workspaceMembers)
-      .values({
-        workspaceId: workspace.id,
-        userId,
-        role: "owner",
-      })
-      .onConflictDoNothing({
-        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
-      });
+    const workspace = await ensureWorkspaceForOwnerInTransaction(tx, {
+      name: PERSONAL_WORKSPACE_NAME,
+      ownerUserId: userId,
+    });
 
     return {
-      ...workspace,
+      id: workspace.id,
+      name: workspace.name,
       role: "owner" as const,
     };
   });

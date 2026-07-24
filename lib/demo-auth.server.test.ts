@@ -20,7 +20,7 @@ vi.mock("@/db", () => ({
 }));
 
 vi.mock("@/db/schema", () => ({
-  workspaces: { id: "workspace-id", name: "workspace-name", ownerUserId: "owner-user-id" },
+  workspaces: { id: "workspace-id", name: "workspace-name" },
   workspaceMembers: { workspaceId: "membership-workspace-id", userId: "membership-user-id", role: "membership-role" },
 }));
 
@@ -50,11 +50,16 @@ const users = {
 } as const;
 
 function queryResult(rows: unknown[]) {
+  const query = {
+    where: () => ({
+      limit: async () => rows,
+    }),
+  };
+
   return {
     from: () => ({
-      where: () => ({
-        limit: async () => rows,
-      }),
+      ...query,
+      innerJoin: () => query,
     }),
   };
 }
@@ -89,7 +94,7 @@ describe("demo role sign-in tokens", () => {
     ["member", "clerk-member"],
   ] as const)("creates a token only for the configured %s account", async (role, userId) => {
     mocks.dbSelect
-      .mockReturnValueOnce(queryResult([{ id: "demo-workspace", ownerUserId: "clerk-owner" }]))
+      .mockReturnValueOnce(queryResult([{ id: "demo-workspace" }]))
       .mockReturnValueOnce(queryResult([{ role }]));
 
     await expect(createDemoSignInUrl(role)).resolves.toBe(
@@ -103,7 +108,7 @@ describe("demo role sign-in tokens", () => {
 
   it("fails closed when the stored membership role does not match the requested role", async () => {
     mocks.dbSelect
-      .mockReturnValueOnce(queryResult([{ id: "demo-workspace", ownerUserId: "clerk-owner" }]))
+      .mockReturnValueOnce(queryResult([{ id: "demo-workspace" }]))
       .mockReturnValueOnce(queryResult([{ role: "member" }]));
 
     await expect(createDemoSignInUrl("admin")).rejects.toBeInstanceOf(

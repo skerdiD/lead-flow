@@ -760,7 +760,6 @@ describe("lead actions", () => {
     getCurrentWorkspaceMock.mockResolvedValue({
       id: "workspace_123",
       name: "Personal Workspace",
-      ownerUserId: "owner_user",
       role: "member",
     });
     selectResults.push([
@@ -787,7 +786,6 @@ describe("lead actions", () => {
     getCurrentWorkspaceMock.mockResolvedValue({
       id: "workspace_123",
       name: "Personal Workspace",
-      ownerUserId: "owner_user",
       role: "member",
     });
     selectResults.push([

@@ -48,8 +48,8 @@ describeDatabase("activity transaction integrity", () => {
     try {
       await client.query("BEGIN");
       const workspace = await client.query<{ id: string }>(
-        "INSERT INTO workspaces (owner_user_id, name) VALUES ($1, $2) RETURNING id",
-        [userId, `Activity transaction ${label} ${randomUUID()}`],
+        "INSERT INTO workspaces (name) VALUES ($1) RETURNING id",
+        [`Activity transaction ${label} ${randomUUID()}`],
       );
       const id = workspace.rows[0]!.id;
 
