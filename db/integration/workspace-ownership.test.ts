@@ -109,13 +109,16 @@ describeDatabase("workspace ownership integrity", () => {
     );
   }
 
-  async function expectOwnerProtection(query: Promise<unknown>) {
+  async function expectOwnerProtection(
+    query: Promise<unknown>,
+    expectedCode: "P0001" | "23503",
+  ) {
     try {
       await query;
       throw new Error("Expected the ownership invariant to reject this mutation.");
     } catch (error) {
       expect(error).toMatchObject({
-        code: "P0001",
+        code: expectedCode,
       });
     }
   }
@@ -185,12 +188,21 @@ describeDatabase("workspace ownership integrity", () => {
       pool.query("UPDATE workspace_members SET role = 'admin' WHERE id = $1", [
         workspace.ownerMemberId,
       ]),
+      "P0001",
     );
     await expectOwnerProtection(
       pool.query("DELETE FROM workspace_members WHERE id = $1", [
         workspace.ownerMemberId,
       ]),
+      "23503",
     );
+
+    await expect(
+      pool.query<{ role: string }>(
+        "SELECT role FROM workspace_members WHERE id = $1",
+        [workspace.ownerMemberId],
+      ),
+    ).resolves.toMatchObject({ rows: [{ role: "owner" }] });
     await expect(
       pool.query("UPDATE workspace_members SET role = 'owner' WHERE id = $1", [
         member.id,

@@ -125,7 +125,9 @@ describeDatabase("activity transaction integrity", () => {
           leadId: lead.id,
         });
       }),
-    ).rejects.toMatchObject({ code: "22001" });
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "22001" }),
+    });
 
     const [leads, activities] = await Promise.all([
       pool.query("SELECT id FROM leads WHERE workspace_id = $1", [workspace.id]),
