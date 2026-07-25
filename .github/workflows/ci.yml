@@ -67,6 +67,11 @@ jobs:
 
       - name: Run unit tests
         run: npm run test
+        env:
+          # The job enables the local auth bypass for Playwright. Keep that
+          # mode out of unit tests so they exercise normal server behavior.
+          E2E_TEST_MODE: "0"
+          NEXT_PUBLIC_E2E_TEST_MODE: "0"
 
       - name: Build
         run: npm run build
