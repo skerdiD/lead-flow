@@ -87,7 +87,11 @@ export function LeadPipelineChart({ data }: LeadPipelineChartProps) {
             Add leads to see your pipeline by stage.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            initialDimension={{ width: 640, height: 280 }}
+          >
             <BarChart
               data={data}
               margin={{ top: 12, right: 16, left: -16, bottom: 4 }}

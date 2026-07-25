@@ -168,6 +168,11 @@ Lead data is scoped to the authenticated user, important mutations are validated
 
 ## Getting Started
 
+### Prerequisite
+
+Use Node.js 24. The project pins the supported major version in `package.json`
+so local development, CI, Arcjet, and the Vercel runtime stay aligned.
+
 ### 1. Clone the repository
 
 ```bash

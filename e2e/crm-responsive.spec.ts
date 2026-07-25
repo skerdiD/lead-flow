@@ -38,7 +38,8 @@ async function createDeal(page: Page) {
   await form.getByLabel("Value *").fill("9600");
   await form.getByLabel("Expected close").fill("2030-07-02");
   await form.getByRole("button", { name: "Create deal", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard\/deals\/.+$/);
+  await expect(page.getByText("Deal created.")).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard\/deals\/(?!new(?:[/?#]|$))[^/?#]+$/);
 }
 
 async function expectNoDocumentOverflow(page: Page) {
@@ -84,7 +85,7 @@ test.describe("CRM responsive layouts", () => {
     }
 
     const table = page.getByTestId("leads-desktop-table");
-    await expect(table.getByRole("columnheader", { name: "Lead" })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "Lead", exact: true })).toBeVisible();
     await expect(table.getByRole("columnheader", { name: "Status" })).toBeVisible();
     await expect(table.getByRole("columnheader", { name: "Next follow-up" })).toBeVisible();
     await expect(table.getByText("Bluepeak Hospitality")).toHaveCount(1);
@@ -239,7 +240,9 @@ test.describe("CRM responsive layouts", () => {
       expect(sidebarBox!.y).toBeLessThan(mainBox!.y);
       expect(Math.abs(notesBox!.x - activityBox!.x)).toBeLessThanOrEqual(1);
       expect(notesBox!.y).toBeLessThan(activityBox!.y);
-      await expect(page.getByLabel("Date")).toBeVisible();
+      await expect(
+        page.locator("#lead-follow-up").getByLabel("Date", { exact: true }),
+      ).toBeVisible();
       await expect(page.getByLabel("Follow-up note")).toBeVisible();
       await expect(page.getByText("$9,600")).toBeVisible();
       await expectNoDocumentOverflow(page);

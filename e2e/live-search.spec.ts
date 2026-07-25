@@ -25,7 +25,8 @@ async function createDeal(page: Page) {
   await form.getByLabel("Value *").fill("4200");
   await form.getByLabel("Expected close").fill("2030-07-02");
   await form.getByRole("button", { name: "Create deal", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard\/deals\/.+$/);
+  await expect(page.getByText("Deal created.")).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard\/deals\/(?!new(?:[/?#]|$))[^/?#]+$/);
 }
 
 async function expectNoDocumentOverflow(page: Page) {

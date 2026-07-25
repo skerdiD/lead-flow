@@ -104,7 +104,11 @@ export function LeadSourcePerformanceChart({
             Add leads to compare source performance.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            initialDimension={{ width: 640, height: 262 }}
+          >
             <BarChart
               data={data}
               layout="vertical"
