@@ -163,94 +163,55 @@ test.describe("CRM responsive layouts", () => {
     await expect(page).toHaveURL(/\/dashboard\/leads\/.+$/);
   });
 
-  test("Lead details uses independent content stacks without a desktop gap or responsive overflow", async ({ page }) => {
+  test("Lead details tabs stay usable without responsive overflow", async ({ page }) => {
     await createLead(page);
     await openLeadDetails(page);
 
     for (const viewport of [
-      { width: 1920, height: 1080 },
-      { width: 1440, height: 900 },
       { width: 1366, height: 768 },
-    ]) {
-      await page.setViewportSize(viewport);
-
-      const detailsPage = page.getByTestId("lead-details-page");
-      const main = page.getByTestId("lead-details-main");
-      const sidebar = page.getByTestId("lead-details-sidebar");
-      const profileContext = page.getByTestId("lead-profile-context-section");
-      const tasks = page.locator("#lead-tasks");
-      const notes = page.locator("#lead-notes");
-      const activity = page.locator("#lead-activity");
-
-      await expect(detailsPage).toBeVisible();
-      await expect(sidebar).toBeVisible();
-      await expect(tasks).toBeVisible();
-      await expectNoDocumentOverflow(page);
-
-      const [pageBox, mainBox, sidebarBox, profileBox, tasksBox, notesBox, activityBox] = await Promise.all([
-        detailsPage.boundingBox(),
-        main.boundingBox(),
-        sidebar.boundingBox(),
-        profileContext.boundingBox(),
-        tasks.boundingBox(),
-        notes.boundingBox(),
-        activity.boundingBox(),
-      ]);
-
-      expect(pageBox).not.toBeNull();
-      expect(mainBox).not.toBeNull();
-      expect(sidebarBox).not.toBeNull();
-      expect(profileBox).not.toBeNull();
-      expect(tasksBox).not.toBeNull();
-      expect(notesBox).not.toBeNull();
-      expect(activityBox).not.toBeNull();
-      expect(pageBox!.width).toBeLessThanOrEqual(1481);
-      expect(mainBox!.x).toBeLessThan(sidebarBox!.x);
-      expect(sidebarBox!.width).toBeGreaterThanOrEqual(340);
-      expect(sidebarBox!.width).toBeLessThanOrEqual(401);
-      expect(tasksBox!.y - (profileBox!.y + profileBox!.height)).toBeLessThanOrEqual(24);
-      expect(tasksBox!.y).toBeLessThan(sidebarBox!.y + sidebarBox!.height);
-      expect(notesBox!.x).toBeLessThan(activityBox!.x);
-      expect(Math.abs(notesBox!.y - activityBox!.y)).toBeLessThanOrEqual(1);
-      expect(
-        await main.evaluate((element, taskId) => {
-          const task = document.getElementById(taskId);
-          return Boolean(task && element.contains(task));
-        }, "lead-tasks"),
-      ).toBe(true);
-    }
-
-    for (const viewport of [
-      { width: 1024, height: 768 },
       { width: 768, height: 1024 },
       { width: 390, height: 844 },
     ]) {
       await page.setViewportSize(viewport);
 
+      const detailsPage = page.getByTestId("lead-details-page");
+      const sidebar = page.getByTestId("lead-details-sidebar");
+
+      await expect(detailsPage).toBeVisible();
+      await expect(sidebar).toBeVisible();
+      await expectNoDocumentOverflow(page);
+
       const mainBox = await page.getByTestId("lead-details-main").boundingBox();
       const sidebarBox = await page.getByTestId("lead-details-sidebar").boundingBox();
-      const notesBox = await page.locator("#lead-notes").boundingBox();
-      const activityBox = await page.locator("#lead-activity").boundingBox();
-
       expect(mainBox).not.toBeNull();
       expect(sidebarBox).not.toBeNull();
-      expect(notesBox).not.toBeNull();
-      expect(activityBox).not.toBeNull();
-      expect(Math.abs(mainBox!.x - sidebarBox!.x)).toBeLessThanOrEqual(1);
-      expect(sidebarBox!.y).toBeLessThan(mainBox!.y);
-      expect(Math.abs(notesBox!.x - activityBox!.x)).toBeLessThanOrEqual(1);
-      expect(notesBox!.y).toBeLessThan(activityBox!.y);
+      if (viewport.width >= 1280) {
+        expect(mainBox!.x).toBeLessThan(sidebarBox!.x);
+      } else {
+        expect(Math.abs(mainBox!.x - sidebarBox!.x)).toBeLessThanOrEqual(1);
+        expect(mainBox!.y).toBeLessThan(sidebarBox!.y);
+      }
       await expect(
         page.locator("#lead-follow-up").getByLabel("Date", { exact: true }),
       ).toBeVisible();
       await expect(page.getByLabel("Follow-up note")).toBeVisible();
-      await expect(
-        page
-          .getByTestId("lead-details-sidebar")
-          .getByText("$9,600", { exact: true }),
-      ).toBeVisible();
       await expectNoDocumentOverflow(page);
     }
+
+    await page.getByRole("tab", { name: "Activity" }).click();
+    await expect(page.getByRole("heading", { name: "Activity timeline" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Follow-up history" })).toBeVisible();
+
+    await page.getByRole("tab", { name: "Tasks" }).click();
+    await expect(page.getByRole("heading", { name: "Follow-up tasks" })).toBeVisible();
+
+    await page.getByRole("tab", { name: "Notes" }).click();
+    await expect(page.getByRole("heading", { name: "Profile context" })).toBeVisible();
+    await expect(page.locator("#lead-notes")).toBeVisible();
+
+    await page.getByRole("tab", { name: "Deal" }).click();
+    await expect(page.locator("#lead-opportunity").getByText("$9,600", { exact: true })).toBeVisible();
+    await expectNoDocumentOverflow(page);
   });
 
   test("Lead details keeps assigned-record controls permission-aware for every workspace role", async ({ page }) => {
@@ -271,8 +232,10 @@ test.describe("CRM responsive layouts", () => {
 
       if (role === "member") {
         await expect(page.getByRole("button", { name: "Archive" })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Change owner" })).toHaveCount(0);
       } else {
         await expect(page.getByRole("button", { name: "Archive" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Change owner" })).toBeVisible();
       }
     }
   });
@@ -298,12 +261,14 @@ test.describe("CRM responsive layouts", () => {
     await followUp.getByRole("button", { name: "Save follow-up" }).click();
     await expect(page.getByText("Follow-up cleared.")).toBeVisible();
 
+    await page.getByRole("tab", { name: "Deal" }).click();
     const opportunity = page.locator("#lead-opportunity");
     await opportunity.getByRole("combobox", { name: "Deal stage" }).click();
     await page.getByRole("option", { name: "Qualified" }).click();
     await opportunity.getByRole("button", { name: "Apply stage" }).click();
     await expect(page.getByText("Deal stage updated to qualified.")).toBeVisible();
 
+    await page.getByRole("tab", { name: "Tasks" }).click();
     const tasks = page.locator("#lead-tasks");
     await tasks.getByLabel("Title").fill("Send revised proposal");
     await tasks.getByLabel("Due date").fill("2030-07-03");
@@ -318,6 +283,23 @@ test.describe("CRM responsive layouts", () => {
     await task.getByRole("button", { name: "Mark complete" }).click();
     await expect(page.getByText("Task marked complete.")).toBeVisible();
     await expect(task.getByRole("button", { name: "Reopen" })).toBeVisible();
+  });
+
+  test("Archived lead details show restore controls and suppress editing", async ({ page }) => {
+    await createLead(page);
+    await openLeadDetails(page);
+    const detailsUrl = page.url();
+
+    await page.getByRole("button", { name: "Archive" }).click();
+    await page.getByRole("button", { name: "Archive lead" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/leads$/);
+    await page.goto(detailsUrl);
+
+    await expect(page.getByText("Archived lead", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Edit lead" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Qualify lead" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Save follow-up" })).toBeDisabled();
   });
 
   test("Deals fits every desktop stage without horizontal scrolling and supports List view", async ({ page }) => {

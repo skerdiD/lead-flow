@@ -487,7 +487,7 @@ export function LeadForm({
               </div>
             </section>
 
-            <section className="rounded-2xl border bg-muted/20 p-4 sm:p-5">
+            <section id="opportunity" className="scroll-mt-6 rounded-2xl border bg-muted/20 p-4 sm:p-5">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Opportunity
               </p>

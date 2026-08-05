@@ -9,6 +9,7 @@ import {
   Ellipsis,
   Loader2,
   PenSquare,
+  Sparkles,
   Target,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -39,14 +40,9 @@ type LeadQuickActionsProps = {
   currentStatus: LeadStatus;
   readOnly?: boolean;
   canDelete?: boolean;
+  canUpdate?: boolean;
+  canQualify?: boolean;
 };
-
-function scrollToSection(id: string) {
-  document.getElementById(id)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}
 
 export function LeadQuickActions({
   leadId,
@@ -56,6 +52,8 @@ export function LeadQuickActions({
   currentStatus,
   readOnly = false,
   canDelete = false,
+  canUpdate = false,
+  canQualify = false,
 }: LeadQuickActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -81,17 +79,46 @@ export function LeadQuickActions({
     });
   };
 
+  const handleQualify = () => {
+    startTransition(async () => {
+      const result = await updateLeadStatusQuickAction(leadId, "Interested");
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success("Lead qualified.");
+      router.refresh();
+    });
+  };
+
+  const actionsDisabled = readOnly || !canUpdate || isArchived;
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button asChild size="sm" variant="outline">
-        <a href="#lead-note-editor">{readOnly ? "View notes" : "Add note"}</a>
-      </Button>
+      {!actionsDisabled ? (
+        <Button asChild size="sm" variant="outline">
+          <a href="#notes">Add note</a>
+        </Button>
+      ) : null}
 
-      <Button asChild size="sm" variant="outline">
-        <a href="#lead-follow-up">{readOnly ? "View follow-up" : "Schedule follow-up"}</a>
-      </Button>
+      {!actionsDisabled ? (
+        <Button asChild size="sm" variant="outline">
+          <a href="#overview">Schedule follow-up</a>
+        </Button>
+      ) : null}
 
-      {!readOnly ? (
+      {canQualify && !actionsDisabled ? (
+        <Button size="sm" onClick={handleQualify} disabled={isPending}>
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          Qualify lead
+        </Button>
+      ) : null}
+
+      {!actionsDisabled ? (
         <Button asChild size="sm">
           <Link href={`/dashboard/leads/${leadId}/edit`}>
             <PenSquare className="mr-2 h-4 w-4" />
@@ -104,35 +131,35 @@ export function LeadQuickActions({
         <>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" disabled={isPending}>
+              <Button size="sm" variant="outline" disabled={isPending} aria-label="More lead actions">
                 {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Ellipsis className="h-4 w-4" />
                 )}
-                Actions
+                More
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Lead actions</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => scrollToSection("lead-stage")}>
+              <DropdownMenuItem disabled={actionsDisabled} onSelect={() => { window.location.hash = "overview"; }}>
                 <Target className="mr-2 h-4 w-4" />
                 Change stage or status
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => scrollToSection("lead-tasks")}>
+              <DropdownMenuItem onSelect={() => { window.location.hash = "tasks"; }}>
                 <Target className="mr-2 h-4 w-4" />
-                Jump to tasks
+                View tasks
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                disabled={isPending || currentStatus === "Closed"}
+                disabled={actionsDisabled || isPending || currentStatus === "Closed"}
                 onSelect={() => handleTerminalUpdate("won")}
               >
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Mark as won
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={isPending || currentStatus === "Lost"}
+                disabled={actionsDisabled || isPending || currentStatus === "Lost"}
                 onSelect={() => handleTerminalUpdate("lost")}
               >
                 <CircleOff className="mr-2 h-4 w-4" />

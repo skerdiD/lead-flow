@@ -15,7 +15,12 @@ import {
   getCurrentWorkspaceAuthorizationContext,
   getRecordVisibilityConditions,
   getTaskVisibilityConditions,
+  hasWorkspacePermission,
 } from "@/lib/authorization";
+import {
+  getWorkspaceMemberOptions,
+  type WorkspaceMemberOption,
+} from "@/lib/workspace-member-profiles.server";
 
 export type LeadDetailsResult = {
   id: string;
@@ -39,9 +44,12 @@ export type LeadDetailsResult = {
   primaryContactName: string | null;
   primaryContactEmail: string | null;
   primaryContactPhone: string | null;
+  jobTitle: string | null;
   createdAt: Date;
   updatedAt: Date;
   viewerUserId: string;
+  owner: WorkspaceMemberOption | null;
+  ownerOptions: WorkspaceMemberOption[];
   noteEntries: Array<{
     id: string;
     content: string;
@@ -113,6 +121,7 @@ export async function getLeadDetails(
       primaryContactName: contacts.fullName,
       primaryContactEmail: contacts.email,
       primaryContactPhone: contacts.phone,
+      jobTitle: contacts.title,
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
     })
@@ -144,7 +153,7 @@ export async function getLeadDetails(
     return null;
   }
 
-  const [noteEntries, activityEntries, taskEntries, dealEntry] = await Promise.all([
+  const [noteEntries, activityEntries, taskEntries, dealEntry, ownerOptions] = await Promise.all([
     db
       .select({
         id: leadNotes.id,
@@ -225,11 +234,29 @@ export async function getLeadDetails(
         ),
       )
       .limit(1),
+    getWorkspaceMemberOptions(
+      context.workspaceId,
+      hasWorkspacePermission(context.role, "crm:assign")
+        ? undefined
+        : lead.assignedOwnerUserId
+          ? [lead.assignedOwnerUserId]
+          : [],
+    ),
   ]);
+
+  const owner = lead.assignedOwnerUserId
+    ? ownerOptions.find((member) => member.userId === lead.assignedOwnerUserId) ?? {
+        userId: lead.assignedOwnerUserId,
+        name: "Unknown member",
+        imageUrl: null,
+      }
+    : null;
 
   return {
     ...lead,
     viewerUserId: context.userId,
+    owner,
+    ownerOptions,
     noteEntries,
     activityEntries,
     taskEntries,

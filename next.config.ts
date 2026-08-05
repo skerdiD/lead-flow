@@ -63,6 +63,18 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // Arcjet 1.9.1 publishes its Node WASM shims under a directory ending in a
+  // dot, which Windows cannot materialize. The package's supported edge-light
+  // entry uses the same analyzer without relying on that invalid path.
+  turbopack:
+    process.platform === "win32"
+      ? {
+          resolveAlias: {
+            "@arcjet/analyze-wasm":
+              "./node_modules/@arcjet/analyze-wasm/dist/edge-light.js",
+          },
+        }
+      : undefined,
   async redirects() {
     return [
       {

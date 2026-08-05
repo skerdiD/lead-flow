@@ -22,5 +22,18 @@ export default async function LeadPage({ params }: LeadPageProps) {
     notFound();
   }
 
-  return <LeadDetailsCard lead={lead} readOnly={isDemoWorkspace(workspace)} canManageAllCrm={hasWorkspacePermission(workspace.role, "crm:update_all")} canDelete={hasWorkspacePermission(workspace.role, "crm:delete")} />;
+  const canUpdate =
+    hasWorkspacePermission(workspace.role, "crm:update_all") ||
+    hasWorkspacePermission(workspace.role, "crm:update_assigned");
+
+  return (
+    <LeadDetailsCard
+      lead={lead}
+      readOnly={isDemoWorkspace(workspace)}
+      canUpdate={canUpdate}
+      canManageAllCrm={hasWorkspacePermission(workspace.role, "crm:update_all")}
+      canDelete={hasWorkspacePermission(workspace.role, "crm:delete")}
+      canAssign={hasWorkspacePermission(workspace.role, "crm:assign")}
+    />
+  );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -77,7 +78,15 @@ export function LeadDealPanel({
           Opportunity
         </h2>
         <div className="mt-4 rounded-2xl border border-dashed bg-muted/20 px-4 py-4 text-sm leading-6 text-muted-foreground">
-          No deal is linked yet. Add one from the lead edit form when this becomes a sales opportunity.
+          <p>No deal is linked yet. Qualify this lead and add the opportunity details when there is a real sales path.</p>
+          {!readOnly ? (
+            <Button asChild className="mt-4">
+              <Link href={`/dashboard/leads/${leadId}/edit#opportunity`}>
+                <Target className="mr-2 h-4 w-4" />
+                Qualify and create deal
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </section>
     );
@@ -189,6 +198,9 @@ export function LeadDealPanel({
         {deal.closedAt ? `Closed ${formatDate(deal.closedAt)} | ` : ""}
         Last updated {formatDateTime(deal.updatedAt)}
       </p>
+      <Button asChild variant="outline" size="sm" className="mt-4">
+        <Link href={`/dashboard/deals/${deal.id}`}>Open full deal</Link>
+      </Button>
       {deal.lostReason ? (
         <p className="mt-2 rounded-2xl border bg-muted/20 p-3 text-sm text-muted-foreground">
           Lost reason: {deal.lostReason}
