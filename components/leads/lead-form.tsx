@@ -59,6 +59,7 @@ type LeadFormProps = {
   mode: "create" | "edit";
   leadId?: string;
   initialValues?: Partial<LeadFormValues>;
+  showOpportunity?: boolean;
 };
 
 const defaultValues: LeadFormValues = {
@@ -87,6 +88,7 @@ export function LeadForm({
   mode,
   leadId,
   initialValues,
+  showOpportunity = false,
 }: LeadFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -487,6 +489,7 @@ export function LeadForm({
               </div>
             </section>
 
+            {showOpportunity ? (
             <section id="opportunity" className="scroll-mt-6 rounded-2xl border bg-muted/20 p-4 sm:p-5">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Opportunity
@@ -715,6 +718,7 @@ export function LeadForm({
                 />
               </div>
             </section>
+            ) : null}
 
             <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">

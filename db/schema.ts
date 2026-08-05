@@ -626,6 +626,7 @@ export const activityEvents = pgTable(
     accountId: uuid("account_id"),
     contactId: uuid("contact_id"),
     dealId: uuid("deal_id"),
+    metadata: jsonb("metadata").$type<Record<string, string> | null>(),
     createdAt: timestamp("created_at", {
       withTimezone: true,
       mode: "date",

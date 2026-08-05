@@ -61,6 +61,7 @@ export type LeadDetailsResult = {
     id: string;
     eventType: (typeof activityEventTypes)[number];
     message: string;
+    metadata: Record<string, string> | null;
     createdAt: Date;
   }>;
   taskEntries: Array<{
@@ -172,6 +173,7 @@ export async function getLeadDetails(
         id: activityEvents.id,
         eventType: activityEvents.eventType,
         message: activityEvents.message,
+        metadata: activityEvents.metadata,
         createdAt: activityEvents.createdAt,
       })
       .from(activityEvents)

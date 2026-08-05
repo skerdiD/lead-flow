@@ -79,14 +79,7 @@ export function LeadDealPanel({
         </h2>
         <div className="mt-4 rounded-2xl border border-dashed bg-muted/20 px-4 py-4 text-sm leading-6 text-muted-foreground">
           <p>No deal is linked yet. Qualify this lead and add the opportunity details when there is a real sales path.</p>
-          {!readOnly ? (
-            <Button asChild className="mt-4">
-              <Link href={`/dashboard/leads/${leadId}/edit#opportunity`}>
-                <Target className="mr-2 h-4 w-4" />
-                Qualify and create deal
-              </Link>
-            </Button>
-          ) : null}
+          {!readOnly ? <p className="mt-2 font-medium text-foreground">Use Qualify lead in the page header to start the guided workflow.</p> : null}
         </div>
       </section>
     );

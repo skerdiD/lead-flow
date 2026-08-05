@@ -44,6 +44,12 @@ ON CONFLICT ("workspace_id", "user_id") DO UPDATE
 SET "role" = 'owner'::"public"."workspace_role";
 --> statement-breakpoint
 
+-- Flush deferred membership/FK trigger checks before altering the ownership
+-- columns. PostgreSQL otherwise rejects the later ALTER TABLE when this and
+-- prior unapplied migrations are executed in one transaction.
+SET CONSTRAINTS ALL IMMEDIATE;
+--> statement-breakpoint
+
 -- Fail closed unless every workspace now has exactly one owner membership and
 -- that membership contains the owner preserved from the legacy column.
 DO $$

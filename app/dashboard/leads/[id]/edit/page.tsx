@@ -46,6 +46,7 @@ export default async function EditLeadPage({
       <LeadForm
         mode="edit"
         leadId={lead.id}
+        showOpportunity={Boolean(lead.dealEntry)}
         initialValues={{
           fullName: lead.fullName,
           company: lead.company ?? undefined,

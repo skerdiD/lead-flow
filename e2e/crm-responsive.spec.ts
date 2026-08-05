@@ -17,12 +17,25 @@ async function createLead(page: Page) {
   await page.getByTestId("lead-full-name-input").fill("Grace Kim");
   await page.getByTestId("lead-company-input").fill("Bluepeak Hospitality");
   await page.getByTestId("lead-source-input").fill("LinkedIn");
-  await page.getByLabel("Deal name").fill("Bluepeak expansion");
-  await page.getByLabel("Deal value").fill("9600");
-  await page.getByLabel("Probability").fill("20");
-  await page.getByLabel("Expected close date").fill("2030-07-02");
   await page.getByTestId("lead-form-submit-btn").click();
   await expect(page).toHaveURL(/\/dashboard\/leads$/);
+}
+
+async function qualifyLead(page: Page) {
+  await page.getByRole("button", { name: "Qualify lead" }).click();
+  await expect(page.getByRole("dialog", { name: /Qualify Grace Kim/ })).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByLabel("Account name")).toHaveValue("Bluepeak Hospitality");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByLabel("Full name")).toHaveValue("Grace Kim");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Deal title").fill("Bluepeak expansion");
+  await page.getByLabel("Value").fill("9600");
+  await page.getByLabel("Probability (%)").fill("20");
+  await page.getByLabel("Expected close date").fill("2030-07-02");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Confirm qualification" }).click();
+  await expect(page.getByText("Lead qualified successfully.")).toBeVisible();
 }
 
 async function openLeadDetails(page: Page) {
@@ -166,6 +179,8 @@ test.describe("CRM responsive layouts", () => {
   test("Lead details tabs stay usable without responsive overflow", async ({ page }) => {
     await createLead(page);
     await openLeadDetails(page);
+    await qualifyLead(page);
+    await page.getByRole("tab", { name: "Overview" }).click();
 
     for (const viewport of [
       { width: 1366, height: 768 },
@@ -241,8 +256,11 @@ test.describe("CRM responsive layouts", () => {
   });
 
   test("Lead detail follow-up, opportunity, and task workflows remain functional", async ({ page }) => {
+    test.setTimeout(90_000);
     await createLead(page);
     await openLeadDetails(page);
+    await qualifyLead(page);
+    await page.getByRole("tab", { name: "Overview" }).click();
 
     const followUp = page.locator("#lead-follow-up");
     const followUpDate = followUp.getByLabel("Date", { exact: true });
@@ -264,9 +282,9 @@ test.describe("CRM responsive layouts", () => {
     await page.getByRole("tab", { name: "Deal" }).click();
     const opportunity = page.locator("#lead-opportunity");
     await opportunity.getByRole("combobox", { name: "Deal stage" }).click();
-    await page.getByRole("option", { name: "Qualified" }).click();
+    await page.getByRole("option", { name: "Proposal" }).click();
     await opportunity.getByRole("button", { name: "Apply stage" }).click();
-    await expect(page.getByText("Deal stage updated to qualified.")).toBeVisible();
+    await expect(page.getByText("Deal stage updated to proposal.")).toBeVisible();
 
     await page.getByRole("tab", { name: "Tasks" }).click();
     const tasks = page.locator("#lead-tasks");

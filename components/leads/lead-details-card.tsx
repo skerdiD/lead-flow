@@ -326,7 +326,17 @@ export function LeadDetailsCard({
               readOnly={readOnly}
               canDelete={canDelete}
               canUpdate={canUpdate}
-              canQualify={!lead.dealEntry && !["Interested", "Proposal Sent", "Closed", "Lost"].includes(lead.status)}
+              canQualify={!lead.dealEntry && !["Closed", "Lost"].includes(lead.status)}
+              qualificationLead={{
+                id: lead.id,
+                fullName: lead.fullName,
+                company: lead.company,
+                email: lead.email,
+                phone: lead.phone,
+                jobTitle: lead.jobTitle,
+                assignedOwnerUserId: lead.assignedOwnerUserId,
+                ownerOptions: lead.ownerOptions,
+              }}
             />
           </div>
 

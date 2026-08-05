@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
 import { db } from "@/db";
-import { leads } from "@/db/schema";
+import { deals, leads } from "@/db/schema";
 import {
   getRecordUpdateConditions,
   getWorkspaceAuthorizationContext,
@@ -74,40 +74,18 @@ export async function createLeadAction(
   const requestId = await getRequestId();
 
   try {
-    const reconciled = reconcileLeadAndDealStage(
-      parsed.data.status,
-      parsed.data.dealStage,
-    );
     const { createdLead } = await db.transaction(async (tx) => {
-      const accountId = await saveLeadAccount({
-        client: tx,
-        workspaceId: workspace.id,
-        userId,
-        company: parsed.data.company,
-      });
-      const contactId = await saveLeadContact({
-        client: tx,
-        workspaceId: workspace.id,
-        userId,
-        accountId,
-        fullName: parsed.data.fullName,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-      });
-
       const [lead] = await tx
         .insert(leads)
         .values({
           workspaceId: workspace.id,
           userId,
           assignedOwnerUserId: userId,
-          accountId,
-          primaryContactId: contactId,
           fullName: parsed.data.fullName,
           company: parsed.data.company ?? null,
           email: parsed.data.email ?? null,
           phone: parsed.data.phone ?? null,
-          status: reconciled.status,
+          status: parsed.data.status,
           source: parsed.data.source ?? null,
           notes: parsed.data.notes ?? null,
           nextFollowUpDate: parseDateInput(parsed.data.nextFollowUpDate),
@@ -120,25 +98,6 @@ export async function createLeadAction(
           fullName: leads.fullName,
         });
 
-      const deal = await saveLeadDeal({
-        client: tx,
-        workspaceId: workspace.id,
-        userId,
-        leadId: lead.id,
-        accountId,
-        contactId,
-        ownerUserId: userId,
-        dealName: parsed.data.dealName,
-        dealStage: reconciled.dealStage,
-        dealValue: parsed.data.dealValue,
-        dealCurrency: parsed.data.dealCurrency,
-        dealProbability: parsed.data.dealProbability,
-        expectedCloseDate: parsed.data.expectedCloseDate,
-        closedDate: parsed.data.closedDate,
-        lostReason: parsed.data.lostReason,
-        authorizationContext: getWorkspaceAuthorizationContext(workspace, userId),
-      });
-
       await createLeadActivity({
         client: tx,
         workspaceId: workspace.id,
@@ -149,19 +108,7 @@ export async function createLeadAction(
         leadName: lead.fullName,
       });
 
-      if (deal?.id) {
-        await createLeadActivity({
-          client: tx,
-          workspaceId: workspace.id,
-          userId,
-          eventType: "deal_stage_changed",
-          message: `Opportunity opened: ${parsed.data.dealName} (${reconciled.dealStage})`,
-          leadId: lead.id,
-          leadName: lead.fullName,
-        });
-      }
-
-      return { createdLead: lead, createdDeal: deal };
+      return { createdLead: lead };
     });
 
     revalidatePath("/dashboard");
@@ -265,28 +212,37 @@ export async function updateLeadAction(
       return { success: false, message: "This lead could not be found or you do not have permission to update it." };
     }
 
-    const reconciled = reconcileLeadAndDealStage(
-      parsed.data.status,
-      parsed.data.dealStage,
-    );
+    const [existingDeal] = await db
+      .select({ id: deals.id })
+      .from(deals)
+      .where(and(eq(deals.workspaceId, workspace.id), eq(deals.leadId, leadId)))
+      .limit(1);
+
+    const reconciled = existingDeal
+      ? reconcileLeadAndDealStage(parsed.data.status, parsed.data.dealStage)
+      : { status: parsed.data.status, dealStage: parsed.data.dealStage };
     const { updatedLead, notification } = await db.transaction(async (tx) => {
-      const accountId = await saveLeadAccount({
-        client: tx,
-        workspaceId: workspace.id,
-        userId,
-        existingAccountId: existingLead.accountId,
-        company: parsed.data.company,
-      });
-      const contactId = await saveLeadContact({
-        client: tx,
-        workspaceId: workspace.id,
-        userId,
-        existingContactId: existingLead.primaryContactId,
-        accountId,
-        fullName: parsed.data.fullName,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-      });
+      const accountId = existingDeal
+        ? await saveLeadAccount({
+            client: tx,
+            workspaceId: workspace.id,
+            userId,
+            existingAccountId: existingLead.accountId,
+            company: parsed.data.company,
+          })
+        : existingLead.accountId;
+      const contactId = existingDeal
+        ? await saveLeadContact({
+            client: tx,
+            workspaceId: workspace.id,
+            userId,
+            existingContactId: existingLead.primaryContactId,
+            accountId,
+            fullName: parsed.data.fullName,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+          })
+        : existingLead.primaryContactId;
 
       const [lead] = await tx
         .update(leads)
@@ -331,7 +287,7 @@ export async function updateLeadAction(
         };
       }
 
-      const deal = await saveLeadDeal({
+      const deal = existingDeal ? await saveLeadDeal({
         client: tx,
         workspaceId: workspace.id,
         userId,
@@ -348,7 +304,7 @@ export async function updateLeadAction(
         closedDate: parsed.data.closedDate,
         lostReason: parsed.data.lostReason,
         authorizationContext: getWorkspaceAuthorizationContext(workspace, userId),
-      });
+      }) : null;
 
       const notificationUserId = existingLead.assignedOwnerUserId ?? userId;
       const notification = (
@@ -389,18 +345,6 @@ export async function updateLeadAction(
           userId,
           eventType: "deal_stage_changed",
           message: `Deal stage changed: ${parsed.data.dealName} (${deal.previousStage} -> ${deal.stage})`,
-          leadId: lead.id,
-          leadName: lead.fullName,
-        });
-      }
-
-      if (lead.status === "Interested" && existingLead.status !== "Interested") {
-        await createLeadActivity({
-          client: tx,
-          workspaceId: workspace.id,
-          userId,
-          eventType: "lead_qualified",
-          message: `Lead qualified: ${lead.fullName}`,
           leadId: lead.id,
           leadName: lead.fullName,
         });

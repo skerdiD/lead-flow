@@ -344,8 +344,7 @@ describe("lead actions", () => {
     getRequestIdMock.mockResolvedValue("00000000-0000-4000-8000-000000000000");
   });
 
-  it("createLeadAction saves deal revenue fields when an opportunity is provided", async () => {
-    selectResults.push([]);
+  it("createLeadAction keeps opportunity fields behind qualification", async () => {
     insertLeadReturningMock.mockResolvedValue([
       { id: leadId, fullName: "Jane Doe" },
     ]);
@@ -361,24 +360,12 @@ describe("lead actions", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(insertDealValuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: "workspace_123",
-        leadId,
-        name: "Website redesign",
-        stage: "proposal",
-        valueCents: 750050,
-        currency: "EUR",
-        probability: 60,
-        lostReason: null,
-      }),
-    );
-    expect(insertDealValuesMock.mock.calls[0]?.[0].expectedCloseAt).toEqual(
-      new Date("2026-06-15T00:00:00.000Z"),
-    );
+    expect(insertDealValuesMock).not.toHaveBeenCalled();
+    expect(insertAccountValuesMock).not.toHaveBeenCalled();
+    expect(insertContactValuesMock).not.toHaveBeenCalled();
   });
 
-  it("createLeadAction keeps terminal lead and deal states consistent", async () => {
+  it("createLeadAction preserves the lead stage without creating a deal", async () => {
     insertLeadReturningMock.mockResolvedValue([
       { id: leadId, fullName: "Jane Doe" },
     ]);
@@ -398,12 +385,7 @@ describe("lead actions", () => {
         status: "Closed",
       }),
     );
-    expect(insertDealValuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stage: "won",
-        probability: 100,
-      }),
-    );
+    expect(insertDealValuesMock).not.toHaveBeenCalled();
   });
 
   it("createLeadAction creates a lead and activity event", async () => {
@@ -427,19 +409,9 @@ describe("lead actions", () => {
       }),
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/leads");
-    expect(insertAccountValuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: "workspace_123",
-        name: "Acme",
-      }),
-    );
-    expect(insertContactValuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: "workspace_123",
-        accountId: "account_123",
-        fullName: "Jane Doe",
-      }),
-    );
+    expect(insertAccountValuesMock).not.toHaveBeenCalled();
+    expect(insertContactValuesMock).not.toHaveBeenCalled();
+    expect(insertDealValuesMock).not.toHaveBeenCalled();
   });
 
   it("updateLeadAction updates a lead and logs status change", async () => {

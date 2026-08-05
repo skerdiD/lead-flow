@@ -8,7 +8,7 @@ import { getRequestId } from "@/lib/request-context.server";
 
 export const auditActions = [
   "workspace.created", "workspace.updated", "workspace.deleted", "member.invited", "member.invitation_accepted", "member.invitation_revoked", "member.role_changed", "member.removed", "workspace.ownership_transferred",
-  "lead.created", "lead.updated", "lead.archived", "lead.deleted", "deal.created", "deal.updated", "deal.stage_changed", "deal.archived", "deal.deleted", "account.created", "account.updated", "account.archived", "account.deleted", "contact.created", "contact.updated", "contact.archived", "contact.deleted", "task.created", "task.updated", "task.completed", "task.reopened", "task.deleted", "note.deleted", "crm.import.completed", "export.created", "demo.mutation_blocked", "authorization.forbidden",
+  "lead.created", "lead.updated", "lead.qualified", "lead.archived", "lead.deleted", "deal.created", "deal.updated", "deal.stage_changed", "deal.archived", "deal.deleted", "account.created", "account.updated", "account.archived", "account.deleted", "contact.created", "contact.updated", "contact.archived", "contact.deleted", "task.created", "task.updated", "task.completed", "task.reopened", "task.deleted", "note.deleted", "crm.import.completed", "export.created", "demo.mutation_blocked", "authorization.forbidden",
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 export type AuditEntityType = "workspace" | "member" | "invitation" | "lead" | "deal" | "account" | "contact" | "task" | "note" | "import" | "export" | "authorization";

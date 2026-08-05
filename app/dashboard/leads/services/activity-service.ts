@@ -26,6 +26,7 @@ export async function createLeadActivity(params: {
   message: string;
   leadId?: string | null;
   leadName?: string | null;
+  metadata?: Record<string, string>;
 }) {
   const client = params.client ?? db;
 
@@ -36,5 +37,6 @@ export async function createLeadActivity(params: {
     message: params.message,
     leadId: params.leadId ?? null,
     leadName: params.leadName ?? null,
+    metadata: params.metadata ?? null,
   });
 }

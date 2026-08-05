@@ -9,7 +9,6 @@ import {
   Ellipsis,
   Loader2,
   PenSquare,
-  Sparkles,
   Target,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +30,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LeadStatus } from "@/lib/constants/leads";
+import {
+  LeadQualificationDialog,
+  type LeadQualificationSnapshot,
+} from "@/components/leads/lead-qualification-dialog";
 
 type LeadQuickActionsProps = {
   leadId: string;
@@ -42,6 +45,7 @@ type LeadQuickActionsProps = {
   canDelete?: boolean;
   canUpdate?: boolean;
   canQualify?: boolean;
+  qualificationLead?: LeadQualificationSnapshot;
 };
 
 export function LeadQuickActions({
@@ -54,6 +58,7 @@ export function LeadQuickActions({
   canDelete = false,
   canUpdate = false,
   canQualify = false,
+  qualificationLead,
 }: LeadQuickActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -79,18 +84,6 @@ export function LeadQuickActions({
     });
   };
 
-  const handleQualify = () => {
-    startTransition(async () => {
-      const result = await updateLeadStatusQuickAction(leadId, "Interested");
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-      toast.success("Lead qualified.");
-      router.refresh();
-    });
-  };
-
   const actionsDisabled = readOnly || !canUpdate || isArchived;
 
   return (
@@ -107,15 +100,8 @@ export function LeadQuickActions({
         </Button>
       ) : null}
 
-      {canQualify && !actionsDisabled ? (
-        <Button size="sm" onClick={handleQualify} disabled={isPending}>
-          {isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="mr-2 h-4 w-4" />
-          )}
-          Qualify lead
-        </Button>
+      {canQualify && qualificationLead && !actionsDisabled ? (
+        <LeadQualificationDialog lead={qualificationLead} disabled={isPending} />
       ) : null}
 
       {!actionsDisabled ? (
