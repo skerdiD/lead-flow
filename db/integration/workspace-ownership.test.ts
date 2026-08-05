@@ -215,27 +215,50 @@ describeDatabase("workspace ownership integrity", () => {
       "SELECT event_type FROM activity_events WHERE workspace_id = $1 AND event_type = 'ownership_transferred'",
       [workspace.id],
     );
+    const auditEvent = await pool.query<{
+      action: string;
+      actor_user_id: string;
+      actor_role: string;
+      before: { ownerMemberId?: string } | null;
+      after: { ownerMemberId?: string } | null;
+    }>(
+      `SELECT action, actor_user_id, actor_role, before, after
+       FROM audit_logs
+       WHERE workspace_id = $1 AND action = 'workspace.ownership_transferred'`,
+      [workspace.id],
+    );
 
     expect(memberships.rows.find((member) => member.user_id === workspace.ownerUserId)?.role).toBe("admin");
     expect(memberships.rows.find((member) => member.user_id === target.userId)?.role).toBe("owner");
     expect(owners).toHaveLength(1);
     expect(event.rows).toHaveLength(1);
+    expect(auditEvent.rows).toEqual([
+      {
+        action: "workspace.ownership_transferred",
+        actor_user_id: workspace.ownerUserId,
+        actor_role: "owner",
+        before: { ownerMemberId: workspace.ownerMemberId },
+        after: { ownerMemberId: target.id },
+      },
+    ]);
   });
 
-  it("rejects non-owners, admins, cross-workspace targets, and missing targets", async () => {
-    const workspace = await createWorkspace("authorization");
+  it("rejects an admin attempting to transfer ownership", async () => {
+    const workspace = await createWorkspace("admin-authorization");
     const admin = await addMember(workspace.id, "admin");
     const member = await addMember(workspace.id);
-    const secondMember = await addMember(workspace.id);
-    const otherWorkspace = await createWorkspace("other");
-    const otherMember = await addMember(otherWorkspace.id);
 
     await expect(transfer(workspace, member.id, admin.userId)).rejects.toBeInstanceOf(
       WorkspaceOwnershipError,
     );
-    await expect(
-      transfer(workspace, secondMember.id, member.userId),
-    ).rejects.toBeInstanceOf(WorkspaceOwnershipError);
+  });
+
+  it("requires the transfer target to belong to the workspace", async () => {
+    const workspace = await createWorkspace("target-tenant");
+    const secondMember = await addMember(workspace.id);
+    const otherWorkspace = await createWorkspace("other");
+    const otherMember = await addMember(otherWorkspace.id);
+
     await expect(transfer(workspace, otherMember.id)).rejects.toBeInstanceOf(
       WorkspaceOwnershipError,
     );
@@ -245,18 +268,13 @@ describeDatabase("workspace ownership integrity", () => {
     await expect(
       transfer(workspace, workspace.ownerMemberId),
     ).rejects.toBeInstanceOf(WorkspaceOwnershipError);
+    await expect(transfer(workspace, secondMember.id)).resolves.toMatchObject({
+      newOwnerMemberId: secondMember.id,
+    });
   });
 
-  it("rejects generic attempts to demote, remove, invite, or promote another owner", async () => {
-    const workspace = await createWorkspace("guardrails");
-    const member = await addMember(workspace.id);
-
-    await expectOwnerProtection(
-      pool.query("UPDATE workspace_members SET role = 'admin' WHERE id = $1", [
-        workspace.ownerMemberId,
-      ]),
-      "P0001",
-    );
+  it("prevents the current owner from being removed", async () => {
+    const workspace = await createWorkspace("owner-removal");
     await expectOwnerProtection(
       pool.query("DELETE FROM workspace_members WHERE id = $1", [
         workspace.ownerMemberId,
@@ -270,6 +288,37 @@ describeDatabase("workspace ownership integrity", () => {
         [workspace.ownerMemberId],
       ),
     ).resolves.toMatchObject({ rows: [{ role: "owner" }] });
+  });
+
+  it("prevents the current owner from leaving the workspace", async () => {
+    const workspace = await createWorkspace("owner-leave");
+
+    await expectOwnerProtection(
+      pool.query(
+        "DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2",
+        [workspace.id, workspace.ownerUserId],
+      ),
+      "P0001",
+    );
+
+    await expect(
+      pool.query<{ role: string }>(
+        "SELECT role FROM workspace_members WHERE id = $1",
+        [workspace.ownerMemberId],
+      ),
+    ).resolves.toMatchObject({ rows: [{ role: "owner" }] });
+  });
+
+  it("rejects generic attempts to demote, invite, or promote another owner", async () => {
+    const workspace = await createWorkspace("guardrails");
+    const member = await addMember(workspace.id);
+
+    await expectOwnerProtection(
+      pool.query("UPDATE workspace_members SET role = 'admin' WHERE id = $1", [
+        workspace.ownerMemberId,
+      ]),
+      "P0001",
+    );
     await expect(
       pool.query("UPDATE workspace_members SET role = 'owner' WHERE id = $1", [
         member.id,

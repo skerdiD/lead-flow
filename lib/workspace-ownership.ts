@@ -148,9 +148,15 @@ export async function transferWorkspaceOwnershipInTransaction(
     actor: { userId: input.actorUserId, role: "owner" },
     action: "workspace.ownership_transferred",
     entity: { type: "workspace", id: input.workspaceId },
-    before: { ownerUserId: input.actorUserId },
-    after: { ownerUserId: target.userId },
-    metadata: { previousOwnerMemberId: currentOwner.id, newOwnerMemberId: target.id },
+    // Audit the membership transition because membership role is the
+    // ownership source of truth. User IDs remain metadata for durable actor
+    // attribution; they are not treated as workspace ownership state.
+    before: { ownerMemberId: currentOwner.id },
+    after: { ownerMemberId: target.id },
+    metadata: {
+      previousOwnerUserId: currentOwner.userId,
+      newOwnerUserId: target.userId,
+    },
     requestId: input.requestId,
   });
 
