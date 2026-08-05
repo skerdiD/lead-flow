@@ -275,6 +275,10 @@ export const accounts = pgTable(
       table.assignedOwnerUserId,
     ),
     index("accounts_user_id_idx").on(table.userId),
+    check(
+      "accounts_archive_consistency_check",
+      sql`${table.isArchived} = (${table.archivedAt} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -334,6 +338,10 @@ export const contacts = pgTable(
       .on(table.workspaceId, table.accountId)
       .where(sql`${table.isPrimary} = true and ${table.accountId} is not null`),
     index("contacts_user_id_idx").on(table.userId),
+    check(
+      "contacts_archive_consistency_check",
+      sql`${table.isArchived} = (${table.archivedAt} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -423,6 +431,10 @@ export const leads = pgTable(
     index("leads_user_id_idx").on(table.userId),
     index("leads_user_id_status_idx").on(table.userId, table.status),
     index("leads_user_id_created_at_idx").on(table.userId, table.createdAt),
+    check(
+      "leads_archive_consistency_check",
+      sql`${table.isArchived} = (${table.archivedAt} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -488,10 +500,17 @@ export const deals = pgTable(
       "deals_probability_range_check",
       sql`${table.probability} BETWEEN 0 AND 100`,
     ),
-    check("deals_currency_uppercase_check", sql`${table.currency} = upper(${table.currency})`),
+    check(
+      "deals_currency_format_check",
+      sql`${table.currency} ~ '^[A-Z]{3}$'`,
+    ),
     check(
       "deals_closed_at_for_final_stage_check",
-      sql`(${table.stage} IN ('won', 'lost') AND ${table.closedAt} IS NOT NULL) OR ${table.stage} NOT IN ('won', 'lost')`,
+      sql`(${table.stage} IN ('won', 'lost')) = (${table.closedAt} IS NOT NULL)`,
+    ),
+    check(
+      "deals_lost_reason_check",
+      sql`${table.stage} <> 'lost' OR NULLIF(BTRIM(${table.lostReason}), '') IS NOT NULL`,
     ),
     index("deals_workspace_id_idx").on(table.workspaceId),
     index("deals_workspace_id_stage_idx").on(table.workspaceId, table.stage),
@@ -570,6 +589,10 @@ export const crmTasks = pgTable(
     ),
     index("crm_tasks_workspace_id_owner_idx").on(table.workspaceId, table.ownerUserId),
     index("crm_tasks_user_id_idx").on(table.userId),
+    check(
+      "crm_tasks_completion_consistency_check",
+      sql`(${table.status} = 'completed') = (${table.completedAt} IS NOT NULL)`,
+    ),
   ],
 );
 

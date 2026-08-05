@@ -11,6 +11,7 @@ import { requireUserId } from "@/lib/auth";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { createNotificationBestEffort } from "@/lib/notifications";
+import { dealLostReasonSchema } from "@/lib/validations/deal";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { createLeadActivity } from "../services/activity-service";
 import {
@@ -33,6 +34,7 @@ export async function updateDealStageAction(
   leadId: string,
   dealId: string,
   stage: string,
+  lostReason?: string,
 ): Promise<DealStageMutationState> {
   if (!isLeadActionId(leadId) || !isLeadActionId(dealId)) {
     return {
@@ -66,6 +68,16 @@ export async function updateDealStageAction(
     return {
       success: false,
       message: "Select a valid deal stage.",
+    };
+  }
+
+  const parsedLostReason = stage === "lost"
+    ? dealLostReasonSchema.safeParse(lostReason)
+    : null;
+  if (parsedLostReason && !parsedLostReason.success) {
+    return {
+      success: false,
+      message: parsedLostReason.error.issues[0]?.message ?? "Enter a lost reason.",
     };
   }
 
@@ -132,7 +144,7 @@ export async function updateDealStageAction(
           stage,
           probability: normalizeDealProbability(stage, existingDeal.probability),
           closedAt: stage === "won" || stage === "lost" ? new Date() : null,
-          lostReason: null,
+          lostReason: stage === "lost" ? parsedLostReason?.data : null,
           updatedAt: new Date(),
         })
         .where(

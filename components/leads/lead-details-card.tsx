@@ -482,7 +482,7 @@ export function LeadDetailsCard({
             </div>
 
             <aside className="min-w-0 space-y-5" aria-label="Lead workflow" data-testid="lead-details-sidebar">
-              <LeadWorkflowPanel leadId={lead.id} fullName={lead.fullName} currentStatus={lead.status} nextStep={nextStep} readOnly={actionsDisabled} />
+              <LeadWorkflowPanel leadId={lead.id} fullName={lead.fullName} currentStatus={lead.status} nextStep={nextStep} hasLinkedDeal={Boolean(lead.dealEntry)} readOnly={actionsDisabled} />
               <LeadFollowUpPanel key={`${lead.nextFollowUpDate?.toISOString() ?? "none"}:${lead.followUpPriority}:${lead.followUpStatus}:${lead.followUpNote ?? ""}`} leadId={lead.id} followUp={{ date: lead.nextFollowUpDate, note: lead.followUpNote, priority: lead.followUpPriority, status: lead.followUpStatus }} readOnly={actionsDisabled} />
               {canAssign ? <LeadOwnerControl leadId={lead.id} currentOwnerUserId={lead.assignedOwnerUserId} ownerOptions={lead.ownerOptions} disabled={readOnly || lead.isArchived} /> : null}
             </aside>

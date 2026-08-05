@@ -45,6 +45,10 @@ import { writeAuditEvent } from "@/lib/audit-log.server";
 import { getRequestId } from "@/lib/request-context.server";
 import { logger } from "@/lib/logger.server";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
+import {
+  acceptWorkspaceInvitationInTransaction,
+  InvitationAcceptanceError,
+} from "@/lib/workspace-invitations";
 
 type WorkspaceActionState =
   | { success: true; message: string; inviteUrl?: string }
@@ -520,44 +524,10 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
     const tokenHash = hashInvitationToken(token);
     const requestId = await getRequestId();
     const accepted = await db.transaction(async (tx) => {
-      const [invitation] = await tx
-        .select({
-          id: workspaceInvitations.id,
-          workspaceId: workspaceInvitations.workspaceId,
-          email: workspaceInvitations.email,
-          role: workspaceInvitations.role,
-          status: workspaceInvitations.status,
-          expiresAt: workspaceInvitations.expiresAt,
-        })
-        .from(workspaceInvitations)
-        .where(eq(workspaceInvitations.tokenHash, tokenHash))
-        .limit(1);
-
-      if (!invitation || invitation.status !== "pending" || invitation.expiresAt <= new Date()) {
-        throw new Error("This invitation is invalid or has expired.");
-      }
-      if (!verifiedEmails.includes(invitation.email.toLowerCase())) {
-        throw new Error("Sign in with the email address that received this invitation.");
-      }
-
-      const [existingMembership] = await tx
-        .select({ id: workspaceMembers.id })
-        .from(workspaceMembers)
-        .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userId, userId)))
-        .limit(1);
-      if (existingMembership) throw new Error("You already have access to this workspace.");
-
-      const [claimed] = await tx
-        .update(workspaceInvitations)
-        .set({ status: "accepted", acceptedAt: new Date(), acceptedByUserId: userId })
-        .where(and(eq(workspaceInvitations.id, invitation.id), eq(workspaceInvitations.status, "pending")))
-        .returning({ id: workspaceInvitations.id });
-      if (!claimed) throw new Error("This invitation has already been used.");
-
-      await tx.insert(workspaceMembers).values({
-        workspaceId: invitation.workspaceId,
+      const invitation = await acceptWorkspaceInvitationInTransaction(tx, {
+        tokenHash,
         userId,
-        role: invitation.role,
+        verifiedEmails,
       });
       await tx.insert(activityEvents).values({
         workspaceId: invitation.workspaceId,
@@ -587,13 +557,15 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
     revalidateWorkspaceSettings();
     return { success: true, message: "You joined the workspace." };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "We couldn't accept this invitation right now. Please try again.";
-    if (message.startsWith("This invitation") || message.startsWith("You already")) {
+    const message = error instanceof InvitationAcceptanceError
+      ? error.message
+      : "We couldn't accept this invitation right now. Please try again.";
+    if (error instanceof InvitationAcceptanceError) {
       logger.warn("security_invitation_rejected", "An invitation was invalid, expired, or already used.", {
         actorUserId: userId,
         entityType: "invitation",
       });
     }
-    return { success: false, message: message.startsWith("This invitation") || message.startsWith("Sign in") || message.startsWith("You already") ? message : "We couldn't accept this invitation right now. Please try again." };
+    return { success: false, message };
   }
 }

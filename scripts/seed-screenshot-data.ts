@@ -52,12 +52,10 @@ type SeedLead = {
   source: string;
   notes: string;
   dealName: string;
-  dealStage: DealStage;
   dealValue: number;
   probability: number;
   expectedCloseOffsetDays?: number;
   closedOffsetDays?: number;
-  lostReason?: string;
   createdOffsetDays: number;
   noteEntries: string[];
   tasks: Array<{
@@ -67,7 +65,10 @@ type SeedLead = {
     status: TaskStatus;
     priority: TaskPriority;
   }>;
-};
+} & (
+  | { dealStage: "lost"; lostReason: string }
+  | { dealStage: Exclude<DealStage, "lost">; lostReason?: never }
+);
 
 const seedLeads: SeedLead[] = [
   {

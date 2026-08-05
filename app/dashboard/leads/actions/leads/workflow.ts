@@ -12,6 +12,7 @@ import { requireUserId } from "@/lib/auth";
 import { DEAL_STAGE_LABELS } from "@/lib/constants/crm";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { createNotificationBestEffort } from "@/lib/notifications";
+import { dealLostReasonSchema } from "@/lib/validations/deal";
 import {
   leadFollowUpSchema,
   type LeadFollowUpValues,
@@ -42,6 +43,7 @@ import {
 export async function updateLeadStatusQuickAction(
   leadId: string,
   status: string,
+  lostReason?: string,
 ): Promise<LeadQuickStatusState> {
   if (!isLeadActionId(leadId)) {
     return {
@@ -77,6 +79,11 @@ export async function updateLeadStatusQuickAction(
       message: "Select a valid lead stage.",
     };
   }
+
+
+  const parsedLostReason = status === "Lost"
+    ? dealLostReasonSchema.safeParse(lostReason)
+    : null;
 
   try {
     const [existingLead] = await db
@@ -176,13 +183,20 @@ export async function updateLeadStatusQuickAction(
         return { updatedLead: lead, updatedDeal: null, notification: null };
       }
 
+      if (syncedDealStage === "lost" && parsedLostReason && !parsedLostReason.success) {
+        throw new Error(
+          parsedLostReason.error.issues[0]?.message ??
+            "Enter a reason before marking this deal as lost.",
+        );
+      }
+
       const [deal] = await tx
         .update(deals)
         .set({
           stage: syncedDealStage,
           probability: normalizeDealProbability(syncedDealStage, 0),
           closedAt: new Date(),
-          lostReason: syncedDealStage === "lost" ? existingDeal.lostReason : null,
+          lostReason: syncedDealStage === "lost" ? parsedLostReason?.data : null,
           updatedAt: new Date(),
         })
         .where(and(eq(deals.id, existingDeal.id), eq(deals.workspaceId, workspace.id)))
@@ -254,7 +268,10 @@ export async function updateLeadStatusQuickAction(
       status: updatedLead.status,
       message: `Lead stage updated to ${updatedLead.status}.`,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("reason before marking")) {
+      return { success: false, message: error.message };
+    }
     return {
       success: false,
       message: "We couldn't update lead stage right now. Please try again.",

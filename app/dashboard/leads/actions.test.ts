@@ -559,6 +559,22 @@ describe("lead actions", () => {
     );
   });
 
+  it("rejects a lost deal transition without a meaningful reason", async () => {
+    const result = await updateDealStageAction(
+      leadId,
+      "22222222-2222-4222-8222-222222222222",
+      "lost",
+      "   ",
+    );
+
+    expect(result).toEqual({
+      success: false,
+      message: "Enter a reason before marking this deal as lost.",
+    });
+    expect(selectResults).toHaveLength(0);
+    expect(updateReturningMock).not.toHaveBeenCalled();
+  });
+
   it("updateLeadFollowUpAction saves follow-up details and logs activity", async () => {
     selectResults.push([
       {

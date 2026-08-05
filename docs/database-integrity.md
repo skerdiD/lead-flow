@@ -72,3 +72,39 @@ intent; the migration supplies PostgreSQL's more precise column-list form.
 
 Run `npm run test:db` only with `TEST_DATABASE_URL` set to a dedicated database
 whose name includes `test` or `ci`. CI runs migrations before this suite.
+
+## Business-state invariants
+
+Migration `0023_icy_mantis.sql` adds checks for task completion, archive
+timestamps, deal closure, lost reasons, and currency format. Before adding the
+checks it applies only repairs whose intent is unambiguous:
+
+- `crm_tasks.status` is authoritative. Completed tasks missing a timestamp use
+  `updated_at`; non-completed tasks have a stale `completed_at` cleared.
+- Each archive flag is authoritative. Archived accounts, contacts, and leads
+  missing a timestamp use `updated_at`; active rows have stale archive
+  timestamps cleared.
+- Deal stage is authoritative. Open deals have stale `closed_at` values cleared;
+  final-stage deals missing a timestamp use `updated_at`.
+- Nonblank lost reasons are trimmed. The migration never invents a reason.
+- Currency values are trimmed and uppercased only when they unambiguously map
+  to the supported `USD`, `EUR`, or `GBP` codes.
+
+Missing lost reasons and currencies that still fail `^[A-Z]{3}$` are ambiguous.
+The migration reports their counts and aborts before changing constraints so an
+operator can repair the business data explicitly. Inspect those rows with:
+
+```sql
+SELECT id, workspace_id, stage, lost_reason
+FROM deals
+WHERE stage = 'lost' AND NULLIF(BTRIM(lost_reason), '') IS NULL;
+
+SELECT id, workspace_id, currency
+FROM deals
+WHERE currency !~ '^[A-Z]{3}$';
+```
+
+The database deliberately validates currency shape rather than the product's
+supported set. The centralized application list in `lib/constants/crm.ts`
+controls which ISO currencies users can submit, allowing that product list to
+change without a database migration.

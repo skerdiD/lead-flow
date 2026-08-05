@@ -14,6 +14,8 @@ import {
 } from "@/lib/constants/crm";
 import { formatCurrencyFromCents } from "@/lib/revenue";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -67,6 +69,7 @@ export function LeadDealPanel({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [stage, setStage] = useState<DealStage>(deal?.stage ?? "new");
+  const [lostReason, setLostReason] = useState(deal?.lostReason ?? "");
 
   if (!deal) {
     return (
@@ -91,7 +94,12 @@ export function LeadDealPanel({
     if (!hasChanges) return;
 
     startTransition(async () => {
-      const result = await updateDealStageAction(leadId, deal.id, stage);
+      const result = await updateDealStageAction(
+        leadId,
+        deal.id,
+        stage,
+        stage === "lost" ? lostReason : undefined,
+      );
 
       if (!result.success) {
         toast.error(result.message);
@@ -169,7 +177,15 @@ export function LeadDealPanel({
             </Select>
           </div>
 
-          <Button onClick={handleUpdateStage} disabled={isPending || readOnly || !hasChanges}>
+          <Button
+            onClick={handleUpdateStage}
+            disabled={
+              isPending ||
+              readOnly ||
+              !hasChanges ||
+              (stage === "lost" && !lostReason.trim())
+            }
+          >
             {isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -178,6 +194,21 @@ export function LeadDealPanel({
             Apply stage
           </Button>
         </div>
+
+        {stage === "lost" ? (
+          <div className="mt-4">
+            <Label htmlFor="lead-deal-lost-reason">Lost reason *</Label>
+            <Input
+              id="lead-deal-lost-reason"
+              className="mt-2"
+              value={lostReason}
+              onChange={(event) => setLostReason(event.target.value)}
+              disabled={isPending || readOnly}
+              maxLength={255}
+              placeholder="Budget, timing, no decision..."
+            />
+          </div>
+        ) : null}
 
         {readOnly ? (
           <DemoReadOnlyHint

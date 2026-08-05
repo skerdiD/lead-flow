@@ -162,6 +162,13 @@
       "when": 1785932869131,
       "tag": "0022_lyrical_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785934601162,
+      "tag": "0023_icy_mantis",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,12 @@ const optionalText = (max: number) => z.preprocess(
   z.string().trim().max(max).optional(),
 );
 
+export const dealLostReasonSchema = z
+  .string()
+  .trim()
+  .min(1, "Enter a reason before marking this deal as lost.")
+  .max(255, "Lost reason must be 255 characters or less.");
+
 export const dealFormSchema = z.object({
   name: z.string().trim().min(2, "Enter a deal name.").max(160),
   stage: z.enum(DEAL_STAGES),
@@ -18,6 +24,14 @@ export const dealFormSchema = z.object({
   contactId: optionalText(36),
   ownerUserId: optionalText(255),
   lostReason: optionalText(255),
+}).superRefine((value, context) => {
+  if (value.stage === "lost" && !value.lostReason) {
+    context.addIssue({
+      code: "custom",
+      path: ["lostReason"],
+      message: "Enter a reason before marking this deal as lost.",
+    });
+  }
 });
 
 export const dealMoveSchema = z.object({
@@ -25,6 +39,14 @@ export const dealMoveSchema = z.object({
   stage: z.enum(DEAL_STAGES),
   updatedAt: z.string().datetime(),
   lostReason: optionalText(255),
+}).superRefine((value, context) => {
+  if (value.stage === "lost" && !value.lostReason) {
+    context.addIssue({
+      code: "custom",
+      path: ["lostReason"],
+      message: "Enter a reason before marking this deal as lost.",
+    });
+  }
 });
 
 export type DealFormValues = z.output<typeof dealFormSchema>;

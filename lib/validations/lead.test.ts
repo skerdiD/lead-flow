@@ -88,4 +88,21 @@ describe("leadFormSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("requires a reason for a linked deal marked lost", () => {
+    const parsed = leadFormSchema.safeParse({
+      fullName: "Jane Doe",
+      status: "Lost",
+      dealName: "Website redesign",
+      dealStage: "lost",
+      lostReason: "   ",
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.flatten().fieldErrors.lostReason).toContain(
+        "Enter a reason before marking this deal as lost.",
+      );
+    }
+  });
 });

@@ -6,7 +6,7 @@ import {
   type getWorkspaceAuthorizationContext,
   hasWorkspacePermission,
 } from "@/lib/authorization";
-import type { DealStage } from "@/lib/constants/crm";
+import type { DealCurrency, DealStage } from "@/lib/constants/crm";
 import { moneyToCents } from "@/lib/revenue";
 import type { LeadDbClient } from "./db-client";
 import {
@@ -26,7 +26,7 @@ export async function saveLeadDeal(params: {
   dealName?: string;
   dealStage: DealStage;
   dealValue: number;
-  dealCurrency: string;
+  dealCurrency: DealCurrency;
   dealProbability: number;
   expectedCloseDate?: string;
   closedDate?: string;

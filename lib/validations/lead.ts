@@ -132,6 +132,14 @@ export const leadFormSchema = z.object({
   expectedCloseDate: optionalDateString,
   closedDate: optionalDateString,
   lostReason: optionalTrimmedString(255),
+}).superRefine((value, context) => {
+  if (value.dealName && value.dealStage === "lost" && !value.lostReason) {
+    context.addIssue({
+      code: "custom",
+      path: ["lostReason"],
+      message: "Enter a reason before marking this deal as lost.",
+    });
+  }
 });
 
 export const leadFollowUpSchema = z.object({

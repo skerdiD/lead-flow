@@ -64,12 +64,18 @@ export function LeadQuickActions({
   const [isPending, startTransition] = useTransition();
 
   const handleTerminalUpdate = (target: "won" | "lost") => {
+    const lostReason = target === "lost" && dealId
+      ? window.prompt("Why was this deal lost?")?.trim()
+      : undefined;
+    if (target === "lost" && dealId && !lostReason) return;
+
     startTransition(async () => {
       const result = dealId
-        ? await updateDealStageAction(leadId, dealId, target)
+        ? await updateDealStageAction(leadId, dealId, target, lostReason)
         : await updateLeadStatusQuickAction(
             leadId,
             target === "won" ? "Closed" : "Lost",
+            lostReason,
           );
 
       if (!result.success) {

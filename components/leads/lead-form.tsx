@@ -710,7 +710,7 @@ export function LeadForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Optional context when a deal is marked lost.
+                        Required when a deal is marked lost.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

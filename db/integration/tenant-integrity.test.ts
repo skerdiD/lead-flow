@@ -120,13 +120,14 @@ describeDatabase("workspace relationship integrity", () => {
       currency?: string;
       probability?: number;
       closedAt?: Date | null;
+      lostReason?: string | null;
     } = {},
   ) {
     const result = await pool.query<{ id: string }>(
       `INSERT INTO deals (
         workspace_id, user_id, lead_id, account_id, contact_id, name,
-        stage, value_cents, currency, probability, closed_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        stage, value_cents, currency, probability, closed_at, lost_reason
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
       [
         workspace.id,
         workspace.userId,
@@ -139,6 +140,7 @@ describeDatabase("workspace relationship integrity", () => {
         options.currency ?? "USD",
         options.probability ?? 0,
         options.closedAt ?? null,
+        options.lostReason ?? null,
       ],
     );
 
@@ -151,10 +153,12 @@ describeDatabase("workspace relationship integrity", () => {
       leadId?: string | null;
       dealId?: string | null;
       contactId?: string | null;
+      status?: "pending" | "completed";
+      completedAt?: Date | null;
     } = {},
   ) {
     const result = await pool.query<{ id: string }>(
-      "INSERT INTO crm_tasks (workspace_id, user_id, lead_id, deal_id, contact_id, title) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+      "INSERT INTO crm_tasks (workspace_id, user_id, lead_id, deal_id, contact_id, title, status, completed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
       [
         workspace.id,
         workspace.userId,
@@ -162,6 +166,8 @@ describeDatabase("workspace relationship integrity", () => {
         options.dealId ?? null,
         options.contactId ?? null,
         `Task ${randomUUID()}`,
+        options.status ?? "pending",
+        options.completedAt ?? null,
       ],
     );
 
@@ -338,7 +344,15 @@ describeDatabase("workspace relationship integrity", () => {
     });
     await expect(createDeal(workspace, { currency: "usd" })).rejects.toMatchObject({
       code: "23514",
-      constraint: "deals_currency_uppercase_check",
+      constraint: "deals_currency_format_check",
+    });
+    await expect(createDeal(workspace, { currency: "US1" })).rejects.toMatchObject({
+      code: "23514",
+      constraint: "deals_currency_format_check",
+    });
+    await expect(createDeal(workspace, { currency: "US" })).rejects.toMatchObject({
+      code: "23514",
+      constraint: "deals_currency_format_check",
     });
   });
 
@@ -349,7 +363,14 @@ describeDatabase("workspace relationship integrity", () => {
       code: "23514",
       constraint: "deals_closed_at_for_final_stage_check",
     });
-    await expect(createDeal(workspace, { stage: "lost" })).rejects.toMatchObject({
+    await expect(createDeal(workspace, { stage: "lost", lostReason: "Budget" })).rejects.toMatchObject({
+      code: "23514",
+      constraint: "deals_closed_at_for_final_stage_check",
+    });
+
+    await expect(
+      createDeal(workspace, { stage: "new", closedAt: new Date() }),
+    ).rejects.toMatchObject({
       code: "23514",
       constraint: "deals_closed_at_for_final_stage_check",
     });
@@ -362,5 +383,63 @@ describeDatabase("workspace relationship integrity", () => {
 
     expect(updated.rows[0]).toMatchObject({ stage: "won" });
     expect(updated.rows[0]?.closed_at).toBeInstanceOf(Date);
+  });
+
+  it("requires task status and completion timestamps to agree", async () => {
+    const workspace = await createWorkspace("task-completion-checks");
+
+    await expect(
+      createTask(workspace, { status: "completed", completedAt: null }),
+    ).rejects.toMatchObject({
+      code: "23514",
+      constraint: "crm_tasks_completion_consistency_check",
+    });
+    await expect(
+      createTask(workspace, { status: "pending", completedAt: new Date() }),
+    ).rejects.toMatchObject({
+      code: "23514",
+      constraint: "crm_tasks_completion_consistency_check",
+    });
+  });
+
+  it("requires archive flags and timestamps to agree on every archivable entity", async () => {
+    const workspace = await createWorkspace("archive-checks");
+
+    await expect(
+      pool.query(
+        "INSERT INTO accounts (workspace_id, user_id, name, is_archived) VALUES ($1, $2, $3, true)",
+        [workspace.id, workspace.userId, `Account ${randomUUID()}`],
+      ),
+    ).rejects.toMatchObject({ constraint: "accounts_archive_consistency_check" });
+    await expect(
+      pool.query(
+        "INSERT INTO contacts (workspace_id, user_id, full_name, archived_at) VALUES ($1, $2, $3, now())",
+        [workspace.id, workspace.userId, `Contact ${randomUUID()}`],
+      ),
+    ).rejects.toMatchObject({ constraint: "contacts_archive_consistency_check" });
+    await expect(
+      pool.query(
+        "INSERT INTO leads (workspace_id, user_id, full_name, is_archived) VALUES ($1, $2, $3, true)",
+        [workspace.id, workspace.userId, `Lead ${randomUUID()}`],
+      ),
+    ).rejects.toMatchObject({ constraint: "leads_archive_consistency_check" });
+  });
+
+  it("requires a nonblank reason for lost deals", async () => {
+    const workspace = await createWorkspace("lost-reason-checks");
+    const closedAt = new Date();
+
+    await expect(
+      createDeal(workspace, { stage: "lost", closedAt }),
+    ).rejects.toMatchObject({
+      code: "23514",
+      constraint: "deals_lost_reason_check",
+    });
+    await expect(
+      createDeal(workspace, { stage: "lost", closedAt, lostReason: "   " }),
+    ).rejects.toMatchObject({
+      code: "23514",
+      constraint: "deals_lost_reason_check",
+    });
   });
 });
