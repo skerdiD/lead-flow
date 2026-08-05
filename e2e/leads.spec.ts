@@ -62,7 +62,11 @@ test.describe("Leads e2e flows", () => {
       .getByRole("link", { name: "Leads", exact: true })
       .click();
     await expect(page).toHaveURL(/\/dashboard\/leads$/);
-    await expect(page.getByRole("heading", { name: "Leads" })).toBeVisible();
+    await expect(
+      page
+        .getByTestId("dashboard-scroll-region")
+        .getByRole("heading", { name: "Leads", exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { name: "No leads yet", exact: true })).toBeVisible();
   });
 

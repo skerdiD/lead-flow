@@ -244,7 +244,11 @@ test.describe("CRM responsive layouts", () => {
         page.locator("#lead-follow-up").getByLabel("Date", { exact: true }),
       ).toBeVisible();
       await expect(page.getByLabel("Follow-up note")).toBeVisible();
-      await expect(page.getByText("$9,600")).toBeVisible();
+      await expect(
+        page
+          .getByTestId("lead-details-sidebar")
+          .getByText("$9,600", { exact: true }),
+      ).toBeVisible();
       await expectNoDocumentOverflow(page);
     }
   });

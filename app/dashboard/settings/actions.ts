@@ -44,6 +44,7 @@ import {
 import { writeAuditEvent } from "@/lib/audit-log.server";
 import { getRequestId } from "@/lib/request-context.server";
 import { logger } from "@/lib/logger.server";
+import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 type WorkspaceActionState =
   | { success: true; message: string; inviteUrl?: string }
@@ -117,21 +118,41 @@ export async function inviteWorkspaceMemberAction(input: {
   if (actor.error) return { success: false, message: actor.error };
 
   try {
-    const client = await clerkClient();
-    const knownUsers = await client.users.getUserList({
-      emailAddress: [parsed.data.email],
-      limit: 1,
-    });
-    const existingUser = knownUsers.data[0];
+    // E2E authentication is intentionally local, so it must never make a
+    // request to Clerk with the inert CI credentials. In normal operation the
+    // lookup is best-effort: an identity-provider outage should not prevent us
+    // from creating a valid, expiring invitation.
+    let existingUserId: string | undefined;
+    if (!isSafeE2ETestMode()) {
+      try {
+        const client = await clerkClient();
+        const knownUsers = await client.users.getUserList({
+          emailAddress: [parsed.data.email],
+          limit: 1,
+        });
+        existingUserId = knownUsers.data[0]?.id;
+      } catch (error) {
+        logger.warn(
+          "workspace_invitation_recipient_lookup_unavailable",
+          "Workspace invitation recipient lookup was unavailable; invitation creation will continue.",
+          {
+            workspaceId: actor.workspace.id,
+            actorUserId: actor.userId,
+            entityType: "invitation",
+            errorName: error instanceof Error ? error.name : "UnknownError",
+          },
+        );
+      }
+    }
 
-    if (existingUser) {
+    if (existingUserId) {
       const [existingMember] = await db
         .select({ id: workspaceMembers.id })
         .from(workspaceMembers)
         .where(
           and(
             eq(workspaceMembers.workspaceId, actor.workspace.id),
-            eq(workspaceMembers.userId, existingUser.id),
+            eq(workspaceMembers.userId, existingUserId),
           ),
         )
         .limit(1);
