@@ -1,40 +1,26 @@
 import Link from "next/link";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { AuditLogFilters } from "@/components/settings/audit-log-filters";
 import { Button } from "@/components/ui/button";
-import { auditLogs } from "@/db/schema";
-import { db } from "@/db";
-import { hasWorkspacePermission } from "@/lib/authorization";
+import {
+  AuditLogAccessError,
+  getAuthorizedAuditLogPage,
+} from "@/lib/audit-log-query.server";
 import { normalizeSearchParam, updateSearchParams } from "@/lib/list-query-state";
-import { getCurrentWorkspace } from "@/lib/workspaces";
-
-const PAGE_SIZE = 40;
 
 export default async function AuditLogPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [workspace, params] = await Promise.all([getCurrentWorkspace(), searchParams]);
-  if (!hasWorkspacePermission(workspace.role, "workspace:manage")) notFound();
-
+  const params = await searchParams;
   const search = normalizeSearchParam(params.search);
   const requestedPage = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
-  const conditions = [eq(auditLogs.workspaceId, workspace.id)];
-  if (search) {
-    const pattern = `%${search}%`;
-    conditions.push(or(
-      ilike(auditLogs.action, pattern),
-      ilike(auditLogs.entityType, pattern),
-      ilike(auditLogs.actorUserId, pattern),
-      ilike(auditLogs.entityId, pattern),
-      sql`${auditLogs.metadata}::text ilike ${pattern}`,
-    )!);
+  let result: Awaited<ReturnType<typeof getAuthorizedAuditLogPage>>;
+  try {
+    result = await getAuthorizedAuditLogPage({ search, page: requestedPage });
+  } catch (error) {
+    if (error instanceof AuditLogAccessError) notFound();
+    throw error;
   }
-
-  const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs).where(and(...conditions));
-  const totalCount = Number(countRow?.count ?? 0);
-  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const page = Math.min(requestedPage, pageCount);
-  const rows = await db.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(PAGE_SIZE).offset((page - 1) * PAGE_SIZE);
+  const { rows, totalCount, page, pageCount } = result;
   const pageHref = (targetPage: number) => {
     const query = updateSearchParams(new URLSearchParams(search ? { search } : {}), { page: targetPage }, { resetPage: false });
     return `/dashboard/settings/audit-log?${query}`;

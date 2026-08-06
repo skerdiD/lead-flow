@@ -4,6 +4,10 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { workspaceMembers } from "@/db/schema";
+import {
+  getCurrentWorkspaceAuthorizationContext,
+  hasWorkspacePermission,
+} from "@/lib/authorization";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 
 export type WorkspaceMemberProfile = {
@@ -29,14 +33,20 @@ function getDisplayName(user: {
 
 /**
  * Resolves Clerk-backed member profiles in one membership query and one Clerk
- * request. Only active members of the requested workspace are ever returned.
+ * request. Only active members of the server-authorized workspace are ever
+ * returned; Members can resolve only their own profile.
  */
 export async function getWorkspaceMemberOptions(
-  workspaceId: string,
   requestedUserIds?: readonly string[],
 ): Promise<WorkspaceMemberOption[]> {
-  const userIds = requestedUserIds
-    ? [...new Set(requestedUserIds.filter(Boolean))]
+  const context = await getCurrentWorkspaceAuthorizationContext();
+  const callerVisibleUserIds = hasWorkspacePermission(context.role, "members:view")
+    ? requestedUserIds
+    : requestedUserIds
+      ? requestedUserIds.filter((userId) => userId === context.userId)
+      : [context.userId];
+  const userIds = callerVisibleUserIds
+    ? [...new Set(callerVisibleUserIds.filter(Boolean))]
     : undefined;
 
   if (userIds?.length === 0) return [];
@@ -46,7 +56,7 @@ export async function getWorkspaceMemberOptions(
     .from(workspaceMembers)
     .where(
       and(
-        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.workspaceId, context.workspaceId),
         userIds ? inArray(workspaceMembers.userId, userIds) : undefined,
       ),
     )
@@ -97,10 +107,9 @@ export async function getWorkspaceMemberOptions(
 }
 
 export async function resolveWorkspaceMemberProfiles(
-  workspaceId: string,
   userIds: readonly string[],
 ) {
-  const members = await getWorkspaceMemberOptions(workspaceId, userIds);
+  const members = await getWorkspaceMemberOptions(userIds);
   return new Map(
     members.map(({ userId, ...profile }) => [userId, profile] as const),
   );

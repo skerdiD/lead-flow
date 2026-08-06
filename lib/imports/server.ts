@@ -45,6 +45,7 @@ import {
   type ImportRowError,
 } from "@/lib/imports/normalize";
 import { logImportEvent } from "@/lib/imports/logging";
+import { assertImportRowRelationships } from "@/lib/imports/relationships.server";
 import {
   getDuplicateAction,
   getMappedNonBlankFields,
@@ -90,7 +91,7 @@ export async function getImportAuthorization() {
   };
 }
 
-export async function purgeExpiredImportRowData(workspaceId: string) {
+async function purgeExpiredImportRowData(workspaceId: string) {
   const cutoff = new Date(
     Date.now() - IMPORT_LIMITS.stagedDataRetentionDays * 24 * 60 * 60 * 1_000,
   );
@@ -473,7 +474,13 @@ export async function reviewImportJob(input: {
           createdRecordId: null,
           updatedAt: new Date(),
         })
-        .where(eq(importRows.id, row.id));
+        .where(
+          and(
+            eq(importRows.id, row.id),
+            eq(importRows.workspaceId, access.workspace.id),
+            eq(importRows.importJobId, job.id),
+          ),
+        );
     }
     await tx
       .update(importJobs)
@@ -491,7 +498,13 @@ export async function reviewImportJob(input: {
         errorMessage: null,
         updatedAt: new Date(),
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(
+          eq(importJobs.id, job.id),
+          eq(importJobs.workspaceId, access.workspace.id),
+          eq(importJobs.actorUserId, access.userId),
+        ),
+      );
   });
 
   logImportEvent("info", "import_validation_completed", {
@@ -516,6 +529,25 @@ async function processImportRow(
   row: typeof importRows.$inferSelect,
 ) {
   const data = row.normalizedData ?? {};
+
+  // Review resolves human-readable relationship values to IDs, but those
+  // relationships can change before confirmation. Re-check them inside the
+  // same transaction that writes the CRM row so a removed member, archived
+  // related record, or tampered staged row cannot be committed.
+  const assignedOwnerUserId =
+    typeof data.assignedOwnerUserId === "string"
+      ? data.assignedOwnerUserId
+      : null;
+  const accountId = typeof data.accountId === "string" ? data.accountId : null;
+  const primaryContactId =
+    typeof data.primaryContactId === "string" ? data.primaryContactId : null;
+
+  await assertImportRowRelationships(tx, job.workspaceId, {
+    assignedOwnerUserId,
+    accountId,
+    primaryContactId,
+  });
+
   const strategy = job.duplicateStrategy ?? "skip";
   const isDuplicate = row.status === "duplicate";
   const duplicateAction = getDuplicateAction({
@@ -528,7 +560,13 @@ async function processImportRow(
     await tx
       .update(importRows)
       .set({ status: "skipped", updatedAt: new Date() })
-      .where(eq(importRows.id, row.id));
+      .where(
+        and(
+          eq(importRows.id, row.id),
+          eq(importRows.workspaceId, job.workspaceId),
+          eq(importRows.importJobId, job.id),
+        ),
+      );
     return "skipped" as const;
   }
 
@@ -701,18 +739,33 @@ async function processImportRow(
       createdRecordId: recordId,
       updatedAt: new Date(),
     })
-    .where(eq(importRows.id, row.id));
+    .where(
+      and(
+        eq(importRows.id, row.id),
+        eq(importRows.workspaceId, job.workspaceId),
+        eq(importRows.importJobId, job.id),
+      ),
+    );
   return finalStatus;
 }
 
-async function refreshJobCounts(tx: ImportTx, jobId: string) {
+async function refreshJobCounts(
+  tx: ImportTx,
+  workspaceId: string,
+  jobId: string,
+) {
   const counts = await tx
     .select({
       status: importRows.status,
       count: sql<number>`count(*)`,
     })
     .from(importRows)
-    .where(eq(importRows.importJobId, jobId))
+    .where(
+      and(
+        eq(importRows.workspaceId, workspaceId),
+        eq(importRows.importJobId, jobId),
+      ),
+    )
     .groupBy(importRows.status);
   const byStatus = new Map(counts.map((row) => [row.status, Number(row.count)]));
   const values = {
@@ -722,7 +775,15 @@ async function refreshJobCounts(tx: ImportTx, jobId: string) {
     failedRows: byStatus.get("failed") ?? 0,
     updatedAt: new Date(),
   };
-  await tx.update(importJobs).set(values).where(eq(importJobs.id, jobId));
+  await tx
+    .update(importJobs)
+    .set(values)
+    .where(
+      and(
+        eq(importJobs.id, jobId),
+        eq(importJobs.workspaceId, workspaceId),
+      ),
+    );
   return values;
 }
 
@@ -806,7 +867,13 @@ export async function confirmImportJob(jobId: string) {
                   ],
                   updatedAt: new Date(),
                 })
-                .where(eq(importRows.id, row.id));
+                .where(
+                  and(
+                    eq(importRows.id, row.id),
+                    eq(importRows.workspaceId, job.workspaceId),
+                    eq(importRows.importJobId, job.id),
+                  ),
+                );
             });
           }
         }
@@ -835,12 +902,18 @@ export async function confirmImportJob(jobId: string) {
     }
 
     const counts = await db.transaction(async (tx) => {
-      const refreshed = await refreshJobCounts(tx, job.id);
+      const refreshed = await refreshJobCounts(tx, job.workspaceId, job.id);
       const completedAt = new Date();
       await tx
         .update(importJobs)
         .set({ status: "completed", completedAt, updatedAt: completedAt })
-        .where(eq(importJobs.id, job.id));
+        .where(
+          and(
+            eq(importJobs.id, job.id),
+            eq(importJobs.workspaceId, job.workspaceId),
+            eq(importJobs.actorUserId, job.actorUserId),
+          ),
+        );
       await tx.insert(activityEvents).values({
         workspaceId: job.workspaceId,
         userId: job.actorUserId,
@@ -879,7 +952,9 @@ export async function confirmImportJob(jobId: string) {
     return getImportJobDetails(job.id);
   } catch (error) {
     try {
-      await db.transaction((tx) => refreshJobCounts(tx, job.id));
+      await db.transaction((tx) =>
+        refreshJobCounts(tx, job.workspaceId, job.id),
+      );
     } catch {
       // Preserve the original import failure even if its diagnostic recount fails.
     }
@@ -890,7 +965,13 @@ export async function confirmImportJob(jobId: string) {
         errorMessage: "The import stopped because of an unexpected system error.",
         updatedAt: new Date(),
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(
+          eq(importJobs.id, job.id),
+          eq(importJobs.workspaceId, job.workspaceId),
+          eq(importJobs.actorUserId, job.actorUserId),
+        ),
+      );
     logImportEvent("error", "import_failed", {
       requestId: job.requestId,
       workspaceId: job.workspaceId,

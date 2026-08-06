@@ -10,6 +10,8 @@ import {
 } from "@/lib/authorization";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
 import { createLeadActivity } from "../services/activity-service";
 import {
   ensureLeadMutationAllowed,
@@ -93,7 +95,23 @@ export async function updateLeadOwnerAction(
       return { success: true as const, message: "Lead owner is already up to date." };
     }
 
+    const requestId = await getRequestId();
     const updated = await db.transaction(async (tx) => {
+      if (ownerUserId) {
+        const [currentMember] = await tx
+          .select({ userId: workspaceMembers.userId })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, workspace.id),
+              eq(workspaceMembers.userId, ownerUserId),
+            ),
+          )
+          .for("share")
+          .limit(1);
+        if (!currentMember) return null;
+      }
+
       const [record] = await tx
         .update(leads)
         .set({ assignedOwnerUserId: ownerUserId, updatedAt: new Date() })
@@ -119,6 +137,16 @@ export async function updateLeadOwnerAction(
         message: `Lead owner changed: ${lead.fullName}`,
         leadId,
         leadName: lead.fullName,
+      });
+      await writeAuditEvent({
+        tx,
+        workspaceId: workspace.id,
+        actor: { userId, role: workspace.role },
+        action: "lead.updated",
+        entity: { type: "lead", id: leadId },
+        before: { assignedOwnerUserId: lead.assignedOwnerUserId },
+        after: { assignedOwnerUserId: ownerUserId },
+        requestId,
       });
 
       return record;

@@ -6,10 +6,10 @@ import { db } from "@/db";
 import { workspaceMembers } from "@/db/schema";
 import {
   canManageWorkspaceMember,
+  getCurrentWorkspaceAuthorizationContext,
   hasWorkspacePermission,
   type WorkspaceRole,
 } from "@/lib/authorization";
-import type { CurrentWorkspace } from "@/lib/workspaces";
 
 export type WorkspaceTeamMember = {
   id: string;
@@ -23,14 +23,16 @@ export type WorkspaceTeamMember = {
   canReceiveOwnership: boolean;
 };
 
-export async function getWorkspaceTeam(workspace: CurrentWorkspace, filters: { search?: string; role?: string } = {}) {
-  if (!hasWorkspacePermission(workspace.role, "members:view")) {
+export async function getWorkspaceTeam(filters: { search?: string; role?: string } = {}) {
+  const context = await getCurrentWorkspaceAuthorizationContext();
+
+  if (!hasWorkspacePermission(context.role, "members:view")) {
     return [] as WorkspaceTeamMember[];
   }
 
   const search = filters.search?.trim().slice(0, 120) ?? "";
   const role = filters.role === "owner" || filters.role === "admin" || filters.role === "member" ? filters.role : "";
-  const membershipConditions = [eq(workspaceMembers.workspaceId, workspace.id)];
+  const membershipConditions = [eq(workspaceMembers.workspaceId, context.workspaceId)];
   if (role) membershipConditions.push(eq(workspaceMembers.role, role));
   const memberships = await db
     .select({
@@ -73,13 +75,13 @@ export async function getWorkspaceTeam(workspace: CurrentWorkspace, filters: { s
       name: profile?.name ?? "Workspace member",
       email: profile?.email ?? "Email unavailable",
       canChangeRole: canManageWorkspaceMember(
-        workspace.role,
+        context.role,
         membership.role,
         membership.role === "admin" ? "member" : "admin",
       ),
-      canRemove: canManageWorkspaceMember(workspace.role, membership.role, undefined, "remove"),
+      canRemove: canManageWorkspaceMember(context.role, membership.role, undefined, "remove"),
       canReceiveOwnership:
-        workspace.role === "owner" && membership.role !== "owner",
+        context.role === "owner" && membership.role !== "owner",
     };
   }).filter((member) => !search || [member.name, member.email, member.userId].some((value) => value.toLocaleLowerCase().includes(search.toLocaleLowerCase())));
 }

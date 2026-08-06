@@ -264,6 +264,7 @@ export async function qualifyLeadAction(
             eq(workspaceMembers.userId, values.ownerUserId),
           ),
         )
+        .for("share")
         .limit(1);
 
       if (!owner) {

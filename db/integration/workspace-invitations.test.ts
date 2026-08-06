@@ -116,6 +116,51 @@ describeDatabase("workspace invitation acceptance", () => {
     });
   });
 
+  it("rejects an email mismatch without consuming the invitation", async () => {
+    const invitation = await createInvitation({
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    await expect(
+      database.transaction((tx) =>
+        acceptWorkspaceInvitationInTransaction(tx, {
+          tokenHash: invitation.tokenHash,
+          userId: `user-${randomUUID()}`,
+          verifiedEmails: ["attacker@example.com"],
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "email_mismatch" });
+
+    const stored = await pool.query<{ status: string }>(
+      "SELECT status FROM workspace_invitations WHERE token_hash = $1",
+      [invitation.tokenHash],
+    );
+    expect(stored.rows[0]?.status).toBe("pending");
+  });
+
+  it("rejects a reused invitation and never creates membership in another workspace", async () => {
+    const invitation = await createInvitation({
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const unrelatedWorkspaceId = await createWorkspace();
+    const firstUserId = `user-${randomUUID()}`;
+    const secondUserId = `user-${randomUUID()}`;
+
+    await accept(invitation, firstUserId);
+    await expect(accept(invitation, secondUserId)).rejects.toMatchObject({
+      code: "invalid_or_expired",
+    });
+
+    const memberships = await pool.query<{ workspace_id: string; user_id: string }>(
+      "SELECT workspace_id, user_id FROM workspace_members WHERE user_id = ANY($1::text[])",
+      [[firstUserId, secondUserId]],
+    );
+    expect(memberships.rows).toEqual([
+      { workspace_id: invitation.workspaceId, user_id: firstUserId },
+    ]);
+    expect(memberships.rows.some((row) => row.workspace_id === unrelatedWorkspaceId)).toBe(false);
+  });
+
   it("allows only one concurrent acceptance and creates one membership", async () => {
     const invitation = await createInvitation({
       expiresAt: new Date(Date.now() + 60_000),

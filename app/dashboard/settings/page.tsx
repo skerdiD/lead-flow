@@ -103,7 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const canManageWorkspace = hasWorkspacePermission(workspace.role, "workspace:manage");
   const canViewAllCrm = hasWorkspacePermission(workspace.role, "crm:view_all");
   const memberFilters = { search: params.search?.trim().slice(0, 120) ?? "", role: params.memberRole === "owner" || params.memberRole === "admin" || params.memberRole === "member" ? params.memberRole : "" };
-  const members = canViewMembers ? await getWorkspaceTeam(workspace, memberFilters) : [];
+  const members = canViewMembers ? await getWorkspaceTeam(memberFilters) : [];
   const demoWorkspace = isDemoWorkspace(workspace);
 
   return (

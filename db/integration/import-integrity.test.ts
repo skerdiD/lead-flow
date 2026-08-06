@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import * as schema from "@/db/schema";
+import { assertImportRowRelationships } from "@/lib/imports/relationships.server";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 
 describeDatabase("CSV import persistence integrity", () => {
   let pool: Pool;
+  let database: ReturnType<typeof drizzle<typeof schema>>;
   const workspaceIds: string[] = [];
 
   beforeAll(() => {
@@ -15,6 +19,7 @@ describeDatabase("CSV import persistence integrity", () => {
       throw new Error("TEST_DATABASE_URL must point to a dedicated test or CI database.");
     }
     pool = new Pool({ connectionString: testDatabaseUrl });
+    database = drizzle(pool, { schema });
   });
 
   afterEach(async () => {
@@ -92,5 +97,66 @@ describeDatabase("CSV import persistence integrity", () => {
       code: "23503",
       constraint: "import_rows_workspace_job_tenant_fk",
     });
+  });
+
+  it("rejects modified owner, account, and contact relationships from another workspace", async () => {
+    const active = await workspace();
+    const outside = await workspace();
+    const [outsideAccount] = await database
+      .insert(schema.accounts)
+      .values({
+        workspaceId: outside.id,
+        userId: outside.userId,
+        assignedOwnerUserId: outside.userId,
+        name: "Outside account",
+      })
+      .returning({ id: schema.accounts.id });
+    const [outsideContact] = await database
+      .insert(schema.contacts)
+      .values({
+        workspaceId: outside.id,
+        userId: outside.userId,
+        assignedOwnerUserId: outside.userId,
+        fullName: "Outside contact",
+      })
+      .returning({ id: schema.contacts.id });
+
+    await expect(
+      assertImportRowRelationships(database, active.id, {
+        assignedOwnerUserId: outside.userId,
+        accountId: outsideAccount!.id,
+        primaryContactId: outsideContact!.id,
+      }),
+    ).rejects.toThrow("An import relationship is no longer available.");
+  });
+
+  it("accepts only current active-workspace import relationships", async () => {
+    const active = await workspace();
+    const [account] = await database
+      .insert(schema.accounts)
+      .values({
+        workspaceId: active.id,
+        userId: active.userId,
+        assignedOwnerUserId: active.userId,
+        name: "Active account",
+      })
+      .returning({ id: schema.accounts.id });
+    const [contact] = await database
+      .insert(schema.contacts)
+      .values({
+        workspaceId: active.id,
+        userId: active.userId,
+        assignedOwnerUserId: active.userId,
+        fullName: "Active contact",
+      })
+      .returning({ id: schema.contacts.id });
+
+    await expect(
+      assertImportRowRelationships(database, active.id, {
+        assignedOwnerUserId: active.userId,
+        accountId: account!.id,
+        primaryContactId: contact!.id,
+      }),
+    ).resolves.toBeUndefined();
   });
 });

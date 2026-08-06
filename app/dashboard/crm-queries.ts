@@ -52,7 +52,7 @@ export async function getCrmListFilterOptions() {
   const canViewAll = hasWorkspacePermission(context.role, "crm:view_all");
   const accountConditions = [eq(accounts.isArchived, false), ...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId)];
   const [owners, accountRows] = await Promise.all([
-    getWorkspaceMemberOptions(context.workspaceId, canViewAll ? undefined : [context.userId]),
+    getWorkspaceMemberOptions(canViewAll ? undefined : [context.userId]),
     db.select({ id: accounts.id, name: accounts.name }).from(accounts).where(and(...accountConditions)).orderBy(asc(accounts.name)).limit(200),
   ]);
   return { ownerOptions: owners.map((owner) => ({ value: owner.userId, label: owner.name })), accountOptions: accountRows.map((account) => ({ value: account.id, label: account.name })) };

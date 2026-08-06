@@ -15,6 +15,8 @@ import {
   permissionDeniedMessage,
 } from "@/lib/authorization";
 import { buildLeadsCsv, buildLeadsPdf } from "@/lib/leads-export";
+import { writeAuditEvent } from "@/lib/audit-log.server";
+import { getRequestId } from "@/lib/request-context.server";
 import { normalizeUuidList } from "@/lib/uuid";
 
 export const runtime = "nodejs";
@@ -116,14 +118,40 @@ export async function GET(request: Request) {
     totalCount: rows.length,
     selectedCount: selectedIds.length || undefined,
   };
+  const fileBody =
+    format === "csv"
+      ? buildLeadsCsv(rows, metadata)
+      : Buffer.from(await buildLeadsPdf(rows, metadata));
+
+  // Export access is security-sensitive even though it is read-only. Record
+  // only bounded, non-sensitive metadata; never persist free-text search
+  // terms, selected record IDs, or generated file contents in the audit log.
+  await db.transaction(async (tx) => {
+    await writeAuditEvent({
+      tx,
+      workspaceId: context.workspaceId,
+      actor: { userId: context.userId, role: context.role },
+      action: "export.created",
+      entity: { type: "export" },
+      requestId: await getRequestId(),
+      metadata: {
+        format,
+        rowCount: rows.length,
+        selectedCount: selectedIds.length,
+        statusFilterApplied: Boolean(normalized.status),
+        sourceFilterApplied: Boolean(normalized.source),
+        ownerFilterApplied: Boolean(normalized.owner),
+        searchFilterApplied: Boolean(normalized.search),
+        archived: normalized.archived,
+      },
+    });
+  });
 
   const filenameDate = exportedAt.toISOString().slice(0, 19).replace(/:/g, "-");
   const disposition = `attachment; filename="leadflow-leads-${filenameDate}.${format}"`;
 
   if (format === "csv") {
-    const csv = buildLeadsCsv(rows, metadata);
-
-    return new Response(csv, {
+    return new Response(fileBody, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": disposition,
@@ -133,8 +161,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const pdfBytes = await buildLeadsPdf(rows, metadata);
-  return new Response(Buffer.from(pdfBytes), {
+  return new Response(fileBody, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": disposition,

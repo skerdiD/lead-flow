@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserListMock, selectMock, memberships, workspaceMembersTable } = vi.hoisted(() => ({
+const { getUserListMock, selectMock, authorizationMock, memberships, workspaceMembersTable } = vi.hoisted(() => ({
   getUserListMock: vi.fn(),
   selectMock: vi.fn(),
+  authorizationMock: vi.fn(),
   memberships: [] as Array<{ userId: string }>,
   workspaceMembersTable: {
     userId: "user_id",
@@ -39,6 +40,13 @@ vi.mock("@clerk/nextjs/server", () => ({
     users: { getUserList: getUserListMock },
   })),
 }));
+vi.mock("@/lib/authorization", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/authorization")>();
+  return {
+    ...actual,
+    getCurrentWorkspaceAuthorizationContext: authorizationMock,
+  };
+});
 
 import {
   getWorkspaceMemberOptions,
@@ -55,6 +63,11 @@ describe("workspace member profile resolution", () => {
       { userId: "user_missing_profile" },
     );
     selectMock.mockImplementation(() => selectBuilder());
+    authorizationMock.mockResolvedValue({
+      workspaceId: "workspace_123",
+      userId: "user_one",
+      role: "admin",
+    });
     getUserListMock.mockResolvedValue({
       data: [
         {
@@ -76,7 +89,7 @@ describe("workspace member profile resolution", () => {
   });
 
   it("resolves all requested owners with one membership query and one batched Clerk request", async () => {
-    const profiles = await getWorkspaceMemberOptions("workspace_123", [
+    const profiles = await getWorkspaceMemberOptions([
       "user_one",
       "user_two",
       "user_missing_profile",
@@ -98,7 +111,7 @@ describe("workspace member profile resolution", () => {
   it("never substitutes a technical user ID when a profile is unavailable", async () => {
     getUserListMock.mockRejectedValue(new Error("profile provider unavailable"));
 
-    const profiles = await resolveWorkspaceMemberProfiles("workspace_123", [
+    const profiles = await resolveWorkspaceMemberProfiles([
       "user_missing_profile",
     ]);
 
@@ -108,4 +121,5 @@ describe("workspace member profile resolution", () => {
     });
     expect(profiles.get("user_missing_profile")?.name).not.toContain("user_");
   });
+
 });

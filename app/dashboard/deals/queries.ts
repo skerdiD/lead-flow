@@ -240,7 +240,6 @@ export async function getDealsPipeline(filters: DealPipelineFilters = {}) {
 
   const [ownerOptions, accountOptions, existingCountRow] = await Promise.all([
     getWorkspaceMemberOptions(
-      context.workspaceId,
       hasWorkspacePermission(context.role, "crm:view_all")
         ? undefined
         : [context.userId],
@@ -420,7 +419,7 @@ export async function getDealDetails(id: string) {
 
   if (!deal) return null;
   const profiles = deal.ownerUserId
-    ? await resolveWorkspaceMemberProfiles(context.workspaceId, [deal.ownerUserId])
+    ? await resolveWorkspaceMemberProfiles([deal.ownerUserId])
     : new Map<string, WorkspaceMemberProfile>();
   const { ownerUserId, ...safeDeal } = deal;
 

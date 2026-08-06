@@ -225,7 +225,6 @@ export async function getLeadsList(filters: LeadsListFilters): Promise<LeadsList
   const context = await getCurrentWorkspaceAuthorizationContext();
   const normalized = normalizeLeadsFilters(filters);
   const ownerOptionsPromise = getWorkspaceMemberOptions(
-    context.workspaceId,
     context.role === "member" ? [context.userId] : undefined,
   );
   if (normalized.owner) {

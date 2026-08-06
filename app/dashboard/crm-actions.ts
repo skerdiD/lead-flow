@@ -13,6 +13,7 @@ import {
 } from "@/lib/authorization";
 import { requireUserId } from "@/lib/auth";
 import { createCrmActivity } from "@/lib/crm-activity.server";
+import type { DatabaseClient } from "@/lib/db-client";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { reportUnexpectedError } from "@/lib/error-reporting.server";
 import { moneyToCents } from "@/lib/revenue";
@@ -38,6 +39,26 @@ async function validateMember(workspaceId: string, userId: string | undefined) {
   return member ? userId : null;
 }
 
+async function lockWorkspaceMember(
+  client: Pick<DatabaseClient, "select">,
+  workspaceId: string,
+  userId: string | null,
+) {
+  if (!userId) return true;
+  const [member] = await client
+    .select({ userId: workspaceMembers.userId })
+    .from(workspaceMembers)
+    .where(
+      and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId),
+      ),
+    )
+    .for("share")
+    .limit(1);
+  return Boolean(member);
+}
+
 type CrmMutationPermission = "crm:create" | "crm:update" | "crm:delete";
 
 async function prepareMutation(permission: CrmMutationPermission) {
@@ -59,9 +80,10 @@ export async function createAccountAction(values: AccountFormValues): Promise<Mu
     : state.userId;
   if (parsed.data.assignedOwnerUserId && !owner) return { success: false, message: "Choose a valid workspace member as the owner." };
   const requestId = await getRequestId();
-  let record: { id: string };
+  let record: { id: string } | null;
   try {
     record = await db.transaction(async (tx) => {
+      if (!(await lockWorkspaceMember(tx, state.workspace.id, owner))) return null;
       const [created] = await tx.insert(accounts).values({ workspaceId: state.workspace.id, userId: state.userId, assignedOwnerUserId: owner, name: parsed.data.name, website: parsed.data.website, industry: parsed.data.industry }).returning({ id: accounts.id });
       await createCrmActivity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "account_created", message: `Account created: ${parsed.data.name}`, accountId: created.id });
       await writeAuditEvent({ tx, workspaceId: state.workspace.id, actor: { userId: state.userId, role: state.workspace.role }, action: "account.created", entity: { type: "account", id: created.id }, after: { name: parsed.data.name, website: parsed.data.website, industry: parsed.data.industry, assignedOwnerUserId: owner }, requestId });
@@ -71,6 +93,7 @@ export async function createAccountAction(values: AccountFormValues): Promise<Mu
     await reportUnexpectedError(error, { event: "account.create.failed", requestId, workspaceId: state.workspace.id, userId: state.userId, entityType: "account", operation: "account.create", errorCategory: "transaction_failure" });
     return { success: false, message: "We couldn't create this account right now. Please try again." };
   }
+  if (!record) return { success: false, message: "Choose a valid workspace member as the owner." };
   mutationPaths("/dashboard/accounts", `/dashboard/accounts/${record.id}`); return { success: true, id: record.id, message: "Account created." };
 }
 
@@ -86,6 +109,7 @@ export async function updateAccountAction(id: string, values: AccountFormValues)
   let record: { id: string } | undefined;
   try {
     record = await db.transaction(async (tx) => {
+      if (!(await lockWorkspaceMember(tx, state.workspace.id, owner))) return undefined;
       const [updated] = await tx.update(accounts).set({ name: parsed.data.name, website: parsed.data.website, industry: parsed.data.industry, assignedOwnerUserId: owner, updatedAt: new Date() }).where(and(eq(accounts.id, id), ...getRecordUpdateConditions(state.context, accounts.workspaceId, accounts.assignedOwnerUserId))).returning({ id: accounts.id });
       if (!updated) return undefined;
       await createCrmActivity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "account_updated", message: `Account updated: ${parsed.data.name}`, accountId: id });
@@ -124,6 +148,7 @@ export async function createContactAction(values: ContactFormValues): Promise<Mu
   let record: { id: string } | null;
   try {
     record = await db.transaction(async (tx) => {
+      if (!(await lockWorkspaceMember(tx, state.workspace.id, owner))) return null;
       if (accountId) {
         const [activeAccount] = await tx.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.workspaceId, state.workspace.id), eq(accounts.isArchived, false))).for("share").limit(1);
         if (!activeAccount) return null;
@@ -152,6 +177,7 @@ export async function updateContactAction(id: string, values: ContactFormValues)
   let record: { id: string } | null | undefined;
   try {
     record = await db.transaction(async (tx) => {
+      if (!(await lockWorkspaceMember(tx, state.workspace.id, owner))) return undefined;
       const [lockedContact] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, id), ...getRecordUpdateConditions(state.context, contacts.workspaceId, contacts.assignedOwnerUserId))).for("update").limit(1);
       if (!lockedContact) return undefined;
       if (accountId) {
@@ -189,6 +215,7 @@ export async function archiveContactAction(id: string): Promise<MutationResult> 
 async function validateDealLinks(
   context: ReturnType<typeof getWorkspaceAuthorizationContext>,
   values: DealFormValues,
+  client: Pick<DatabaseClient, "select"> = db,
 ) {
   const ids = [values.leadId, values.accountId, values.contactId];
   if (ids.some((id) => id && !isUuid(id))) return false;
@@ -197,21 +224,21 @@ async function validateDealLinks(
   // server-action payloads cannot attach a new deal to another member's CRM record.
   const [leadRows, accountRows, contactRows] = await Promise.all([
     values.leadId
-      ? db.select({ id: leads.id }).from(leads).where(and(
+      ? client.select({ id: leads.id }).from(leads).where(and(
         eq(leads.id, values.leadId),
         eq(leads.isArchived, false),
         ...getRecordVisibilityConditions(context, leads.workspaceId, leads.assignedOwnerUserId),
       )).limit(1)
       : Promise.resolve([{ id: "" }]),
     values.accountId
-      ? db.select({ id: accounts.id }).from(accounts).where(and(
+      ? client.select({ id: accounts.id }).from(accounts).where(and(
         eq(accounts.id, values.accountId),
         eq(accounts.isArchived, false),
         ...getRecordVisibilityConditions(context, accounts.workspaceId, accounts.assignedOwnerUserId),
       )).limit(1)
       : Promise.resolve([{ id: "" }]),
     values.contactId
-      ? db.select({ id: contacts.id }).from(contacts).where(and(
+      ? client.select({ id: contacts.id }).from(contacts).where(and(
         eq(contacts.id, values.contactId),
         eq(contacts.isArchived, false),
         ...getRecordVisibilityConditions(context, contacts.workspaceId, contacts.assignedOwnerUserId),
@@ -225,9 +252,10 @@ async function validateDealLinks(
 export async function createDealAction(values: DealFormValues): Promise<MutationResult> {
   const parsed = dealFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the deal details.", fieldErrors: parsed.error.flatten().fieldErrors }; const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   if (!(await validateDealLinks(state.context, parsed.data))) return { success: false, message: "Choose related records from this active workspace." }; const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") && parsed.data.ownerUserId ? await validateMember(state.workspace.id, parsed.data.ownerUserId) : state.userId; if (parsed.data.ownerUserId && !owner) return { success: false, message: "Choose a valid workspace member as the owner." }; if (parsed.data.stage === "lost" && !parsed.data.lostReason) return { success: false, message: "A lost reason is required before closing a deal as lost." };
+  const requestId = await getRequestId();
   let record: { id: string } | null;
   try {
-    record = await db.transaction(async (tx) => { const [created] = await tx.insert(deals).values({ workspaceId: state.workspace.id, userId: state.userId, ownerUserId: owner, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null, name: parsed.data.name, stage: parsed.data.stage, valueCents: moneyToCents(parsed.data.value), currency: parsed.data.currency, probability: parsed.data.probability, expectedCloseAt: parsed.data.expectedCloseDate ? new Date(`${parsed.data.expectedCloseDate}T00:00:00Z`) : null, closedAt: ["won", "lost"].includes(parsed.data.stage) ? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null }).onConflictDoNothing({ target: [deals.workspaceId, deals.leadId] }).returning({ id: deals.id }); if (!created) return null; await createCrmActivity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "deal_updated", message: `Deal created: ${parsed.data.name}`, dealId: created.id, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null }); return created; });
+    record = await db.transaction(async (tx) => { if (!(await lockWorkspaceMember(tx, state.workspace.id, owner))) return null; if (!(await validateDealLinks(state.context, parsed.data, tx))) return null; const [created] = await tx.insert(deals).values({ workspaceId: state.workspace.id, userId: state.userId, ownerUserId: owner, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null, name: parsed.data.name, stage: parsed.data.stage, valueCents: moneyToCents(parsed.data.value), currency: parsed.data.currency, probability: parsed.data.probability, expectedCloseAt: parsed.data.expectedCloseDate ? new Date(`${parsed.data.expectedCloseDate}T00:00:00Z`) : null, closedAt: ["won", "lost"].includes(parsed.data.stage) ? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null }).onConflictDoNothing({ target: [deals.workspaceId, deals.leadId] }).returning({ id: deals.id }); if (!created) return null; await createCrmActivity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: "deal_updated", message: `Deal created: ${parsed.data.name}`, dealId: created.id, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null }); await writeAuditEvent({ tx, workspaceId: state.workspace.id, actor: { userId: state.userId, role: state.workspace.role }, action: "deal.created", entity: { type: "deal", id: created.id }, after: { name: parsed.data.name, stage: parsed.data.stage, ownerUserId: owner, leadId: parsed.data.leadId || null, accountId: parsed.data.accountId || null, contactId: parsed.data.contactId || null }, requestId }); return created; });
   } catch {
     return { success: false, message: "We couldn't create this deal right now. Please try again." };
   }
@@ -241,9 +269,10 @@ export async function moveDealAction(input: { dealId: string; stage: string; upd
   const expectedUpdatedAt = new Date(parsed.data.updatedAt);
   const expectedUpdatedAtEnd = new Date(expectedUpdatedAt.getTime() + 1);
   const reopening = ["won", "lost"].includes(existing.stage) && !["won", "lost"].includes(parsed.data.stage);
+  const requestId = await getRequestId();
   let updated: { updatedAt: Date } | null;
   try {
-    updated = await db.transaction(async (tx) => { const [record] = await tx.update(deals).set({ stage: parsed.data.stage, closedAt: reopening ? null : ["won", "lost"].includes(parsed.data.stage) ? existing.closedAt ?? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null, updatedAt: new Date() }).where(and(eq(deals.id, existing.id), eq(deals.workspaceId, state.workspace.id), gte(deals.updatedAt, expectedUpdatedAt), lt(deals.updatedAt, expectedUpdatedAtEnd), ...getRecordUpdateConditions(state.context, deals.workspaceId, deals.ownerUserId))).returning({ updatedAt: deals.updatedAt }); if (!record) return null; await createCrmActivity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: parsed.data.stage === "lost" ? "deal_lost" : "deal_stage_changed", message: `Deal moved to ${parsed.data.stage}: ${existing.name}`, dealId: existing.id, leadId: existing.leadId }); return record; });
+    updated = await db.transaction(async (tx) => { const [record] = await tx.update(deals).set({ stage: parsed.data.stage, closedAt: reopening ? null : ["won", "lost"].includes(parsed.data.stage) ? existing.closedAt ?? new Date() : null, lostReason: parsed.data.stage === "lost" ? parsed.data.lostReason : null, updatedAt: new Date() }).where(and(eq(deals.id, existing.id), eq(deals.workspaceId, state.workspace.id), gte(deals.updatedAt, expectedUpdatedAt), lt(deals.updatedAt, expectedUpdatedAtEnd), ...getRecordUpdateConditions(state.context, deals.workspaceId, deals.ownerUserId))).returning({ updatedAt: deals.updatedAt }); if (!record) return null; await createCrmActivity({ client: tx, workspaceId: state.workspace.id, userId: state.userId, eventType: parsed.data.stage === "lost" ? "deal_lost" : "deal_stage_changed", message: `Deal moved to ${parsed.data.stage}: ${existing.name}`, dealId: existing.id, leadId: existing.leadId }); await writeAuditEvent({ tx, workspaceId: state.workspace.id, actor: { userId: state.userId, role: state.workspace.role }, action: "deal.stage_changed", entity: { type: "deal", id: existing.id }, before: { stage: existing.stage }, after: { stage: parsed.data.stage }, requestId }); return record; });
   } catch {
     return { success: false, message: "We couldn't update this deal right now. Please try again." };
   }

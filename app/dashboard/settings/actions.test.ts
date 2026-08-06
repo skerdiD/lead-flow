@@ -65,4 +65,21 @@ describe("demo workspace management restrictions", () => {
       acceptWorkspaceInvitationAction("a".repeat(32)),
     ).resolves.toEqual({ success: false, message: DEMO_MUTATION_MESSAGE });
   });
+
+  it("rejects a direct ownership-transfer call from an admin", async () => {
+    mocks.getCurrentWorkspace.mockResolvedValue({
+      id: "workspace-active",
+      name: "Active workspace",
+      role: "admin",
+    });
+
+    await expect(
+      transferWorkspaceOwnershipAction({
+        memberId: "00000000-0000-4000-8000-000000000001",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      message: "Only the workspace owner can transfer ownership.",
+    });
+  });
 });

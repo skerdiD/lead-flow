@@ -237,7 +237,6 @@ export async function getLeadDetails(
       )
       .limit(1),
     getWorkspaceMemberOptions(
-      context.workspaceId,
       hasWorkspacePermission(context.role, "crm:assign")
         ? undefined
         : lead.assignedOwnerUserId
