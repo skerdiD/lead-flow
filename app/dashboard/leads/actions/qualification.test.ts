@@ -107,6 +107,13 @@ vi.mock("@/app/dashboard/leads/actions/shared", async (importOriginal) => {
 vi.mock("@/lib/request-context.server", () => ({ getRequestId: requestIdMock }));
 vi.mock("@/lib/error-reporting.server", () => ({ reportUnexpectedError: reportErrorMock }));
 vi.mock("@/lib/audit-log.server", () => ({ writeAuditEvent: auditMock }));
+vi.mock("@/lib/idempotency.server", () => ({
+  IdempotencyConflictError: class IdempotencyConflictError extends Error {},
+  executeIdempotentMutation: vi.fn(async (_scope, mutation) => {
+    const result = await transactionMock(() => mutation(dbMock));
+    return { value: result.response, replayed: false };
+  }),
+}));
 
 import { qualifyLeadAction } from "@/app/dashboard/leads/actions/qualification";
 

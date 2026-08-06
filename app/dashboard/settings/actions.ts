@@ -43,6 +43,7 @@ import {
 } from "@/lib/workspace-ownership";
 import { writeAuditEvent } from "@/lib/audit-log.server";
 import { getRequestId } from "@/lib/request-context.server";
+import { executeIdempotentMutation, getIdempotentReplay, IdempotencyConflictError } from "@/lib/idempotency.server";
 import { logger } from "@/lib/logger.server";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 import {
@@ -416,26 +417,44 @@ export async function removeWorkspaceMemberAction(memberId: string): Promise<Wor
   }
 }
 
-export async function transferWorkspaceOwnershipAction(input: { memberId: string }): Promise<WorkspaceActionState> {
+export async function transferWorkspaceOwnershipAction(input: { memberId: string; idempotencyKey?: string }): Promise<WorkspaceActionState> {
   const parsed = transferWorkspaceOwnershipSchema.safeParse(input);
   if (!parsed.success) return { success: false, message: "Select a valid team member." };
 
   const actor = await getCurrentWorkspaceActor("ownership:transfer");
+  if (input.idempotencyKey) {
+    try {
+      const replay = await getIdempotentReplay<WorkspaceActionState>({ workspaceId: actor.workspace.id, actorUserId: actor.userId, action: "workspace.ownership.transfer", idempotencyKey: input.idempotencyKey, request: { memberId: parsed.data.memberId } });
+      if (replay !== undefined) return replay;
+    } catch (error) {
+      if (!actor.error && error instanceof IdempotencyConflictError) return { success: false, message: error.message };
+    }
+  }
   if (actor.error) return { success: false, message: actor.error };
 
   try {
     const requestId = await getRequestId();
-    await db.transaction(async (tx) => {
+    const { value: result } = await executeIdempotentMutation({
+      workspaceId: actor.workspace.id,
+      actorUserId: actor.userId,
+      action: "workspace.ownership.transfer",
+      idempotencyKey: input.idempotencyKey ?? requestId,
+      request: { memberId: parsed.data.memberId },
+    }, async (tx) => {
       await transferWorkspaceOwnershipInTransaction(tx, {
         workspaceId: actor.workspace.id,
         actorUserId: actor.userId,
         targetMemberId: parsed.data.memberId,
         requestId,
       });
+      return { response: { success: true as const, message: "Ownership transferred. You are now an admin in this workspace." }, resource: { type: "workspace", id: actor.workspace.id } };
     });
     revalidateWorkspaceSettings();
-    return { success: true, message: "Ownership transferred. You are now an admin in this workspace." };
+    return result;
   } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      return { success: false, message: error.message };
+    }
     if (error instanceof WorkspaceOwnershipError) {
       logger.warn("security_ownership_transfer_failed", "Workspace ownership transfer was rejected.", {
         workspaceId: actor.workspace.id,
@@ -499,7 +518,7 @@ export async function deleteWorkspaceAction(input: { confirmationName: string })
   }
 }
 
-export async function acceptWorkspaceInvitationAction(token: string): Promise<WorkspaceActionState> {
+export async function acceptWorkspaceInvitationAction(token: string, idempotencyKey?: string): Promise<WorkspaceActionState> {
   if (!/^[A-Za-z0-9_-]{20,200}$/.test(token)) {
     logger.warn("security_invitation_rejected", "An invitation token had an invalid format.", {
       entityType: "invitation",
@@ -523,7 +542,25 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
   try {
     const tokenHash = hashInvitationToken(token);
     const requestId = await getRequestId();
-    const accepted = await db.transaction(async (tx) => {
+    // Resolve scope only after authentication and verify the invited address
+    // before reserving a key. Replays can still find an accepted invitation.
+    const [candidate] = await db
+      .select({ workspaceId: workspaceInvitations.workspaceId, email: workspaceInvitations.email })
+      .from(workspaceInvitations)
+      .where(eq(workspaceInvitations.tokenHash, tokenHash))
+      .limit(1);
+    if (!candidate) throw new InvitationAcceptanceError("invalid_or_expired");
+    if (!verifiedEmails.includes(candidate.email.toLowerCase())) {
+      throw new InvitationAcceptanceError("email_mismatch");
+    }
+
+    const { value: accepted } = await executeIdempotentMutation({
+      workspaceId: candidate.workspaceId,
+      actorUserId: userId,
+      action: "workspace.invitation.accept",
+      idempotencyKey: idempotencyKey ?? requestId,
+      request: { tokenHash },
+    }, async (tx) => {
       const invitation = await acceptWorkspaceInvitationInTransaction(tx, {
         tokenHash,
         userId,
@@ -536,7 +573,7 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
         message: `A new ${workspaceRoleLabels[invitation.role]} joined the workspace.`,
       });
       await writeAuditEvent({ tx, workspaceId: invitation.workspaceId, actor: { userId, role: invitation.role }, action: "member.invitation_accepted", entity: { type: "invitation", id: invitation.id }, after: { role: invitation.role }, requestId });
-      return invitation;
+      return { response: invitation, resource: { type: "workspace_membership", id: userId } };
     });
 
     const { setActiveWorkspace } = await import("@/lib/workspaces");
@@ -557,6 +594,9 @@ export async function acceptWorkspaceInvitationAction(token: string): Promise<Wo
     revalidateWorkspaceSettings();
     return { success: true, message: "You joined the workspace." };
   } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      return { success: false, message: error.message };
+    }
     const message = error instanceof InvitationAcceptanceError
       ? error.message
       : "We couldn't accept this invitation right now. Please try again.";

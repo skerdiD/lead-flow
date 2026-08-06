@@ -142,6 +142,12 @@ export const importRowStatusEnum = pgEnum(
   importRowStatuses,
 );
 
+export const idempotencyStatuses = ["processing", "completed"] as const;
+export const idempotencyStatusEnum = pgEnum(
+  "idempotency_status",
+  idempotencyStatuses,
+);
+
 export const workspaces = pgTable(
   "workspaces",
   {
@@ -817,6 +823,44 @@ export const importRows = pgTable(
       table.workspaceId,
       table.importJobId,
     ),
+  ],
+);
+
+/**
+ * Durable coordination for retry-safe mutations. Response data is deliberately
+ * limited to the small action result needed to replay a request; request bodies,
+ * credentials, invitation tokens, and exported CRM data never belong here.
+ */
+export const idempotencyRecords = pgTable(
+  "idempotency_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    actorUserId: varchar("actor_user_id", { length: 255 }).notNull(),
+    action: varchar("action", { length: 120 }).notNull(),
+    idempotencyKey: varchar("idempotency_key", { length: 200 }).notNull(),
+    requestHash: varchar("request_hash", { length: 64 }).notNull(),
+    status: idempotencyStatusEnum("status").notNull().default("processing"),
+    responseData: jsonb("response_data").$type<unknown>(),
+    resourceType: varchar("resource_type", { length: 80 }),
+    resourceId: varchar("resource_id", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" })
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("idempotency_records_scope_key_unique").on(
+      table.workspaceId,
+      table.actorUserId,
+      table.action,
+      table.idempotencyKey,
+    ),
+    index("idempotency_records_expires_at_idx").on(table.expiresAt),
   ],
 );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, UserRoundCog } from "lucide-react";
 import { toast } from "sonner";
@@ -35,12 +35,14 @@ export function LeadOwnerControl({
   const [isPending, startTransition] = useTransition();
   const initialOwner = currentOwnerUserId ?? "unassigned";
   const [owner, setOwner] = useState(initialOwner);
+  const submissionKey = useRef(crypto.randomUUID());
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateLeadOwnerAction(
         leadId,
         owner === "unassigned" ? null : owner,
+        submissionKey.current,
       );
 
       if (!result.success) {
@@ -60,7 +62,7 @@ export function LeadOwnerControl({
         <Label htmlFor="lead-owner">Assigned owner</Label>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <Select value={owner} onValueChange={setOwner} disabled={disabled || isPending}>
+        <Select value={owner} onValueChange={(value) => { setOwner(value); submissionKey.current = crypto.randomUUID(); }} disabled={disabled || isPending}>
           <SelectTrigger id="lead-owner" aria-label="Assigned owner">
             <SelectValue placeholder="Choose an owner" />
           </SelectTrigger>

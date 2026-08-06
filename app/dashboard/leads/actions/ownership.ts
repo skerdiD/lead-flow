@@ -12,6 +12,7 @@ import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { writeAuditEvent } from "@/lib/audit-log.server";
 import { getRequestId } from "@/lib/request-context.server";
+import { executeIdempotentMutation, getIdempotentReplay, IdempotencyConflictError } from "@/lib/idempotency.server";
 import { createLeadActivity } from "../services/activity-service";
 import {
   ensureLeadMutationAllowed,
@@ -23,6 +24,7 @@ import { isLeadActionId } from "../validations/action-inputs";
 export async function updateLeadOwnerAction(
   leadId: string,
   ownerUserId: string | null,
+  idempotencyKey?: string,
 ) {
   if (!isLeadActionId(leadId)) {
     return { success: false as const, message: "This lead could not be found." };
@@ -46,6 +48,20 @@ export async function updateLeadOwnerAction(
   if (!protection.ok) return { success: false as const, message: protection.message };
   if (isDemoWorkspace(workspace)) {
     return { success: false as const, message: DEMO_MUTATION_MESSAGE };
+  }
+
+  if (idempotencyKey) {
+    try {
+      const replay = await getIdempotentReplay<{ id: string } | null>({ workspaceId: workspace.id, actorUserId: userId, action: "lead.owner.update", idempotencyKey, request: { leadId, ownerUserId } });
+      if (replay !== undefined) {
+        return replay
+          ? { success: true as const, message: "Lead owner updated." }
+          : { success: false as const, message: "This lead could not be found." };
+      }
+    } catch (error) {
+      if (error instanceof IdempotencyConflictError) return { success: false as const, message: error.message };
+      throw error;
+    }
   }
 
   const context = getWorkspaceAuthorizationContext(workspace, userId);
@@ -96,7 +112,13 @@ export async function updateLeadOwnerAction(
     }
 
     const requestId = await getRequestId();
-    const updated = await db.transaction(async (tx) => {
+    const { value: updated } = await executeIdempotentMutation({
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      action: "lead.owner.update",
+      idempotencyKey: idempotencyKey ?? requestId,
+      request: { leadId, ownerUserId },
+    }, async (tx) => {
       if (ownerUserId) {
         const [currentMember] = await tx
           .select({ userId: workspaceMembers.userId })
@@ -109,7 +131,7 @@ export async function updateLeadOwnerAction(
           )
           .for("share")
           .limit(1);
-        if (!currentMember) return null;
+        if (!currentMember) return { response: null };
       }
 
       const [record] = await tx
@@ -127,7 +149,7 @@ export async function updateLeadOwnerAction(
         )
         .returning({ id: leads.id });
 
-      if (!record) return null;
+      if (!record) return { response: null };
 
       await createLeadActivity({
         client: tx,
@@ -149,7 +171,7 @@ export async function updateLeadOwnerAction(
         requestId,
       });
 
-      return record;
+      return { response: record, resource: { type: "lead", id: record.id } };
     });
 
     if (!updated) {
@@ -158,7 +180,10 @@ export async function updateLeadOwnerAction(
 
     revalidateLeadPaths(leadId);
     return { success: true as const, message: "Lead owner updated." };
-  } catch {
+  } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      return { success: false as const, message: error.message };
+    }
     return {
       success: false as const,
       message: "We couldn't update the lead owner right now. Please try again.",

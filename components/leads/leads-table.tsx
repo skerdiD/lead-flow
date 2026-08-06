@@ -376,6 +376,8 @@ export function LeadsTable({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const desktopSelectAllRef = useRef<HTMLInputElement>(null);
   const mobileSelectAllRef = useRef<HTMLInputElement>(null);
+  const bulkStatusKeyRef = useRef(crypto.randomUUID());
+  const bulkDeleteKeyRef = useRef(crypto.randomUUID());
 
   const leadIdsOnPage = useMemo(() => leads.map((lead) => lead.id), [leads]);
   const selectedLeadIds = useMemo(
@@ -383,6 +385,11 @@ export function LeadsTable({
     [leadIdsOnPage, selectedIds],
   );
   const selectedCount = selectedLeadIds.length;
+
+  useEffect(() => {
+    bulkStatusKeyRef.current = crypto.randomUUID();
+    bulkDeleteKeyRef.current = crypto.randomUUID();
+  }, [bulkStatus, selectedLeadIds]);
   const isAllSelected =
     leadIdsOnPage.length > 0 &&
     leadIdsOnPage.every((leadId) => selectedIds.has(leadId));
@@ -453,7 +460,7 @@ export function LeadsTable({
     if (!bulkStatus || bulkStatus === "none" || selectedCount === 0) return;
 
     startTransition(async () => {
-      const result = await bulkUpdateLeadStatusAction(selectedLeadIds, bulkStatus);
+      const result = await bulkUpdateLeadStatusAction(selectedLeadIds, bulkStatus, bulkStatusKeyRef.current);
       if (!result.success) {
         toast.error(result.message);
         return;
@@ -470,7 +477,7 @@ export function LeadsTable({
     if (selectedCount === 0) return;
 
     startTransition(async () => {
-      const result = await bulkDeleteLeadsAction(selectedLeadIds);
+      const result = await bulkDeleteLeadsAction(selectedLeadIds, bulkDeleteKeyRef.current);
       if (!result.success) {
         toast.error(result.message);
         return;

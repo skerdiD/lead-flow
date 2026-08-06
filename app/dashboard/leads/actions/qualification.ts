@@ -19,6 +19,10 @@ import {
 import { writeAuditEvent } from "@/lib/audit-log.server";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { reportUnexpectedError } from "@/lib/error-reporting.server";
+import {
+  executeIdempotentMutation,
+  IdempotencyConflictError,
+} from "@/lib/idempotency.server";
 import { getRequestId } from "@/lib/request-context.server";
 import { moneyToCents } from "@/lib/revenue";
 import {
@@ -212,7 +216,18 @@ export async function qualifyLeadAction(
   const values = parsed.data;
 
   try {
-    const result = await db.transaction(async (tx) => {
+    const { value: result } = await executeIdempotentMutation<{
+      reused: boolean;
+      accountId: string | null;
+      contactId: string | null;
+      dealId: string;
+    }>({
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      action: "lead.qualify",
+      idempotencyKey: values.requestKey,
+      request: { leadId, ...values, requestKey: undefined },
+    }, async (tx) => {
       const [lead] = await tx
         .select({
           id: leads.id,
@@ -247,12 +262,13 @@ export async function qualifyLeadAction(
         .limit(1);
 
       if (existingDeal) {
-        return {
-          reused: true,
+        const response = {
+          reused: true as const,
           accountId: existingDeal.accountId,
           contactId: existingDeal.contactId,
           dealId: existingDeal.id,
         };
+        return { response, resource: { type: "deal", id: existingDeal.id } };
       }
 
       const [owner] = await tx
@@ -525,7 +541,10 @@ export async function qualifyLeadAction(
         eventKey: `lead-qualified:${leadId}`,
       });
 
-      return { reused: false, accountId, contactId, dealId: deal.id };
+      return {
+        response: { reused: false as const, accountId, contactId, dealId: deal.id },
+        resource: { type: "deal", id: deal.id },
+      };
     });
 
     revalidateLeadPaths(leadId);
@@ -542,6 +561,9 @@ export async function qualifyLeadAction(
   } catch (error) {
     if (error instanceof QualificationConflict) {
       return { success: false, message: error.message, code: error.code };
+    }
+    if (error instanceof IdempotencyConflictError) {
+      return { success: false, message: error.message, code: "conflict" };
     }
     await reportUnexpectedError(error, {
       event: "lead.qualify.failed",

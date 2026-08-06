@@ -79,6 +79,7 @@ export function TeamMembersSection({
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<WorkspaceTeamMember | null>(null);
   const [transferTarget, setTransferTarget] = useState<WorkspaceTeamMember | null>(null);
+  const [transferKey, setTransferKey] = useState(() => crypto.randomUUID());
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -222,7 +223,7 @@ export function TeamMembersSection({
                     </Select>
                   ) : null}
                   {canTransferOwnership && member.canReceiveOwnership ? (
-                    <Button type="button" variant="outline" onClick={() => setTransferTarget(member)}>
+                    <Button type="button" variant="outline" onClick={() => { setTransferKey(crypto.randomUUID()); setTransferTarget(member); }}>
                       Transfer ownership
                     </Button>
                   ) : null}
@@ -271,7 +272,7 @@ export function TeamMembersSection({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={isPending} onClick={(event) => { event.preventDefault(); if (transferTarget) run(() => transferWorkspaceOwnershipAction({ memberId: transferTarget.id }), () => setTransferTarget(null)); }}>Transfer ownership</AlertDialogAction>
+            <AlertDialogAction disabled={isPending} onClick={(event) => { event.preventDefault(); if (transferTarget) run(() => transferWorkspaceOwnershipAction({ memberId: transferTarget.id, idempotencyKey: transferKey }), () => setTransferTarget(null)); }}>Transfer ownership</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

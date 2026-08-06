@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, UsersRound } from "lucide-react";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 export function AcceptInvitationCard({ token, isSignedIn }: { token: string; isSignedIn: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const submissionKey = useRef(crypto.randomUUID());
   const redirectTo = `/invite/${token}`;
 
   return (
@@ -29,7 +30,7 @@ export function AcceptInvitationCard({ token, isSignedIn }: { token: string; isS
             disabled={isPending}
             onClick={() => {
               startTransition(async () => {
-                const result = await acceptWorkspaceInvitationAction(token);
+                const result = await acceptWorkspaceInvitationAction(token, submissionKey.current);
                 if (!result.success) {
                   toast.error(result.message);
                   return;

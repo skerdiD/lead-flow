@@ -12,6 +12,8 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MUTATION_MESSAGE, isDemoWorkspace } from "@/lib/demo";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+import { executeIdempotentMutation, getIdempotentReplay, IdempotencyConflictError } from "@/lib/idempotency.server";
+import { getRequestId } from "@/lib/request-context.server";
 import { createLeadActivity } from "../services/activity-service";
 import {
   crmUpdatePermissionError,
@@ -27,6 +29,7 @@ import {
 export async function bulkUpdateLeadStatusAction(
   leadIds: string[],
   status: string,
+  idempotencyKey?: string,
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
@@ -62,6 +65,16 @@ export async function bulkUpdateLeadStatusAction(
       success: false,
       message: "Select a valid lead stage.",
     };
+  }
+
+  if (idempotencyKey) {
+    try {
+      const affectedCount = await getIdempotentReplay<number>({ workspaceId: workspace.id, actorUserId: userId, action: "leads.bulk_status_update", idempotencyKey, request: { leadIds: normalizedIds, status } });
+      if (affectedCount !== undefined) return { success: true, affectedCount, message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} updated to ${status}.` };
+    } catch (error) {
+      if (error instanceof IdempotencyConflictError) return { success: false, message: error.message };
+      throw error;
+    }
   }
 
   try {
@@ -105,7 +118,14 @@ export async function bulkUpdateLeadStatusAction(
       };
     }
 
-    await db.transaction(async (tx) => {
+    const requestId = await getRequestId();
+    const { value: affectedCount } = await executeIdempotentMutation({
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      action: "leads.bulk_status_update",
+      idempotencyKey: idempotencyKey ?? requestId,
+      request: { leadIds: normalizedIds, status },
+    }, async (tx) => {
       await tx
         .update(leads)
         .set({
@@ -131,6 +151,7 @@ export async function bulkUpdateLeadStatusAction(
         eventType: "lead_status_changed",
         message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} moved to ${status}.`,
       });
+      return { response: leadIdsToUpdate.length };
     });
 
     revalidatePath("/dashboard");
@@ -139,10 +160,13 @@ export async function bulkUpdateLeadStatusAction(
 
     return {
       success: true,
-      affectedCount: leadIdsToUpdate.length,
-      message: `${leadIdsToUpdate.length} lead${leadIdsToUpdate.length === 1 ? "" : "s"} updated to ${status}.`,
+      affectedCount,
+      message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} updated to ${status}.`,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      return { success: false, message: error.message };
+    }
     return {
       success: false,
       message: "We couldn't update the selected leads right now. Please try again.",
@@ -153,6 +177,7 @@ export async function bulkUpdateLeadStatusAction(
 
 export async function bulkDeleteLeadsAction(
   leadIds: string[],
+  idempotencyKey?: string,
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
@@ -183,8 +208,28 @@ export async function bulkDeleteLeadsAction(
     };
   }
 
+  if (idempotencyKey) {
+    try {
+      const archivedLeads = await getIdempotentReplay<Array<{ id: string }>>({ workspaceId: workspace.id, actorUserId: userId, action: "leads.bulk_archive", idempotencyKey, request: { leadIds: normalizedIds } });
+      if (archivedLeads !== undefined) {
+        const affectedCount = archivedLeads.length;
+        return { success: true, affectedCount, message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} archived successfully.` };
+      }
+    } catch (error) {
+      if (error instanceof IdempotencyConflictError) return { success: false, message: error.message };
+      throw error;
+    }
+  }
+
   try {
-    const archivedLeads = await db.transaction(async (tx) => {
+    const requestId = await getRequestId();
+    const { value: archivedLeads } = await executeIdempotentMutation({
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      action: "leads.bulk_archive",
+      idempotencyKey: idempotencyKey ?? requestId,
+      request: { leadIds: normalizedIds },
+    }, async (tx) => {
       const records = await tx
         .update(leads)
         .set({
@@ -213,7 +258,7 @@ export async function bulkDeleteLeadsAction(
         });
       }
 
-      return records;
+      return { response: records };
     });
 
     const affectedCount = archivedLeads.length;
@@ -234,7 +279,10 @@ export async function bulkDeleteLeadsAction(
       affectedCount,
       message: `${affectedCount} lead${affectedCount === 1 ? "" : "s"} archived successfully.`,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      return { success: false, message: error.message };
+    }
     return {
       success: false,
       message: "We couldn't archive the selected leads right now. Please try again.",

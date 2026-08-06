@@ -25,6 +25,7 @@
     "e2e:install": "playwright install --with-deps chromium",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:cleanup-idempotency": "tsx scripts/cleanup-idempotency.ts",
     "db:seed:screenshots": "tsx scripts/seed-screenshot-data.ts",
     "db:seed:demo": "tsx scripts/seed-demo-workspace.ts"
   },
