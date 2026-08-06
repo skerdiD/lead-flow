@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3100";
-// The E2E app bypasses Clerk entirely, but Clerk still validates this public
-// configuration while Next starts. Keep this inert test key well-formed.
+// Protected E2E routes bypass Clerk. The auth pages still mount Clerk to verify
+// CSP integration, so keep their inert public configuration well-formed.
 const e2eClerkPublishableKey =
   "pk_test_bGVhZC1mbG93LWUyZS0xLmNsZXJrLmFjY291bnRzLmRldiQ=";
 const webServerCommand =

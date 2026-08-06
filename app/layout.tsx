@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
-import Script from "next/script";
+import { headers } from "next/headers";
+import { ScrollRestoration } from "@/components/scroll-restoration";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
 import "./globals.css";
 
@@ -30,34 +31,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const isE2ETestMode = isSafeE2ETestMode();
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased`}
       >
-        <Script id="scroll-top-on-refresh" strategy="beforeInteractive">
-          {`
-            if (typeof window !== "undefined") {
-              if ("scrollRestoration" in window.history) {
-                window.history.scrollRestoration = "manual";
-              }
-              window.addEventListener("beforeunload", function () {
-                window.scrollTo(0, 0);
-              });
-              window.addEventListener("pageshow", function () {
-                window.scrollTo(0, 0);
-              });
-            }
-          `}
-        </Script>
-        {isE2ETestMode ? children : <ClerkProvider>{children}</ClerkProvider>}
+        <ScrollRestoration />
+        {isE2ETestMode ? (
+          children
+        ) : (
+          <ClerkProvider dynamic nonce={nonce}>
+            {children}
+          </ClerkProvider>
+        )}
       </body>
     </html>
   );
