@@ -254,6 +254,7 @@ vi.mock("@/lib/workspaces", () => ({
 
 vi.mock("@/lib/arcjet", () => ({
   protectLeadMutation: protectLeadMutationMock,
+  enforceRateLimit: protectLeadMutationMock,
 }));
 
 vi.mock("@/lib/notifications", () => ({

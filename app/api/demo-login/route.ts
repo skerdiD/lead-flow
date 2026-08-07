@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { protectDemoLogin } from "@/lib/arcjet";
+import { enforceRateLimit, rateLimitHeaders } from "@/lib/arcjet";
 import { createDemoSignInUrl, DemoLoginError } from "@/lib/demo-auth.server";
 import { isDemoRole } from "@/lib/demo";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
@@ -23,11 +23,11 @@ function readDemoRoleRequest(value: unknown) {
 export async function POST(request: Request) {
   const requestId = createRequestId(request.headers.get(REQUEST_ID_HEADER));
   const responseHeaders = requestIdHeaders(requestId);
-  const protection = await protectDemoLogin();
+  const protection = await enforceRateLimit({ action: "demo:login", request });
   if (!protection.ok) {
     return NextResponse.json(
       { error: protection.message, requestId },
-      { status: protection.status, headers: responseHeaders },
+      { status: protection.status, headers: { ...responseHeaders, ...rateLimitHeaders(protection) } },
     );
   }
 

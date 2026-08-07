@@ -202,7 +202,7 @@ export async function qualifyLeadAction(
   const [userId, workspace, protection, requestId] = await Promise.all([
     requireUserId(),
     getCurrentWorkspace(),
-    ensureLeadMutationAllowed(),
+    ensureLeadMutationAllowed("deal:create"),
     getRequestId(),
   ]);
   const permissionError = crmUpdatePermissionError(workspace.role);

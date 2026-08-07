@@ -41,7 +41,7 @@ export async function createFollowUpTaskAction(
 
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
-  const protection = await ensureLeadMutationAllowed();
+  const protection = await ensureLeadMutationAllowed("task:create");
   const parsed = crmTaskFormSchema.safeParse(input);
 
   const permissionError = workspacePermissionError(workspace.role, "crm:create");

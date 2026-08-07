@@ -25,6 +25,8 @@ import { getCurrentWorkspace } from "@/lib/workspaces";
 import { writeAuditEvent } from "@/lib/audit-log.server";
 import { getRequestId } from "@/lib/request-context.server";
 import { executeIdempotentMutation, IdempotencyConflictError } from "@/lib/idempotency.server";
+import { enforceRateLimit } from "@/lib/arcjet";
+import type { RateLimitAction } from "@/lib/rate-limit-policies";
 
 type MutationResult = { success: true; id: string; message: string } | { success: false; message: string; fieldErrors?: Record<string, string[]> };
 type MoveResult = { success: true; stage: string; updatedAt: string; message: string } | { success: false; message: string };
@@ -62,20 +64,22 @@ async function lockWorkspaceMember(
 
 type CrmMutationPermission = "crm:create" | "crm:update" | "crm:delete";
 
-async function prepareMutation(permission: CrmMutationPermission) {
+async function prepareMutation(permission: CrmMutationPermission, action: RateLimitAction = "crm:mutation") {
   const [workspace, userId] = await Promise.all([getCurrentWorkspace(), requireUserId()]);
   if (isDemoWorkspace(workspace)) return { error: DEMO_MUTATION_MESSAGE } as const;
   const allowed = permission === "crm:update"
     ? hasWorkspacePermission(workspace.role, "crm:update_all") || hasWorkspacePermission(workspace.role, "crm:update_assigned")
     : hasWorkspacePermission(workspace.role, permission);
   if (!allowed) return { error: "You do not have permission to make this change." } as const;
+  const protection = await enforceRateLimit({ action, actorUserId: userId, workspaceId: workspace.id });
+  if (!protection.ok) return { error: protection.message } as const;
   return { workspace, userId, context: getWorkspaceAuthorizationContext(workspace, userId) } as const;
 }
 
 export async function createAccountAction(values: AccountFormValues): Promise<MutationResult> {
   const parsed = accountFormSchema.safeParse(values);
   if (!parsed.success) return { success: false, message: "Please review the account details.", fieldErrors: parsed.error.flatten().fieldErrors };
-  const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const state = await prepareMutation("crm:create", "account:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   const owner = hasWorkspacePermission(state.workspace.role, "crm:assign")
     ? await validateMember(state.workspace.id, parsed.data.assignedOwnerUserId)
     : state.userId;
@@ -140,7 +144,7 @@ export async function archiveAccountAction(id: string): Promise<MutationResult> 
 
 export async function createContactAction(values: ContactFormValues): Promise<MutationResult> {
   const parsed = contactFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the contact details.", fieldErrors: parsed.error.flatten().fieldErrors };
-  const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const state = await prepareMutation("crm:create", "contact:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   const accountId = parsed.data.accountId && isUuid(parsed.data.accountId) ? parsed.data.accountId : null;
   if (parsed.data.accountId && (!accountId || !(await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.workspaceId, state.workspace.id), eq(accounts.isArchived, false))).limit(1))[0])) return { success: false, message: "Choose an active account in this workspace." };
   const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") ? await validateMember(state.workspace.id, parsed.data.assignedOwnerUserId) : state.userId;
@@ -251,7 +255,7 @@ async function validateDealLinks(
 }
 
 export async function createDealAction(values: DealFormValues, idempotencyKey?: string): Promise<MutationResult> {
-  const parsed = dealFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the deal details.", fieldErrors: parsed.error.flatten().fieldErrors }; const state = await prepareMutation("crm:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
+  const parsed = dealFormSchema.safeParse(values); if (!parsed.success) return { success: false, message: "Please review the deal details.", fieldErrors: parsed.error.flatten().fieldErrors }; const state = await prepareMutation("crm:create", "deal:create"); if ("error" in state) return { success: false, message: state.error ?? "You do not have permission to make this change." };
   if (!(await validateDealLinks(state.context, parsed.data))) return { success: false, message: "Choose related records from this active workspace." }; const owner = hasWorkspacePermission(state.workspace.role, "crm:assign") && parsed.data.ownerUserId ? await validateMember(state.workspace.id, parsed.data.ownerUserId) : state.userId; if (parsed.data.ownerUserId && !owner) return { success: false, message: "Choose a valid workspace member as the owner." }; if (parsed.data.stage === "lost" && !parsed.data.lostReason) return { success: false, message: "A lost reason is required before closing a deal as lost." };
   const requestId = await getRequestId();
   let record: { id: string } | null;

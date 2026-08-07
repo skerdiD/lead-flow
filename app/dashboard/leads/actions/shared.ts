@@ -1,5 +1,8 @@
 import { revalidatePathBestEffort as revalidatePath } from "@/lib/revalidation.server";
-import { protectLeadMutation } from "@/lib/arcjet";
+import { enforceRateLimit } from "@/lib/arcjet";
+import type { RateLimitAction } from "@/lib/rate-limit-policies";
+import { requireUserId } from "@/lib/auth";
+import { getCurrentWorkspace } from "@/lib/workspaces";
 import {
   canAccessRecord,
   getWorkspaceAuthorizationContext,
@@ -18,8 +21,9 @@ export function revalidateLeadPaths(leadId: string) {
   revalidatePath(`/dashboard/leads/${leadId}/edit`);
 }
 
-export async function ensureLeadMutationAllowed() {
-  return protectLeadMutation();
+export async function ensureLeadMutationAllowed(action: RateLimitAction = "crm:mutation") {
+  const [actorUserId, workspace] = await Promise.all([requireUserId(), getCurrentWorkspace()]);
+  return enforceRateLimit({ action, actorUserId, workspaceId: workspace.id });
 }
 
 export function workspacePermissionError(

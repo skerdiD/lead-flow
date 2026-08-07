@@ -43,7 +43,7 @@ export async function createLeadAction(
 ): Promise<LeadMutationState> {
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
-  const protection = await ensureLeadMutationAllowed();
+  const protection = await ensureLeadMutationAllowed("lead:create");
   const parsed = leadFormSchema.safeParse(input);
 
   const permissionError = workspacePermissionError(workspace.role, "crm:create");

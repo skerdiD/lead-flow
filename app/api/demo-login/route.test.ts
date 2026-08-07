@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  protectDemoLogin: vi.fn(),
+  enforceRateLimit: vi.fn(),
   createDemoSignInUrl: vi.fn(),
 }));
 
 vi.mock("@/lib/arcjet", () => ({
-  protectDemoLogin: mocks.protectDemoLogin,
+  enforceRateLimit: mocks.enforceRateLimit,
+  rateLimitHeaders: (result: { retryAfter?: number }) => result.retryAfter ? { "Retry-After": String(result.retryAfter) } : undefined,
 }));
 
 vi.mock("@/lib/demo-auth.server", () => ({
@@ -27,7 +28,7 @@ function demoRequest(payload: unknown) {
 beforeEach(() => {
   vi.unstubAllEnvs();
   vi.clearAllMocks();
-  mocks.protectDemoLogin.mockResolvedValue({ ok: true });
+  mocks.enforceRateLimit.mockResolvedValue({ ok: true });
   mocks.createDemoSignInUrl.mockResolvedValue(
     "https://clerk.example/sign-in-token",
   );
@@ -76,15 +77,17 @@ describe("POST /api/demo-login", () => {
   });
 
   it("enforces the shared Arcjet protection before making a Clerk request", async () => {
-    mocks.protectDemoLogin.mockResolvedValue({
+    mocks.enforceRateLimit.mockResolvedValue({
       ok: false,
       status: 429,
       message: "Too many requests. Please wait a moment and try again.",
+      retryAfter: 42,
     });
 
     const response = await POST(demoRequest({ role: "owner" }));
 
     expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("42");
     expect(mocks.createDemoSignInUrl).not.toHaveBeenCalled();
   });
 });

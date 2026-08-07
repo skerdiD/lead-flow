@@ -46,6 +46,7 @@ import { getRequestId } from "@/lib/request-context.server";
 import { executeIdempotentMutation, getIdempotentReplay, IdempotencyConflictError } from "@/lib/idempotency.server";
 import { logger } from "@/lib/logger.server";
 import { isSafeE2ETestMode } from "@/lib/e2e-test-mode";
+import { enforceRateLimit } from "@/lib/arcjet";
 import {
   acceptWorkspaceInvitationInTransaction,
   InvitationAcceptanceError,
@@ -121,6 +122,8 @@ export async function inviteWorkspaceMemberAction(input: {
 
   const actor = await getCurrentWorkspaceActor("members:manage");
   if (actor.error) return { success: false, message: actor.error };
+  const protection = await enforceRateLimit({ action: "invitation:create", actorUserId: actor.userId, workspaceId: actor.workspace.id });
+  if (!protection.ok) return { success: false, message: protection.message };
 
   try {
     // E2E authentication is intentionally local, so it must never make a
@@ -422,6 +425,9 @@ export async function transferWorkspaceOwnershipAction(input: { memberId: string
   if (!parsed.success) return { success: false, message: "Select a valid team member." };
 
   const actor = await getCurrentWorkspaceActor("ownership:transfer");
+  if (actor.error) return { success: false, message: actor.error };
+  const protection = await enforceRateLimit({ action: "ownership:transfer", actorUserId: actor.userId, workspaceId: actor.workspace.id });
+  if (!protection.ok) return { success: false, message: protection.message };
   if (input.idempotencyKey) {
     try {
       const replay = await getIdempotentReplay<WorkspaceActionState>({ workspaceId: actor.workspace.id, actorUserId: actor.userId, action: "workspace.ownership.transfer", idempotencyKey: input.idempotencyKey, request: { memberId: parsed.data.memberId } });
@@ -430,8 +436,6 @@ export async function transferWorkspaceOwnershipAction(input: { memberId: string
       if (!actor.error && error instanceof IdempotencyConflictError) return { success: false, message: error.message };
     }
   }
-  if (actor.error) return { success: false, message: actor.error };
-
   try {
     const requestId = await getRequestId();
     const { value: result } = await executeIdempotentMutation({
@@ -534,6 +538,8 @@ export async function acceptWorkspaceInvitationAction(token: string, idempotency
   if (isDemoWorkspace(currentWorkspace)) {
     return { success: false, message: DEMO_MUTATION_MESSAGE };
   }
+  const protection = await enforceRateLimit({ action: "invitation:accept", actorUserId: userId, workspaceId: currentWorkspace.id });
+  if (!protection.ok) return { success: false, message: protection.message };
 
   const verifiedEmails = (user?.emailAddresses ?? [])
     .filter((email) => email.verification?.status === "verified")

@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server";
-import { protectCsvImport } from "@/lib/arcjet";
+import { enforceRateLimit, rateLimitHeaders } from "@/lib/arcjet";
 import {
   confirmImportJob,
+  getImportAuthorization,
   ImportServiceError,
 } from "@/lib/imports/server";
 
 export const runtime = "nodejs";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const protection = await protectCsvImport();
-  if (!protection.ok) {
-    return NextResponse.json(
-      { error: protection.message },
-      { status: protection.status },
-    );
-  }
-
   try {
+    const access = await getImportAuthorization();
+    const protection = await enforceRateLimit({ action: "csv:import", actorUserId: access.userId, workspaceId: access.workspace.id, request });
+    if (!protection.ok) return NextResponse.json({ error: protection.message }, { status: protection.status, headers: rateLimitHeaders(protection) });
     const { id } = await context.params;
     return NextResponse.json(await confirmImportJob(id));
   } catch (error) {

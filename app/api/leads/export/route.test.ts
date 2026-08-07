@@ -49,7 +49,10 @@ vi.mock("@/db", () => ({
     transaction: mocks.transaction,
   },
 }));
-vi.mock("@/lib/arcjet", () => ({ protectLeadExport: mocks.protect }));
+vi.mock("@/lib/arcjet", () => ({
+  enforceRateLimit: mocks.protect,
+  rateLimitHeaders: (result: { retryAfter?: number }) => result.retryAfter ? { "Retry-After": String(result.retryAfter) } : undefined,
+}));
 vi.mock("@/lib/authorization", () => ({
   getCurrentWorkspaceAuthorizationContext: mocks.authorization,
   hasWorkspacePermission: (role: string) => role === "owner" || role === "admin",

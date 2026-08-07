@@ -8,7 +8,7 @@ import {
   normalizeLeadsFilters,
   type LeadsListFilters,
 } from "@/app/dashboard/leads/queries";
-import { protectLeadExport } from "@/lib/arcjet";
+import { enforceRateLimit, rateLimitHeaders } from "@/lib/arcjet";
 import {
   getCurrentWorkspaceAuthorizationContext,
   hasWorkspacePermission,
@@ -30,16 +30,20 @@ function normalizeSelectedIds(rawSelected: string | null) {
 }
 
 export async function GET(request: Request) {
-  const protection = await protectLeadExport();
+  const context = await getCurrentWorkspaceAuthorizationContext();
+  const protection = await enforceRateLimit({
+    action: "lead:export",
+    actorUserId: context.userId,
+    workspaceId: context.workspaceId,
+    request,
+  });
 
   if (!protection.ok) {
     return NextResponse.json(
       { error: protection.message },
-      { status: protection.status },
+      { status: protection.status, headers: rateLimitHeaders(protection) },
     );
   }
-
-  const context = await getCurrentWorkspaceAuthorizationContext();
 
   if (!hasWorkspacePermission(context.role, "exports:create")) {
     return NextResponse.json(

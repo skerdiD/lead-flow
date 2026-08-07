@@ -1,28 +1,24 @@
 import { NextResponse } from "next/server";
 import { importEntityTypes } from "@/db/schema";
-import { protectCsvImport } from "@/lib/arcjet";
+import { enforceRateLimit, rateLimitHeaders } from "@/lib/arcjet";
 import { CsvImportError } from "@/lib/imports/csv";
 import { logImportEvent } from "@/lib/imports/logging";
 import {
   createImportDraft,
+  getImportAuthorization,
   ImportServiceError,
 } from "@/lib/imports/server";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const protection = await protectCsvImport();
-  if (!protection.ok) {
-    logImportEvent("warn", "import_rate_limit_rejected", {
-      status: protection.status,
-    });
-    return NextResponse.json(
-      { error: protection.message },
-      { status: protection.status },
-    );
-  }
-
   try {
+    const access = await getImportAuthorization();
+    const protection = await enforceRateLimit({ action: "csv:import", actorUserId: access.userId, workspaceId: access.workspace.id, request });
+    if (!protection.ok) {
+      logImportEvent("warn", "import_rate_limit_rejected", { status: protection.status });
+      return NextResponse.json({ error: protection.message }, { status: protection.status, headers: rateLimitHeaders(protection) });
+    }
     const formData = await request.formData();
     const file = formData.get("file");
     const entityType = formData.get("entityType");

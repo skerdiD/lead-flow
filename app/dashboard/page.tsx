@@ -27,12 +27,19 @@ import { Button } from "@/components/ui/button";
 import { isDemoWorkspace } from "@/lib/demo";
 import { formatCurrencyFromCents } from "@/lib/revenue";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+import { requireUserId } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/arcjet";
 
 function toPercent(value: number) {
   return `${Math.round(value)}%`;
 }
 
 export default async function DashboardPage() {
+  const [actorUserId, rateLimitWorkspace] = await Promise.all([requireUserId(), getCurrentWorkspace()]);
+  const protection = await enforceRateLimit({ action: "analytics:expensive", actorUserId, workspaceId: rateLimitWorkspace.id });
+  if (!protection.ok) {
+    return <div className="rounded-xl border p-6 text-sm text-muted-foreground">{protection.message}</div>;
+  }
   const [
     stats,
     recentLeads,

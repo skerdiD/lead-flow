@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentWorkspace: vi.fn(),
   requireUserId: vi.fn(),
+  enforceRateLimit: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -19,6 +20,7 @@ vi.mock("@/db/schema", () => ({
   workspaces: {},
 }));
 vi.mock("@/lib/auth", () => ({ requireUserId: mocks.requireUserId }));
+vi.mock("@/lib/arcjet", () => ({ enforceRateLimit: mocks.enforceRateLimit }));
 vi.mock("@/lib/workspaces", () => ({ getCurrentWorkspace: mocks.getCurrentWorkspace }));
 vi.mock("@/lib/workspace-invitations-email", () => ({
   sendWorkspaceInvitationEmail: vi.fn(),
@@ -38,6 +40,7 @@ import { DEMO_MUTATION_MESSAGE, DEMO_WORKSPACE_NAME } from "@/lib/demo";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.requireUserId.mockResolvedValue("clerk-owner");
+  mocks.enforceRateLimit.mockResolvedValue({ ok: true });
   mocks.getCurrentWorkspace.mockResolvedValue({
     id: "demo-workspace",
     name: DEMO_WORKSPACE_NAME,

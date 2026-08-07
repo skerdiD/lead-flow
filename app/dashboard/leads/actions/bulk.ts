@@ -33,7 +33,7 @@ export async function bulkUpdateLeadStatusAction(
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
-  const protection = await ensureLeadMutationAllowed();
+  const protection = await ensureLeadMutationAllowed("crm:bulk");
   const normalizedIds = normalizeLeadIds(leadIds);
 
   const permissionError = crmUpdatePermissionError(workspace.role);
@@ -181,7 +181,7 @@ export async function bulkDeleteLeadsAction(
 ): Promise<BulkLeadActionState> {
   const userId = await requireUserId();
   const workspace = await getCurrentWorkspace();
-  const protection = await ensureLeadMutationAllowed();
+  const protection = await ensureLeadMutationAllowed("crm:bulk");
   const normalizedIds = normalizeLeadIds(leadIds);
 
   const permissionError = workspacePermissionError(workspace.role, "crm:delete");

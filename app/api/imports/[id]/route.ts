@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { protectCsvImport } from "@/lib/arcjet";
+import { enforceRateLimit, rateLimitHeaders } from "@/lib/arcjet";
 import {
   getImportJobDetails,
+  getImportAuthorization,
   ImportServiceError,
   reviewImportJob,
 } from "@/lib/imports/server";
@@ -11,15 +12,10 @@ export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, context: RouteContext) {
-  const protection = await protectCsvImport();
-  if (!protection.ok) {
-    return NextResponse.json(
-      { error: protection.message },
-      { status: protection.status },
-    );
-  }
-
   try {
+    const access = await getImportAuthorization();
+    const protection = await enforceRateLimit({ action: "read:authenticated", actorUserId: access.userId, workspaceId: access.workspace.id, request });
+    if (!protection.ok) return NextResponse.json({ error: protection.message }, { status: protection.status, headers: rateLimitHeaders(protection) });
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     return NextResponse.json(
@@ -43,15 +39,10 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const protection = await protectCsvImport();
-  if (!protection.ok) {
-    return NextResponse.json(
-      { error: protection.message },
-      { status: protection.status },
-    );
-  }
-
   try {
+    const access = await getImportAuthorization();
+    const protection = await enforceRateLimit({ action: "csv:import", actorUserId: access.userId, workspaceId: access.workspace.id, request });
+    if (!protection.ok) return NextResponse.json({ error: protection.message }, { status: protection.status, headers: rateLimitHeaders(protection) });
     const { id } = await context.params;
     const body = (await request.json()) as {
       mapping?: Record<string, string | null>;
