@@ -720,7 +720,7 @@ export function LeadForm({
             </section>
             ) : null}
 
-            <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="sticky bottom-0 z-10 -mx-5 flex flex-col gap-3 border-t bg-background/95 px-5 pb-1 pt-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-5">
               <p className="text-sm text-muted-foreground">
                 {mode === "edit"
                   ? "Changes update the lead immediately after save."

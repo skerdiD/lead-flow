@@ -3,6 +3,7 @@
 import { ClearFiltersButton } from "@/components/filters/clear-filters-button";
 import { SearchInput } from "@/components/filters/search-input";
 import { useDebouncedUrlSearch } from "@/components/filters/use-debounced-url-search";
+import { ResponsiveFilterPanel } from "@/components/filters/responsive-filter-panel";
 import { LEAD_STATUSES } from "@/lib/constants/leads";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ export function LeadFilters({
   const hasFilters = Boolean(
     controller.search.trim() || initialStatus || initialSource || initialOwner || initialArchived === "archived",
   );
+  const activeCount = [controller.search.trim(), initialStatus, initialSource, initialOwner, initialArchived === "archived"].filter(Boolean).length;
   const apply = (updates: Record<string, string | null>) => controller.replace(updates);
   const clear = () => {
     controller.clear(
@@ -43,7 +45,7 @@ export function LeadFilters({
 
   return (
     <div
-      className="flex min-w-0 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center"
+      className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
       aria-busy={controller.isPending}
       data-testid="leads-filter-toolbar"
     >
@@ -56,10 +58,11 @@ export function LeadFilters({
         inputRef={controller.inputRef}
         placeholder="Search by name, company, email, or source..."
         ariaLabel="Search leads"
-        className="w-full lg:min-w-[18rem] lg:flex-[1_1_18rem]"
+        className="w-full sm:min-w-[18rem] sm:flex-[1_1_18rem]"
         testId="leads-search-input"
       />
 
+      <ResponsiveFilterPanel activeCount={activeCount} className="min-w-0 flex-1 sm:justify-end">
       <label className="w-full sm:w-auto">
         <span className="sr-only">Stage</span>
         <select key={initialStatus} defaultValue={initialStatus} onChange={(event) => apply({ status: event.target.value || null })} className={cn(selectClass, "sm:w-[10rem]")} aria-label="Stage">
@@ -93,6 +96,7 @@ export function LeadFilters({
       </label>
 
       {hasFilters ? <ClearFiltersButton onClear={clear} disabled={controller.isPending} /> : null}
+      </ResponsiveFilterPanel>
     </div>
   );
 }

@@ -263,7 +263,7 @@ function LeadRowActions({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="size-10 sm:size-8"
             aria-label={`Actions for ${lead.fullName}`}
             data-testid={`lead-actions-${lead.id}`}
           >

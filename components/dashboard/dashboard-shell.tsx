@@ -75,6 +75,8 @@ function setSidebarCollapsedPreference(collapsed: boolean) {
 type DashboardShellProps = {
   children: React.ReactNode;
   currentWorkspaceName: string;
+  currentWorkspaceId: string;
+  workspaces: Array<{ id: string; name: string }>;
   navigationContext: NavigationContext;
   roleLabel: string;
   isDemoWorkspace?: boolean;
@@ -84,6 +86,8 @@ type DashboardShellProps = {
 export function DashboardShell({
   children,
   currentWorkspaceName,
+  currentWorkspaceId,
+  workspaces,
   navigationContext,
   roleLabel,
   isDemoWorkspace = false,
@@ -91,6 +95,7 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
   const sidebarCollapsed = useSyncExternalStore(
     subscribeToSidebarCollapsedPreference,
@@ -103,6 +108,11 @@ export function DashboardShell({
   }
 
   const createActions = getCreateActionsForUser(navigationContext);
+
+  function closeMobileSidebar({ restoreFocus = false } = {}) {
+    setMobileSidebarOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => menuTriggerRef.current?.focus());
+  }
 
   // The dashboard has a fixed app shell, so the document scroll position is
   // unrelated to the content users see. Next resets document scroll for links,
@@ -138,7 +148,7 @@ export function DashboardShell({
       <div className="flex h-full min-h-0">
         <DashboardSidebar
           open={mobileSidebarOpen}
-          onClose={() => setMobileSidebarOpen(false)}
+          onClose={() => closeMobileSidebar({ restoreFocus: true })}
           collapsed={sidebarCollapsed}
           onToggleCollapsed={toggleSidebarCollapsed}
           navigationContext={navigationContext}
@@ -148,7 +158,10 @@ export function DashboardShell({
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
           <DashboardTopbar
             onOpenSidebar={() => setMobileSidebarOpen(true)}
+            menuTriggerRef={menuTriggerRef}
             currentWorkspaceName={currentWorkspaceName}
+            currentWorkspaceId={currentWorkspaceId}
+            workspaces={workspaces}
             isDemoWorkspace={isDemoWorkspace}
             createActions={createActions}
             searchSlot={searchSlot}
@@ -156,7 +169,7 @@ export function DashboardShell({
 
           <main
             ref={mainRef}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 sm:px-6 sm:py-7 lg:px-7 [scrollbar-gutter:stable]"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-6 sm:py-5 lg:px-7 lg:py-6 [scrollbar-gutter:stable]"
             data-testid="dashboard-scroll-region"
           >
             <div className="mx-auto w-full max-w-[1600px]">

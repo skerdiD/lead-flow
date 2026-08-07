@@ -173,7 +173,7 @@ function DealActions({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="size-10 shrink-0 sm:size-8"
           aria-label={`Actions for ${deal.name}`}
           data-testid={`deal-actions-${deal.id}`}
         >
@@ -261,7 +261,7 @@ function DealCard({
           <button
             type="button"
             aria-label={`Drag ${deal.name}`}
-            className="mt-0.5 inline-flex h-7 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/70 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+            className="inline-flex size-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground/70 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing md:size-9"
             {...attributes}
             {...listeners}
           >
@@ -288,7 +288,7 @@ function DealCard({
         />
       </div>
 
-      <div className={cn("mt-2.5", draggable && !readOnly && "ml-6")}>
+      <div className={cn("mt-2.5", draggable && !readOnly && "md:ml-6")}>
         <div className="flex min-w-0 items-center justify-between gap-2">
           <p className="truncate text-sm font-semibold">
             {formatCurrencyFromCents(deal.valueCents, deal.currency)}
@@ -552,15 +552,15 @@ export function DealsPipeline({
           }}
         >
           <div
-            className="h-full min-h-0 max-w-full overflow-hidden rounded-2xl border bg-background/45 p-2 shadow-sm"
+            className="h-full min-h-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border bg-background/45 p-2 shadow-sm [scrollbar-gutter:stable]"
             role="region"
             aria-label="Deal pipeline stages"
             data-testid="pipeline-scroll-viewport"
           >
-            <div className="grid h-full min-h-0 min-w-0 grid-cols-3 grid-rows-2 gap-2 2xl:grid-cols-6 2xl:grid-rows-1">
+            <div className="flex h-full min-h-0 min-w-max gap-2">
               {DEAL_STAGES.map((stage) => (
+                <div key={stage} className="h-full w-72 shrink-0">
                 <PipelineColumn
-                  key={stage}
                   stage={stage}
                   deals={board[stage]}
                   total={totals[stage]}
@@ -569,6 +569,7 @@ export function DealsPipeline({
                   referenceTime={referenceTime}
                   move={requestMove}
                 />
+                </div>
               ))}
             </div>
           </div>

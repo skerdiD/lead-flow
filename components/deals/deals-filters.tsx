@@ -6,6 +6,7 @@ import type { NormalizedDealFilters } from "@/app/dashboard/deals/queries";
 import { ClearFiltersButton } from "@/components/filters/clear-filters-button";
 import { SearchInput } from "@/components/filters/search-input";
 import { useDebouncedUrlSearch } from "@/components/filters/use-debounced-url-search";
+import { ResponsiveFilterPanel } from "@/components/filters/responsive-filter-panel";
 import { Button } from "@/components/ui/button";
 import { DEAL_STAGE_LABELS, DEAL_STAGES } from "@/lib/constants/crm";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ export function DealsFilters({ filters, ownerOptions, accountOptions, view }: De
         testId="deals-search-input"
       />
 
+      <ResponsiveFilterPanel activeCount={activeCount} className="min-w-0 flex-1 sm:justify-end">
       <label className="w-full sm:w-auto">
         <span className="sr-only">Owner</span>
         <select key={filters.owner} defaultValue={filters.owner} onChange={(event) => apply({ owner: event.target.value || null })} className={cn(controlClass, "w-full sm:w-[9.5rem]")} aria-label="Owner">
@@ -122,6 +124,7 @@ export function DealsFilters({ filters, ownerOptions, accountOptions, view }: De
       </details>
 
       {hasFilters ? <ClearFiltersButton onClear={clear} disabled={controller.isPending} /> : null}
+      </ResponsiveFilterPanel>
     </div>
   );
 }

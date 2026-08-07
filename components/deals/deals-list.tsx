@@ -178,7 +178,7 @@ export function DealsList({
             type="button"
             size="icon"
             variant="ghost"
-            className="h-8 w-8"
+            className="size-10 sm:size-8"
             aria-label={`Actions for ${deal.name}`}
           >
             <MoreHorizontal className="h-4 w-4" />

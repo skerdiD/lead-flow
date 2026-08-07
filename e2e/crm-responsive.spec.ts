@@ -320,7 +320,7 @@ test.describe("CRM responsive layouts", () => {
     await expect(page.getByRole("button", { name: "Save follow-up" })).toBeDisabled();
   });
 
-  test("Deals fits every desktop stage without horizontal scrolling and supports List view", async ({ page }) => {
+  test("Deals keeps every stage in an internal horizontal scroller and supports List view", async ({ page }) => {
     await createDeal(page);
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto("/dashboard/deals");
@@ -333,17 +333,10 @@ test.describe("CRM responsive layouts", () => {
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
     }));
-    expect(boardDimensions.scrollWidth).toBeLessThanOrEqual(boardDimensions.clientWidth);
+    expect(boardDimensions.scrollWidth).toBeGreaterThan(boardDimensions.clientWidth);
 
-    const finalColumn = page.getByTestId("deal-column-lost");
-    await expect(finalColumn).toBeVisible();
-    const finalColumnBox = await finalColumn.boundingBox();
-    const viewportBox = await viewport.boundingBox();
-    expect(finalColumnBox).not.toBeNull();
-    expect(viewportBox).not.toBeNull();
-    expect(finalColumnBox!.x + finalColumnBox!.width).toBeLessThanOrEqual(
-      viewportBox!.x + viewportBox!.width + 1,
-    );
+    await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+    await expect(page.getByTestId("deal-column-lost")).toBeVisible();
     const card = page.getByTestId(/deal-card-/).filter({ hasText: "Bluepeak expansion" }).first();
     await expect(card.getByText("Test user")).toBeVisible();
     await expect(page.getByText("e2e-user")).toHaveCount(0);

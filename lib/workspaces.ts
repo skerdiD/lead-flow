@@ -108,6 +108,16 @@ export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace> => 
   }
 });
 
+export const getAvailableWorkspaces = cache(async () => {
+  const userId = await requireUserId();
+  return db
+    .select({ id: workspaces.id, name: workspaces.name, role: workspaceMembers.role })
+    .from(workspaceMembers)
+    .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+    .where(eq(workspaceMembers.userId, userId))
+    .orderBy(desc(workspaceMembers.createdAt));
+});
+
 export async function setActiveWorkspace(workspaceId: string) {
   const userId = await requireUserId();
   const workspace = await getWorkspaceForUser(userId, workspaceId);

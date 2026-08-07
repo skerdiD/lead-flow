@@ -7,7 +7,7 @@ import {
   workspaceRoleLabels,
 } from "@/lib/authorization";
 import { isDemoWorkspace } from "@/lib/demo";
-import { getCurrentWorkspace } from "@/lib/workspaces";
+import { getAvailableWorkspaces, getCurrentWorkspace } from "@/lib/workspaces";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -16,12 +16,14 @@ type DashboardLayoutProps = {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  const workspace = await getCurrentWorkspace();
+  const [workspace, availableWorkspaces] = await Promise.all([getCurrentWorkspace(), getAvailableWorkspaces()]);
 
   return (
     <>
       <DashboardShell
         currentWorkspaceName={workspace.name}
+        currentWorkspaceId={workspace.id}
+        workspaces={availableWorkspaces.map(({ id, name }) => ({ id, name }))}
         isDemoWorkspace={isDemoWorkspace(workspace)}
         navigationContext={{
           permissions: workspacePermissions.filter((permission) =>

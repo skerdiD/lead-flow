@@ -68,7 +68,7 @@ export default async function DashboardPage() {
   const readOnly = isDemoWorkspace(workspace);
 
   return (
-    <div className="space-y-7 lg:space-y-8">
+    <div className="space-y-5 lg:space-y-6">
       <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-background via-background to-muted/40 p-6 shadow-sm sm:p-7">
         <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
 

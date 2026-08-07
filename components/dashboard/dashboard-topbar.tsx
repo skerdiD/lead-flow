@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Building2, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import {
   getDashboardRouteMeta,
@@ -9,11 +9,14 @@ import {
 } from "@/components/dashboard/dashboard-nav";
 import { GlobalCreateMenu } from "@/components/dashboard/global-create-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { Badge } from "@/components/ui/badge";
+import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
 
 type DashboardTopbarProps = {
   onOpenSidebar: () => void;
+  menuTriggerRef?: React.Ref<HTMLButtonElement>;
   currentWorkspaceName: string;
+  currentWorkspaceId: string;
+  workspaces: Array<{ id: string; name: string }>;
   isDemoWorkspace?: boolean;
   createActions: readonly CreateAction[];
   searchSlot?: React.ReactNode;
@@ -21,7 +24,10 @@ type DashboardTopbarProps = {
 
 export function DashboardTopbar({
   onOpenSidebar,
+  menuTriggerRef,
   currentWorkspaceName,
+  currentWorkspaceId,
+  workspaces,
   isDemoWorkspace = false,
   createActions,
   searchSlot,
@@ -34,6 +40,7 @@ export function DashboardTopbar({
     <header className="z-30 shrink-0 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 lg:px-7">
         <button
+          ref={menuTriggerRef}
           type="button"
           onClick={onOpenSidebar}
           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground lg:hidden"
@@ -58,17 +65,7 @@ export function DashboardTopbar({
         ) : null}
 
         <div className="flex items-center gap-2.5 font-sans">
-          <div className="hidden max-w-[240px] items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm sm:flex">
-            <Building2 className="h-4 w-4 shrink-0" />
-            <span className="truncate font-medium text-foreground">
-              {currentWorkspaceName}
-            </span>
-            {isDemoWorkspace ? (
-              <Badge variant="outline" className="shrink-0 bg-muted/40">
-                Demo
-              </Badge>
-            ) : null}
-          </div>
+          <WorkspaceSwitcher currentWorkspaceId={currentWorkspaceId} currentWorkspaceName={currentWorkspaceName} workspaces={workspaces} demo={isDemoWorkspace} />
 
           {!isDemoWorkspace ? <GlobalCreateMenu actions={createActions} /> : null}
 

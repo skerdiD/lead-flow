@@ -6,13 +6,17 @@ import { cn } from "@/lib/utils"
 
 type TableProps = React.ComponentProps<"table"> & {
   containerClassName?: string
+  containerLabel?: string
 }
 
-function Table({ className, containerClassName, ...props }: TableProps) {
+function Table({ className, containerClassName, containerLabel = "Scrollable data table", ...props }: TableProps) {
   return (
     <div
       data-slot="table-container"
-      className={cn("relative w-full overflow-x-auto", containerClassName)}
+      className={cn("relative w-full overflow-x-auto overscroll-x-contain rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset", containerClassName)}
+      role="region"
+      aria-label={containerLabel}
+      tabIndex={0}
     >
       <table
         data-slot="table"
