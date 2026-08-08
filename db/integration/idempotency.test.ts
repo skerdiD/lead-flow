@@ -8,6 +8,7 @@ import {
   IdempotencyConflictError,
 } from "@/lib/idempotency.server";
 import type { DatabaseClient } from "@/lib/db-client";
+import { createWorkspaceWithOwnerInTransaction } from "@/lib/workspace-creation";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -35,17 +36,14 @@ describeDatabase("PostgreSQL mutation idempotency", () => {
   afterAll(async () => pool.end());
 
   async function createWorkspace(actorUserId = `actor-${randomUUID()}`) {
-    const result = await pool.query<{ id: string }>(
-      "INSERT INTO workspaces (name) VALUES ($1) RETURNING id",
-      [`Idempotency ${randomUUID()}`],
+    const workspace = await database.transaction((tx) =>
+      createWorkspaceWithOwnerInTransaction(tx, {
+        name: `Idempotency ${randomUUID()}`,
+        ownerUserId: actorUserId,
+      }),
     );
-    const workspaceId = result.rows[0]!.id;
-    workspaceIds.push(workspaceId);
-    await pool.query(
-      "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner')",
-      [workspaceId, actorUserId],
-    );
-    return { workspaceId, actorUserId };
+    workspaceIds.push(workspace.id);
+    return { workspaceId: workspace.id, actorUserId };
   }
 
   function scope(workspaceId: string, actorUserId: string, action: string, key = randomUUID(), request: unknown = {}) {

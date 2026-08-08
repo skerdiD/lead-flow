@@ -12,6 +12,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "@/db/schema";
 import { acceptWorkspaceInvitationInTransaction } from "@/lib/workspace-invitations";
+import { createWorkspaceWithOwnerInTransaction } from "@/lib/workspace-creation";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -50,18 +51,14 @@ describeDatabase("workspace invitation acceptance", () => {
   });
 
   async function createWorkspace() {
-    const workspace = await database
-      .insert(schema.workspaces)
-      .values({ name: `Invitation test ${randomUUID()}` })
-      .returning({ id: schema.workspaces.id });
-    const workspaceId = workspace[0]!.id;
-    createdWorkspaceIds.push(workspaceId);
-    await database.insert(schema.workspaceMembers).values({
-      workspaceId,
-      userId: `owner-${randomUUID()}`,
-      role: "owner",
-    });
-    return workspaceId;
+    const workspace = await database.transaction((tx) =>
+      createWorkspaceWithOwnerInTransaction(tx, {
+        name: `Invitation test ${randomUUID()}`,
+        ownerUserId: `owner-${randomUUID()}`,
+      }),
+    );
+    createdWorkspaceIds.push(workspace.id);
+    return workspace.id;
   }
 
   async function createInvitation(options: {
