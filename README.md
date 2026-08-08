@@ -6,11 +6,27 @@ It demonstrates authentication, workspace-based authorization, lead management, 
 
 [Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) | [Repository](https://github.com/skerdiD/lead-flow)
 
-### Landing Page
+## Preview
 
-### CRM Dashboard
+### Dashboard overview
 
-### Leads Workspace
+![Lead Flow dashboard overview](public/screenshots/dashboard-overview.png)
+
+### Pipeline analytics
+
+![Lead Flow pipeline analytics](public/screenshots/dashboard-analytics.png)
+
+### Leads workspace
+
+![Lead Flow leads workspace](public/screenshots/leads-workspace.png)
+
+### Deals pipeline
+
+![Lead Flow deals pipeline](public/screenshots/deals-pipeline.png)
+
+### Tasks workspace
+
+![Lead Flow tasks workspace](public/screenshots/tasks-workspace.png)
 
 ---
 
