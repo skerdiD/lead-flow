@@ -1,44 +1,34 @@
 # Lead Flow
 
-**Lead Flow** is a modern CRM-style SaaS application built with **Next.js**, **React**, **TypeScript**, **Clerk Auth**, **PostgreSQL**, **Drizzle ORM**, **Arcjet**, and a clean SaaS dashboard interface.
+**Lead Flow** is a modern multi-tenant CRM SaaS application built with **Next.js**, **React**, **TypeScript**, **Clerk Auth**, **PostgreSQL**, **Drizzle ORM**, **Arcjet**, and a clean responsive SaaS dashboard.
 
-It demonstrates authentication, protected dashboards, lead management, activity tracking, revenue pipeline metrics, weighted forecasting, CSV/PDF exports, server-side validation, automated tests, CI, and production-minded UI/UX.
+It demonstrates authentication, workspace-based authorization, lead management, accounts, contacts, deals, pipeline tracking, activity history, tasks, forecasting, imports, CSV/PDF exports, idempotent mutations, database integrity, automated tests, CI, and production-minded security and UI/UX.
 
 [Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) | [Repository](https://github.com/skerdiD/lead-flow)
 
-
 ### Landing Page
-
-<img src="./public/screenshots/landing-hero.png" alt="Lead Flow landing page hero" width="100%">
-<img src="./public/screenshots/landing-capabilities.png" alt="Lead Flow landing page capabilities" width="100%">
 
 ### CRM Dashboard
 
-<img src="./public/screenshots/product-dashboard-preview.png" alt="Lead Flow dashboard overview" width="100%">
-<img src="./public/screenshots/dashboard-charts.png" alt="Lead Flow dashboard charts" width="100%">
-<img src="./public/screenshots/dashboard-source-revenue.png" alt="Lead Flow source and revenue analytics" width="100%">
-
 ### Leads Workspace
-
-<img src="./public/screenshots/product-leads-workspace-preview.png" alt="Lead Flow leads workspace table" width="100%">
-<img src="./public/screenshots/lead-data.png" alt="Lead Data and specific informations" width="100%">
-<img src="./public/screenshots/activity-timeline.png" alt="Lead Flow activity timeline" width="100%">
 
 ---
 
 ## Overview
 
-Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS lead-management product with authentication, protected dashboard routes, lead CRUD, activity tracking, revenue forecasting, exports, testing, and a polished interface.
+Most CRM demos stop at a basic table of contacts. Lead Flow was built to feel closer to a real SaaS CRM with authentication, multi-tenant workspaces, role-based access, lead management, accounts, contacts, deals, tasks, activity tracking, revenue forecasting, imports, exports, testing, and a polished interface.
 
-The goal was to show more than CRUD: secure server actions, database modeling, dashboard analytics, business-focused pipeline tracking, export workflows, and product-focused UX.
+The goal was to demonstrate more than CRUD: secure server actions, capability-based authorization, relational database modeling, transactional business workflows, dashboard analytics, pipeline management, idempotency, database constraints, and product-focused UX.
 
 ---
 
 ## Business Value
 
-Lead Flow demonstrates how a CRM can help freelancers, agencies, startups, and small sales teams organize leads, track opportunities, and understand pipeline value.
+Lead Flow demonstrates how freelancers, agencies, startups, and small sales teams can organize prospects, companies, contacts, opportunities, and follow-ups in one CRM workspace.
 
-For clients, it shows the foundation of a practical sales tool where users can manage leads, monitor activity, export reports, and view revenue-focused metrics like total pipeline value, weighted forecast, expected revenue, won revenue, and lost revenue.
+Users can manage the complete sales workflow from an initial lead to an account, contact, and revenue opportunity while tracking activity and understanding pipeline performance.
+
+The dashboard provides business-focused metrics including total pipeline value, weighted forecast, expected revenue, won revenue, lost revenue, and pipeline value by stage.
 
 ---
 
@@ -48,27 +38,93 @@ For clients, it shows the foundation of a practical sales tool where users can m
 
 * Clerk authentication
 * Protected dashboard routes
-* Per-user data ownership
-* Secure access to lead data
-* Test-mode auth support for E2E flows
+* Multi-tenant workspaces
+* Owner, Admin, and Member roles
+* Capability-based authorization
+* Workspace membership management
+* Workspace invitation flow
+* Ownership transfer
+* Server-side permission checks
+* Workspace-scoped database access
+* Safe E2E authentication support
+
+Workspace ownership is represented through the membership system, with exactly one member holding the `owner` role.
 
 ### Lead Management
 
-* Create, edit, and delete leads
+* Create and edit leads
+* Archive and restore leads
 * Track lead status and source
-* Store contact details
-* Filter and paginate lead records
-* Manage leads inside a focused workspace
+* Store contact and company details
+* Assign workspace owners
+* Follow-up dates and priority
+* Search, filter, and paginate records
+* Dedicated lead detail pages
+* Lead notes
+* Lead activity timeline
+* Lead-linked tasks
+* Related account, contact, and deal information
 
-### Revenue Pipeline
+### Lead Qualification
 
-* Deal value tracking
-* Currency support
+Leads can move through a structured CRM qualification workflow:
+
+```text
+Lead
+  ↓
+Account + Contact + Deal
+```
+
+The workflow supports:
+
+* Creating or selecting an account
+* Creating or selecting a contact
+* Creating a related deal
+* Carrying lead information into CRM records
+* Duplicate protection
+* Workspace validation
+* Transactional qualification
+* `lead_qualified` activity tracking
+* Audit logging
+
+### Accounts and Contacts
+
+* Dedicated accounts workspace
+* Dedicated contacts workspace
+* Company and organization records
+* Individual contact records
+* Workspace-scoped relationships
+* Relationships between leads, contacts, accounts, and deals
+
+### Deal Pipeline
+
+* Dedicated deals workspace
+* Pipeline and list views
+* Deal cards grouped by stage
+* Drag-and-drop with `dnd-kit`
+* Keyboard-accessible stage movement
+* Deal value and currency
 * Probability percentage
 * Expected close date
 * Closed date tracking
 * Lost reason support
-* Open, won, and lost revenue visibility
+* Assigned deal owner
+* Total value per pipeline stage
+* Weighted value per stage
+* Optimistic stage updates with rollback
+
+Deal stage transitions are handled transactionally so deal state, activity events, and audit events stay consistent.
+
+### Revenue Pipeline
+
+* Deal value tracking
+* Currency validation
+* Probability tracking
+* Expected close dates
+* Won and lost deal tracking
+* Lost reason enforcement
+* Open pipeline visibility
+* Weighted revenue calculations
 
 ### Forecasting and Analytics
 
@@ -79,24 +135,100 @@ For clients, it shows the foundation of a practical sales tool where users can m
 * Lost revenue
 * Pipeline value by stage
 * Lead source performance charts
-* Activity timeline
+* Recent activity timeline
+
+### Tasks and Follow-Ups
+
+* CRM task management
+* Pending and completed task states
+* Due dates
+* Task priorities
+* Completion timestamps
+* Lead-linked tasks
+* Upcoming follow-ups
+* Follow-up tracking inside lead details
+
+### Activity and Audit History
+
+* CRM activity timeline
+* Lead activity
+* Deal stage changes
+* Task activity
+* Qualification events
+* Workspace activity
+* Administrative audit logging
+* Actor and workspace context
+* Before/after state support for sensitive mutations
+
+### Imports
+
+* CSV CRM imports
+* Import job tracking
+* Row-level validation
+* Field mapping
+* Normalized imported data
+* Duplicate detection
+* Import warnings and errors
+* Import status tracking
+* Safe workspace-scoped processing
 
 ### Exports
 
 * CSV export for lead data
 * PDF export for lead data
+* Server-side authorization
+* Workspace-scoped exports
 * Download flows covered by E2E tests
 * Useful for reporting and offline review
 
-### Security and Quality
+### Security and Reliability
 
 * Protected server actions
+* Centralized capability-based authorization
 * Zod validation
-* Server-side auth checks
-* User-scoped database access
-* Arcjet bot and rate-limit protection
+* Server-side authentication checks
+* Workspace-level tenant isolation
+* Arcjet bot protection
+* Action-sensitive rate limiting
+* PostgreSQL transactions
+* PostgreSQL-backed idempotency
+* Request fingerprinting
+* Duplicate mutation protection
+* Audit logging
+* Security response headers
+* Environment validation
 * Mutation guardrails
-* Responsive SaaS interface
+
+### Database Integrity
+
+PostgreSQL constraints protect important CRM invariants including:
+
+* One owner per workspace
+* Valid workspace relationships
+* Task completion consistency
+* Archive timestamp consistency
+* Deal probability limits
+* Non-negative deal values
+* Closed deal consistency
+* Lost reason requirements
+* Currency format
+* Invitation state consistency
+* Idempotency uniqueness
+
+### UI and UX
+
+* Responsive SaaS dashboard
+* Desktop, tablet, and mobile support
+* Responsive sidebar navigation
+* Mobile-friendly tables and forms
+* Horizontally scrollable deal pipeline
+* Route-level loading states
+* Content-shaped skeletons
+* Route-level error handling
+* Dedicated not-found states
+* Context-aware empty states
+* Optimistic UI with rollback
+* Accessible dialogs and controls
 
 ---
 
@@ -110,22 +242,31 @@ For clients, it shows the foundation of a practical sales tool where users can m
 * Tailwind CSS
 * shadcn/ui
 * Recharts
+* dnd-kit
 
 ### Backend and Database
 
 * Next.js Server Actions
-* Next.js API Routes
+* Next.js API Routes / Route Handlers
 * PostgreSQL
 * Drizzle ORM
 * Zod validation
+* PostgreSQL transactions
 * Typed database schema
 
 ### Auth and Security
 
 * Clerk
 * Arcjet
+* Capability-based authorization
+* Workspace tenant isolation
+* Security headers
 * Environment-based secrets
 * Vercel deployment
+
+### Email
+
+* Workspace invitation emails
 
 ### Tooling
 
@@ -143,158 +284,74 @@ For clients, it shows the foundation of a practical sales tool where users can m
 ```txt
 Client UI
   |-- Next.js App Router / React / Tailwind / shadcn UI
-  |-- Dashboard Cards / Charts / Lead Forms / Export Buttons
+  |-- Dashboard / Leads / Accounts / Contacts / Deals / Tasks
+  |-- Pipeline / Imports / Notifications / Settings
 
 Server Layer
   |-- Server Actions / API Routes / Zod Validation
-  |-- Auth Checks / Arcjet Protection / Export Routes
+  |-- Clerk Authentication / Arcjet Protection
+  |-- Rate Limiting / Idempotency / Request Validation
+
+Authorization Layer
+  |-- Workspace Membership
+  |-- Owner / Admin / Member Roles
+  |-- Capability-Based Permissions
+  |-- Workspace-Scoped Resource Access
 
 Database Layer
   |-- PostgreSQL / Drizzle ORM
-  |-- Leads / Activity Events / Revenue Pipeline Fields
+  |-- Workspaces / Members / Invitations
+  |-- Leads / Accounts / Contacts / Deals / Tasks
+  |-- Activity / Audit Logs / Imports / Idempotency
 
 CRM Layer
-  |-- Lead Status / Lead Sources / Activity Timeline
-  |-- CSV Export / PDF Export / Dashboard Analytics
+  |-- Lead Qualification
+  |-- Deal Pipeline
+  |-- Tasks / Follow-Ups
+  |-- Activity Tracking
+  |-- CSV/PDF Exports
 
 Revenue Layer
   |-- Deal Value / Probability / Expected Close Date
-  |-- Total Pipeline / Weighted Forecast / Won and Lost Revenue
+  |-- Pipeline Value / Weighted Forecast
+  |-- Won and Lost Revenue
 ```
 
-Lead data is scoped to the authenticated user, important mutations are validated on the server, and dashboard analytics turn CRM activity into useful business metrics.
+CRM data is scoped to the active workspace. Authentication identifies the user, workspace membership determines access, and capability-based authorization determines which operations that user may perform.
 
----
-
-## Getting Started
-
-### Prerequisite
-
-Use Node.js 24. The project pins the supported major version in `package.json`
-so local development, CI, Arcjet, and the Vercel runtime stay aligned.
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/skerdiD/lead-flow.git
-cd lead-flow
-```
-
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Create environment variables
-
-Create a `.env.local` file in the project root:
-
-```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-DATABASE_URL=
-ARCJET_KEY=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-RESEND_API_KEY=
-RESEND_FROM_EMAIL="LeadFlow <team@your-domain.com>"
-```
-
-Workspace invitations use Resend for transactional email. Add a Resend API key
-and a sender address from a verified domain before deploying. If delivery is
-temporarily unavailable, workspace owners and admins can still create an
-invitation and securely copy its one-time link from **Settings → Team**. The
-recipient can sign in or create an account with the invited email, then accept
-the invitation from that link.
-
-To enable the public role-selection demo, also configure the three dedicated
-Clerk users and explicitly turn the feature on:
-
-```env
-DEMO_LOGIN_ENABLED=true
-DEMO_OWNER_EMAIL=leadflow-demo@example.com
-DEMO_ADMIN_EMAIL=leadflow-demo-admin@example.com
-DEMO_MEMBER_EMAIL=leadflow-demo-member@example.com
-```
-
-`/demo` remains unavailable until `DEMO_LOGIN_ENABLED` is exactly `true`. The
-demo sign-in endpoint accepts only the Owner, Admin, or Member role value, then
-verifies that the configured Clerk user has the matching membership in the
-dedicated demo workspace before issuing a five-minute sign-in token.
-
-### 4. Run database migrations
-
-```bash
-npm run db:migrate
-```
-
-Use `npm run db:generate` only after changing `db/schema.ts`, then review and commit the generated migration files.
-
-### 5. Seed screenshot data
-
-To populate screenshot-ready CRM data for the existing Clerk user `skerdi0005@gmail.com`, make sure `DATABASE_URL` and `CLERK_SECRET_KEY` are set, then run:
-
-```bash
-npm run db:seed:screenshots
-```
-
-The seed finds that Clerk user by email, uses the matching Clerk user id for ownership, and replaces only the known fake screenshot leads in that user's workspace. Empty or seed-only workspaces are named `Lead Flow Demo Workspace`; workspaces with other leads keep their existing name. It does not create a public demo account or bypass authentication.
-
-### 6. Seed the role-selection demo
-
-After configuring the three `DEMO_*_EMAIL` values above, create or refresh the
-isolated shared demo workspace:
-
-```bash
-npm run db:seed:demo
-```
-
-The seed creates the dedicated Clerk identities and assigns exactly one Owner,
-Admin, and Member membership. The login flow never creates users, changes
-memberships, or resets demo data.
-
-### 7. Start the development server
-
-```bash
-npm run dev
-```
-
-Open the app at:
-
-```txt
-http://localhost:3000
-```
+Important multi-record mutations use PostgreSQL transactions, while retry-sensitive operations use database-backed idempotency protection.
 
 ---
 
 ## Available Scripts
 
 ```bash
-npm run dev          # Start the development server
-npm run build        # Create a production build
-npm run start        # Start the production server
-npm run lint         # Run ESLint
-npm run typecheck    # Run TypeScript checks
-npm run test         # Run Vitest tests
-npm run db:generate  # Generate Drizzle migrations
-npm run db:migrate   # Apply Drizzle migrations
+npm run dev                 # Start development server
+npm run build               # Create production build
+npm run start               # Start production server
+npm run lint                # Run ESLint
+npm run typecheck           # Run TypeScript checks
+npm run test                # Run Vitest tests
+npm run db:generate         # Generate Drizzle migrations
+npm run db:migrate          # Apply database migrations
 npm run db:seed:screenshots # Seed screenshot-ready CRM data
-npm run db:seed:demo # Seed the Owner, Admin, and Member demo workspace
-npm run e2e:install  # Install Playwright browsers
-npm run e2e          # Run Playwright E2E tests
-npm run e2e:headed   # Run Playwright tests in headed mode
+npm run db:seed:demo        # Seed demo workspace
+npm run e2e:install         # Install Playwright browsers
+npm run e2e                 # Run Playwright E2E tests
+npm run e2e:headed          # Run E2E tests in headed mode
 ```
 
 ---
 
 ## Testing and Quality
 
-* Vitest validates lead logic, validators, queries, and mutation guardrails
-* Playwright validates protected dashboard flows and lead actions
+* Vitest validates authorization, validators, CRM logic, revenue calculations, idempotency, workspace rules, and mutation guardrails
+* PostgreSQL integration tests validate database constraints and transactional behavior
+* Playwright validates protected dashboard and CRM workflows
+* E2E tests cover lead operations, status changes, exports, and important user flows
 * TypeScript catches type-level regressions
 * ESLint keeps code quality consistent
-* GitHub Actions runs checks on push and pull request
-* E2E tests cover create, edit, delete, status changes, CSV export, and PDF export
+* GitHub Actions runs automated checks on push and pull request
 
 Run the main quality suite:
 
