@@ -178,7 +178,7 @@ describe("qualifyLeadAction", () => {
 
     expect(result).toMatchObject({ success: true, reused: false, accountId, contactId, dealId });
     expect(insertValues.get("accounts")?.[0]).toMatchObject({ workspaceId: "workspace_active", name: "Acme GmbH", assignedOwnerUserId: "owner_user" });
-    expect(insertValues.get("contacts")?.[0]).toMatchObject({ workspaceId: "workspace_active", accountId, fullName: "Ada Lovelace", title: "CTO" });
+    expect(insertValues.get("contacts")?.[0]).toMatchObject({ workspaceId: "workspace_active", assignedOwnerUserId: "owner_user", accountId, fullName: "Ada Lovelace", title: "CTO" });
     expect(insertValues.get("deals")?.[0]).toMatchObject({ workspaceId: "workspace_active", leadId, accountId, contactId, ownerUserId: "owner_user", valueCents: 1250000 });
     expect(updateValues).toContainEqual(expect.objectContaining({ accountId, primaryContactId: contactId, assignedOwnerUserId: "owner_user", status: "Interested" }));
   });

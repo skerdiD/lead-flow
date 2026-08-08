@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { leads, workspaceMembers } from "@/db/schema";
+import { accounts, contacts, deals, leads, workspaceMembers } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import {
   getRecordUpdateConditions,
@@ -134,6 +134,92 @@ export async function updateLeadOwnerAction(
         if (!currentMember) return { response: null };
       }
 
+      const [currentLead] = await tx
+        .select({
+          id: leads.id,
+          fullName: leads.fullName,
+          assignedOwnerUserId: leads.assignedOwnerUserId,
+          accountId: leads.accountId,
+          primaryContactId: leads.primaryContactId,
+        })
+        .from(leads)
+        .where(
+          and(
+            eq(leads.id, leadId),
+            ...getRecordUpdateConditions(
+              context,
+              leads.workspaceId,
+              leads.assignedOwnerUserId,
+            ),
+          ),
+        )
+        .for("update")
+        .limit(1);
+
+      if (!currentLead) return { response: null };
+      if (currentLead.assignedOwnerUserId === ownerUserId) {
+        return {
+          response: { id: currentLead.id },
+          resource: { type: "lead", id: currentLead.id },
+        };
+      }
+
+      const [linkedDeal] = await tx
+        .select({ id: deals.id })
+        .from(deals)
+        .where(
+          and(
+            eq(deals.workspaceId, workspace.id),
+            eq(deals.leadId, leadId),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      const [linkedAccount] = currentLead.accountId
+        ? await tx
+            .select({ id: accounts.id })
+            .from(accounts)
+            .where(
+              and(
+                eq(accounts.id, currentLead.accountId),
+                ...getRecordUpdateConditions(
+                  context,
+                  accounts.workspaceId,
+                  accounts.assignedOwnerUserId,
+                ),
+              ),
+            )
+            .for("update")
+            .limit(1)
+        : [];
+      const [linkedContact] = currentLead.primaryContactId
+        ? await tx
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(
+              and(
+                eq(contacts.id, currentLead.primaryContactId),
+                ...getRecordUpdateConditions(
+                  context,
+                  contacts.workspaceId,
+                  contacts.assignedOwnerUserId,
+                ),
+              ),
+            )
+            .for("update")
+            .limit(1)
+        : [];
+
+      // An existing linked record which is not visible to the authorized
+      // assignment actor must fail the whole operation rather than leaving
+      // ownership partially synchronized.
+      if (
+        (currentLead.accountId && !linkedAccount) ||
+        (currentLead.primaryContactId && !linkedContact)
+      ) {
+        throw new Error("A linked CRM record could not be found or updated.");
+      }
+
       const [record] = await tx
         .update(leads)
         .set({ assignedOwnerUserId: ownerUserId, updatedAt: new Date() })
@@ -151,14 +237,72 @@ export async function updateLeadOwnerAction(
 
       if (!record) return { response: null };
 
+      if (linkedDeal) {
+        const [updatedDeal] = await tx
+          .update(deals)
+          .set({ ownerUserId, updatedAt: new Date() })
+          .where(
+            and(
+              eq(deals.id, linkedDeal.id),
+              ...getRecordUpdateConditions(
+                context,
+                deals.workspaceId,
+                deals.ownerUserId,
+              ),
+            ),
+          )
+          .returning({ id: deals.id });
+        if (!updatedDeal) throw new Error("Linked deal ownership update failed.");
+      }
+
+      if (linkedAccount) {
+        const [updatedAccount] = await tx
+          .update(accounts)
+          .set({ assignedOwnerUserId: ownerUserId, updatedAt: new Date() })
+          .where(
+            and(
+              eq(accounts.id, linkedAccount.id),
+              ...getRecordUpdateConditions(
+                context,
+                accounts.workspaceId,
+                accounts.assignedOwnerUserId,
+              ),
+            ),
+          )
+          .returning({ id: accounts.id });
+        if (!updatedAccount) {
+          throw new Error("Linked account ownership update failed.");
+        }
+      }
+
+      if (linkedContact) {
+        const [updatedContact] = await tx
+          .update(contacts)
+          .set({ assignedOwnerUserId: ownerUserId, updatedAt: new Date() })
+          .where(
+            and(
+              eq(contacts.id, linkedContact.id),
+              ...getRecordUpdateConditions(
+                context,
+                contacts.workspaceId,
+                contacts.assignedOwnerUserId,
+              ),
+            ),
+          )
+          .returning({ id: contacts.id });
+        if (!updatedContact) {
+          throw new Error("Linked contact ownership update failed.");
+        }
+      }
+
       await createLeadActivity({
         client: tx,
         workspaceId: workspace.id,
         userId,
         eventType: "lead_updated",
-        message: `Lead owner changed: ${lead.fullName}`,
+        message: `Lead owner changed: ${currentLead.fullName}`,
         leadId,
-        leadName: lead.fullName,
+        leadName: currentLead.fullName,
       });
       await writeAuditEvent({
         tx,
@@ -166,7 +310,7 @@ export async function updateLeadOwnerAction(
         actor: { userId, role: workspace.role },
         action: "lead.updated",
         entity: { type: "lead", id: leadId },
-        before: { assignedOwnerUserId: lead.assignedOwnerUserId },
+        before: { assignedOwnerUserId: currentLead.assignedOwnerUserId },
         after: { assignedOwnerUserId: ownerUserId },
         requestId,
       });

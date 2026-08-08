@@ -1,12 +1,18 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, contacts } from "@/db/schema";
+import {
+  getRecordUpdateConditions,
+  type WorkspaceAuthorizationContext,
+} from "@/lib/authorization";
 import type { LeadDbClient } from "./db-client";
 
 export async function saveLeadAccount(params: {
   client?: LeadDbClient;
   workspaceId: string;
   userId: string;
+  ownerUserId: string | null;
+  authorizationContext: WorkspaceAuthorizationContext;
   existingAccountId?: string | null;
   company?: string;
 }) {
@@ -24,12 +30,20 @@ export async function saveLeadAccount(params: {
       .where(
         and(
           eq(accounts.id, params.existingAccountId),
-          eq(accounts.workspaceId, params.workspaceId),
+          ...getRecordUpdateConditions(
+            params.authorizationContext,
+            accounts.workspaceId,
+            accounts.assignedOwnerUserId,
+          ),
         ),
       )
       .returning({ id: accounts.id });
 
     if (updatedAccount) return updatedAccount.id;
+
+    throw new Error(
+      "This account could not be found or you do not have permission to update it.",
+    );
   }
 
   const [createdAccount] = await client
@@ -37,6 +51,7 @@ export async function saveLeadAccount(params: {
     .values({
       workspaceId: params.workspaceId,
       userId: params.userId,
+      assignedOwnerUserId: params.ownerUserId,
       name: params.company,
     })
     .returning({ id: accounts.id });
@@ -48,6 +63,8 @@ export async function saveLeadContact(params: {
   client?: LeadDbClient;
   workspaceId: string;
   userId: string;
+  ownerUserId: string | null;
+  authorizationContext: WorkspaceAuthorizationContext;
   existingContactId?: string | null;
   accountId?: string | null;
   fullName: string;
@@ -69,12 +86,20 @@ export async function saveLeadContact(params: {
       .where(
         and(
           eq(contacts.id, params.existingContactId),
-          eq(contacts.workspaceId, params.workspaceId),
+          ...getRecordUpdateConditions(
+            params.authorizationContext,
+            contacts.workspaceId,
+            contacts.assignedOwnerUserId,
+          ),
         ),
       )
       .returning({ id: contacts.id });
 
     if (updatedContact) return updatedContact.id;
+
+    throw new Error(
+      "This contact could not be found or you do not have permission to update it.",
+    );
   }
 
   const [createdContact] = await client
@@ -82,6 +107,7 @@ export async function saveLeadContact(params: {
     .values({
       workspaceId: params.workspaceId,
       userId: params.userId,
+      assignedOwnerUserId: params.ownerUserId,
       accountId: params.accountId ?? null,
       fullName: params.fullName,
       email: params.email ?? null,

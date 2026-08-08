@@ -221,12 +221,16 @@ export async function updateLeadAction(
     const reconciled = existingDeal
       ? reconcileLeadAndDealStage(parsed.data.status, parsed.data.dealStage)
       : { status: parsed.data.status, dealStage: parsed.data.dealStage };
+    const authorizationContext = getWorkspaceAuthorizationContext(workspace, userId);
+    const effectiveOwnerUserId = existingLead.assignedOwnerUserId ?? userId;
     const { updatedLead, notification } = await db.transaction(async (tx) => {
       const accountId = existingDeal
         ? await saveLeadAccount({
             client: tx,
             workspaceId: workspace.id,
             userId,
+            ownerUserId: effectiveOwnerUserId,
+            authorizationContext,
             existingAccountId: existingLead.accountId,
             company: parsed.data.company,
           })
@@ -236,6 +240,8 @@ export async function updateLeadAction(
             client: tx,
             workspaceId: workspace.id,
             userId,
+            ownerUserId: effectiveOwnerUserId,
+            authorizationContext,
             existingContactId: existingLead.primaryContactId,
             accountId,
             fullName: parsed.data.fullName,
@@ -249,7 +255,7 @@ export async function updateLeadAction(
         .set({
           accountId,
           primaryContactId: contactId,
-          assignedOwnerUserId: existingLead.assignedOwnerUserId ?? userId,
+          assignedOwnerUserId: effectiveOwnerUserId,
           fullName: parsed.data.fullName,
           company: parsed.data.company ?? null,
           email: parsed.data.email ?? null,
@@ -267,7 +273,7 @@ export async function updateLeadAction(
           and(
             eq(leads.id, leadId),
             ...getRecordUpdateConditions(
-              getWorkspaceAuthorizationContext(workspace, userId),
+              authorizationContext,
               leads.workspaceId,
               leads.assignedOwnerUserId,
             ),
@@ -294,7 +300,7 @@ export async function updateLeadAction(
         leadId,
         accountId,
         contactId,
-        ownerUserId: existingLead.assignedOwnerUserId ?? userId,
+        ownerUserId: effectiveOwnerUserId,
         dealName: parsed.data.dealName,
         dealStage: reconciled.dealStage,
         dealValue: parsed.data.dealValue,
@@ -303,10 +309,10 @@ export async function updateLeadAction(
         expectedCloseDate: parsed.data.expectedCloseDate,
         closedDate: parsed.data.closedDate,
         lostReason: parsed.data.lostReason,
-        authorizationContext: getWorkspaceAuthorizationContext(workspace, userId),
+        authorizationContext,
       }) : null;
 
-      const notificationUserId = existingLead.assignedOwnerUserId ?? userId;
+      const notificationUserId = effectiveOwnerUserId;
       const notification = (
         deal?.id &&
         deal.previousStage &&
