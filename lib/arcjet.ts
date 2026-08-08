@@ -80,6 +80,22 @@ function providerErrored(decision: { isErrored?: () => boolean; conclusion?: str
   return decision.isErrored?.() === true || decision.conclusion === "ERROR" || decision.results?.some((result) => result.conclusion === "ERROR") === true;
 }
 
+function logProviderUnavailable(
+  policy: (typeof rateLimitPolicies)[RateLimitAction],
+  context: { requestId: string; operation: RateLimitAction; errorName?: string },
+) {
+  const message = "Rate-limit provider could not make a decision.";
+
+  // Ordinary product requests intentionally fail open. Treat this as an
+  // operational warning so Next.js does not render a development error overlay
+  // for a request that the application has safely allowed to continue.
+  if (policy.failClosed) {
+    logger.error("rate_limit_provider_unavailable", message, context);
+  } else {
+    logger.warn("rate_limit_provider_unavailable", message, context);
+  }
+}
+
 export async function enforceRateLimit(input: RateLimitInput): Promise<RateLimitResult> {
   if (isSafeE2ETestMode()) return { ok: true };
 
@@ -96,7 +112,7 @@ export async function enforceRateLimit(input: RateLimitInput): Promise<RateLimit
   try {
     const decision = await getClient(input.action).protect(request, { rateLimitKey });
     if (providerErrored(decision)) {
-      logger.error("rate_limit_provider_unavailable", "Rate-limit provider could not make a decision.", { requestId, operation: input.action });
+      logProviderUnavailable(policy, { requestId, operation: input.action });
       if (policy.failClosed) return { ok: false, status: 503, message: RATE_LIMIT_UNAVAILABLE_MESSAGE, retryAfter: 30 };
       return { ok: true };
     }
@@ -115,7 +131,7 @@ export async function enforceRateLimit(input: RateLimitInput): Promise<RateLimit
     }
     return { ok: true };
   } catch (error) {
-    logger.error("rate_limit_provider_unavailable", "Rate-limit provider call failed.", {
+    logProviderUnavailable(policy, {
       requestId,
       operation: input.action,
       errorName: error instanceof Error ? error.name : "UnknownError",

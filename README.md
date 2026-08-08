@@ -4,7 +4,7 @@
 
 It demonstrates authentication, workspace-based authorization, lead management, accounts, contacts, deals, pipeline tracking, activity history, tasks, forecasting, imports, CSV/PDF exports, idempotent mutations, database integrity, automated tests, CI, and production-minded security and UI/UX.
 
-[Live Demo](https://lead-flow-jx61pjm6w-skerdids-projects.vercel.app/) | [Repository](https://github.com/skerdiD/lead-flow)
+[Live Demo](lead-flow-skerdid.vercel.app) | [Repository](https://github.com/skerdiD/lead-flow)
 
 ## Preview
 

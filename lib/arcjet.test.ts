@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   arcjet: vi.fn(),
   fixedWindow: vi.fn((rule: unknown) => rule),
+  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock("@arcjet/next", () => ({
@@ -16,7 +17,7 @@ vi.mock("@arcjet/next", () => ({
   shield: vi.fn((rule) => rule),
 }));
 vi.mock("@/lib/logger.server", () => ({
-  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
+  logger: mocks.logger,
   logMetric: vi.fn(),
 }));
 vi.mock("@/lib/request-context.server", () => ({ getRequestId: vi.fn(async () => "request-id") }));
@@ -102,6 +103,16 @@ describe("action-sensitive rate limiting", () => {
       retryAfter: 30,
     });
     await expect(enforceRateLimit({ action: "lead:create", actorUserId: "user-a", workspaceId: "workspace-a" })).resolves.toEqual({ ok: true });
+    expect(mocks.logger.error).toHaveBeenCalledWith(
+      "rate_limit_provider_unavailable",
+      "Rate-limit provider could not make a decision.",
+      expect.objectContaining({ operation: "demo:login", errorName: "Error" }),
+    );
+    expect(mocks.logger.warn).toHaveBeenCalledWith(
+      "rate_limit_provider_unavailable",
+      "Rate-limit provider could not make a decision.",
+      expect.objectContaining({ operation: "lead:create", errorName: "Error" }),
+    );
   });
 
   it("does not expose policy numbers or internal provider details in errors", async () => {
