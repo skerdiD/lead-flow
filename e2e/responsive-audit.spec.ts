@@ -48,7 +48,21 @@ test.describe("complete responsive UX audit", () => {
       await page.setViewportSize(viewport);
       await page.goto("/dashboard");
       await expect(page.getByRole("heading", { name: "Your sales pipeline." })).toBeVisible();
-      await expect(page.getByLabel("Switch workspace")).toBeVisible();
+      const workspaceTrigger = page.getByLabel("Switch workspace");
+      await expect(workspaceTrigger).toBeVisible();
+      await workspaceTrigger.click();
+      const workspaceMenu = page.locator('[data-slot="select-content"]');
+      await expect(workspaceMenu).toBeVisible();
+      const [triggerBox, menuBox] = await Promise.all([
+        workspaceTrigger.boundingBox(),
+        workspaceMenu.boundingBox(),
+      ]);
+      expect(triggerBox).not.toBeNull();
+      expect(menuBox).not.toBeNull();
+      expect(menuBox!.y).toBeGreaterThanOrEqual(
+        triggerBox!.y + triggerBox!.height,
+      );
+      await page.keyboard.press("Escape");
       await expectNoPageOverflow(page);
 
       if (viewport.width < 1024) {

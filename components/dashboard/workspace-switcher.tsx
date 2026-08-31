@@ -38,7 +38,13 @@ export function WorkspaceSwitcher({
         <span className="hidden min-w-0 flex-1 truncate text-left font-medium sm:block">{currentWorkspaceName}</span>
         {demo ? <Badge variant="outline" className="hidden shrink-0 bg-muted/40 lg:inline-flex">Demo</Badge> : null}
       </SelectTrigger>
-      <SelectContent align="end" className="max-w-[calc(100vw-2rem)] sm:min-w-[15rem]">
+      <SelectContent
+        position="popper"
+        side="bottom"
+        sideOffset={6}
+        align="end"
+        className="max-w-[calc(100vw-2rem)] sm:min-w-[15rem]"
+      >
         {workspaces.map((workspace) => (
           <SelectItem key={workspace.id} value={workspace.id}>{workspace.name}</SelectItem>
         ))}
