@@ -2,11 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
 import {
   getDashboardRouteMeta,
   type CreateAction,
 } from "@/components/dashboard/dashboard-nav";
+import { AccountMenu } from "@/components/dashboard/account-menu";
 import { GlobalCreateMenu } from "@/components/dashboard/global-create-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
@@ -77,13 +77,7 @@ export function DashboardTopbar({
               aria-label="Test user avatar"
             />
           ) : (
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "h-9 w-9 ring-1 ring-border",
-                },
-              }}
-            />
+            <AccountMenu />
           )}
         </div>
       </div>
