@@ -30,8 +30,10 @@ test.describe("Task deletion", () => {
     await createLead(page, leadName);
     await page.getByRole("link", { name: leadName, exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/leads\/.+$/);
+    await expect(page.getByTestId("lead-details-page")).toBeVisible();
     const leadUrl = page.url();
 
+    await page.getByRole("tab", { name: "Tasks", exact: true }).click();
     await page.locator("#task-title").fill(taskTitle);
     await page.getByRole("button", { name: "Add task" }).click();
     await expect(page.getByText(taskTitle, { exact: true })).toBeVisible();
@@ -43,6 +45,8 @@ test.describe("Task deletion", () => {
     await expect(page.getByText(taskTitle, { exact: true })).toHaveCount(0);
 
     await page.goto(leadUrl);
+    await page.getByRole("tab", { name: "Tasks", exact: true }).click();
+    await expect(page.locator("#task-title")).toBeVisible();
     await expect(page.getByText(taskTitle, { exact: true })).toHaveCount(0);
   });
 });
